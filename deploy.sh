@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Déploiement manuel de FreeHub sur O2Switch, depuis ton Mac.
+# (Secours : le déploiement normal passe par GitHub Actions à chaque push.)
 #
-#   ./deploy.sh            → envoie le code et redémarre l'app
+#   ./deploy.sh            → envoie le code puis vérifie l'API
 #   ./deploy.sh --dry-run  → montre ce qui SERAIT envoyé, sans rien modifier
 #
 # Configuration : copie .deploy.env.exemple en .deploy.env et remplis-le.
-# (.deploy.env n'est jamais commité ni déployé.)
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -39,8 +39,11 @@ if [ -n "$SEC" ]; then
   exit 0
 fi
 
-echo "🔄 Redémarrage de l'application…"
-ssh -p "$O2S_PORT" "$O2S_USER@$O2S_HOST" \
-  "mkdir -p '$O2S_PATH/tmp' && touch '$O2S_PATH/tmp/restart.txt'"
-
-echo "✅ Déployé. La base de production n'a pas été touchée."
+# PHP est servi nativement : rien à redémarrer. On vérifie juste que l'API répond.
+echo "🩺 Contrôle de santé…"
+if curl -s --max-time 15 "https://free-hub.fr/api/ping" | grep -q '"ok":true'; then
+  echo "✅ Déployé et vérifié. Les données de production n'ont pas été touchées."
+else
+  echo "⚠️ Déployé, mais l'API ne répond pas — vérifier https://free-hub.fr/api/ping"
+  exit 1
+fi

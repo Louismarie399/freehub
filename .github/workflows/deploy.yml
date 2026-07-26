@@ -1,19 +1,19 @@
-# Déploiement automatique de FreeHub sur O2Switch.
-# Se déclenche à chaque push sur `main`, et manuellement depuis l'onglet Actions.
+# Déploiement automatique de FreeHub sur O2Switch — backend PHP.
 #
-# Secrets à définir dans GitHub (Settings → Secrets and variables → Actions) :
-#   O2S_HOST     ex. monsite.o2switch.net  (ou l'IP du serveur)
-#   O2S_USER     ton identifiant cPanel
-#   O2S_PATH     chemin absolu de l'app, ex. /home/tonuser/freehub
-#   O2S_SSH_KEY  la clé PRIVÉE de déploiement (contenu complet du fichier)
-#   O2S_PORT     (facultatif) port SSH ; 22 par défaut
+# PHP est exécuté nativement par LiteSpeed : pas de dépendances à installer,
+# pas de process à relancer. Le déploiement se résume à un rsync, suivi d'un
+# contrôle de santé de l'API.
 #
-# IMPORTANT : O2Switch limite l'accès SSH (port 22) à 5 IP autorisées
-# manuellement (cPanel → Sécurité → Autorisation SSH). Les runners GitHub
-# cloud (ubuntu-latest) n'ont pas d'IP fixe et ne peuvent donc PAS être
-# whitelistés. Ce workflow tourne donc sur un runner "self-hosted" installé
-# sur le Mac de Louis (dont l'IP est whitelistée) — voir GitHub →
-# Settings → Actions → Runners pour l'installer/le lancer.
+# Runner : self-hosted (sur le Mac de Louis), car O2Switch limite le SSH à des
+# IP autorisées manuellement dans cPanel — les runners cloud GitHub n'ont pas
+# d'IP fixe. Le runner est installé en service (svc.sh), il survit aux reboots.
+#
+# Secrets requis (Settings → Secrets and variables → Actions) :
+#   O2S_HOST     cronos.o2switch.net
+#   O2S_USER     rtym5189
+#   O2S_PATH     /home/rtym5189/free-hub.fr
+#   O2S_SSH_KEY  clé privée de déploiement
+#   O2S_PORT     (facultatif) 22 par défaut
 
 name: Déploiement O2Switch
 
@@ -34,8 +34,7 @@ jobs:
       - name: Récupérer le code
         uses: actions/checkout@v4
 
-      # Tant que les secrets O2Switch ne sont pas renseignés (avant la mise en
-      # ligne), on s'arrête ici proprement au lieu de faire échouer le workflow.
+      # Si les secrets manquent, on s'arrête proprement au lieu d'échouer en rouge.
       - name: Vérifier la configuration
         id: cfg
         env:
@@ -46,7 +45,7 @@ jobs:
         run: |
           if [ -z "$HOTE" ] || [ -z "$UTILISATEUR" ] || [ -z "$CHEMIN" ] || [ -z "$CLE" ]; then
             echo "pret=non" >> "$GITHUB_OUTPUT"
-            echo "::notice::Secrets O2Switch absents — déploiement ignoré (rien d'anormal avant la mise en ligne)."
+            echo "::notice::Secrets O2Switch absents — déploiement ignoré."
           else
             echo "pret=oui" >> "$GITHUB_OUTPUT"
           fi
@@ -72,38 +71,22 @@ jobs:
           CHEMIN: ${{ secrets.O2S_PATH }}
           PORT: ${{ secrets.O2S_PORT || 22 }}
         run: |
+          # --delete supprime du serveur ce qui a disparu du dépôt, SAUF ce que
+          # .deployignore protège (base de données, .well-known, etc.).
           rsync -az --delete --exclude-from=.deployignore \
             -e "ssh -i ~/.ssh/id_deploy -p $PORT" \
             ./ "$USER@$HOTE:$CHEMIN/"
 
-      - name: Installer les dépendances si elles ont changé
+      - name: Contrôle de santé
         if: steps.cfg.outputs.pret == 'oui'
-        env:
-          HOTE: ${{ secrets.O2S_HOST }}
-          USER: ${{ secrets.O2S_USER }}
-          CHEMIN: ${{ secrets.O2S_PATH }}
-          PORT: ${{ secrets.O2S_PORT || 22 }}
         run: |
-          # Le virtualenv est celui créé par cPanel (« Setup Python App »).
-          # Si la commande d'activation diffère chez toi, adapte ACTIVATE ci-dessous.
-          ssh -i ~/.ssh/id_deploy -p "$PORT" "$USER@$HOTE" bash -lc "'
-            set -e
-            cd \"$CHEMIN\"
-            ACTIVATE=\$(ls -d \$HOME/virtualenv/*/*/bin/activate 2>/dev/null | head -1)
-            if [ -n \"\$ACTIVATE\" ]; then
-              source \"\$ACTIVATE\"
-              pip install --quiet --upgrade -r requirements.txt || true
+          # L'API doit répondre en JSON après le déploiement. Sinon, échec visible.
+          for i in $(seq 1 10); do
+            if curl -s --max-time 15 "https://free-hub.fr/api/ping" | grep -q '"ok":true'; then
+              echo "✅ API en ligne — déploiement vérifié."
+              exit 0
             fi
-          '" || echo "Étape pip ignorée (virtualenv introuvable) — sans conséquence si rien n'a changé."
-
-      - name: Redémarrer l'application (Passenger)
-        if: steps.cfg.outputs.pret == 'oui'
-        env:
-          HOTE: ${{ secrets.O2S_HOST }}
-          USER: ${{ secrets.O2S_USER }}
-          CHEMIN: ${{ secrets.O2S_PATH }}
-          PORT: ${{ secrets.O2S_PORT || 22 }}
-        run: |
-          ssh -i ~/.ssh/id_deploy -p "$PORT" "$USER@$HOTE" \
-            "mkdir -p '$CHEMIN/tmp' && touch '$CHEMIN/tmp/restart.txt'"
-          echo "✅ Déploiement terminé et application redémarrée."
+            sleep 3
+          done
+          echo "::error::L'API ne répond pas après le déploiement."
+          exit 1

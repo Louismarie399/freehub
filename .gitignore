@@ -1,18 +1,21 @@
 # Secrets — ne JAMAIS committer
 .env
 .deploy.env
+config.php
 
-# Base de données locale (dev)
+# Bases de données locales (dev)
 freehub.db
 freehub.db-journal
 freehub.db-wal
 freehub.db-shm
+devdata/
 
 # Divers
 __pycache__/
 *.pyc
 .DS_Store
 *.dmg
+*.zip
 node_modules/
 .venv/
 freehub-deploy.zip
