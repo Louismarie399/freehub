@@ -1,0 +1,63 @@
+# FreeHub — configuration Apache/LiteSpeed (O2Switch)
+#
+# PLUS AUCUNE DIRECTIVE PASSENGER : l'app tourne en PHP, exécuté nativement par
+# LiteSpeed. C'est précisément ce qui nous affranchit du bug d'enregistrement
+# Passenger côté serveur.
+
+# --------------------------------------------------------------------------- #
+# 1. Protection des fichiers sensibles
+# --------------------------------------------------------------------------- #
+# Sans ça, tout fichier du dossier est téléchargeable tel quel (c'est ce qui
+# exposait server.py). On refuse tout ce qui n'a rien à faire dans un navigateur.
+<FilesMatch "\.(py|db|db-journal|db-wal|db-shm|env|sh|yml|yaml|md|zip|toml|lock|sqlite|sqlite3|log|ini)$">
+  Require all denied
+</FilesMatch>
+
+# Fichiers nommément protégés (sans extension ou à nom fixe).
+<FilesMatch "^(Dockerfile|\.deployignore|\.gitignore|\.deploy\.env.*|composer\..*|passenger_wsgi\.py|Lancer FreeHub\.command)$">
+  Require all denied
+</FilesMatch>
+
+# Tout fichier commençant par un point (.env, .git…).
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+
+# Dossiers de développement, s'ils venaient à être déployés par erreur.
+RedirectMatch 404 /\.git(/|$)
+RedirectMatch 404 /\.github(/|$)
+
+# Pas de listing de répertoire.
+Options -Indexes
+
+# --------------------------------------------------------------------------- #
+# 2. Routage
+# --------------------------------------------------------------------------- #
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Toutes les routes /api/* passent par le routeur PHP — mais seulement une fois
+  # qu'il existe (la condition évite de casser le site pendant la migration).
+  RewriteCond %{DOCUMENT_ROOT}/api/index.php -f
+  RewriteRule ^api/ /api/index.php [L,QSA]
+
+  # Le dashboard : /app → app.html (équivalent de la route /app de FastAPI).
+  RewriteCond %{DOCUMENT_ROOT}/app.html -f
+  RewriteRule ^app/?$ /app.html [L]
+</IfModule>
+
+# --------------------------------------------------------------------------- #
+# 3. En-têtes
+# --------------------------------------------------------------------------- #
+<IfModule mod_headers.c>
+  # L'app est une SPA : on ne veut jamais servir un HTML/JS périmé après un déploiement.
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-store, must-revalidate"
+  </FilesMatch>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Page d'accueil : index.php prioritaire (bascule de la Phase 1), sinon index.html.
+DirectoryIndex index.php index.html
