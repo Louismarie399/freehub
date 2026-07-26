@@ -27,7 +27,25 @@ jobs:
       - name: Récupérer le code
         uses: actions/checkout@v4
 
+      # Tant que les secrets O2Switch ne sont pas renseignés (avant la mise en
+      # ligne), on s'arrête ici proprement au lieu de faire échouer le workflow.
+      - name: Vérifier la configuration
+        id: cfg
+        env:
+          HOTE: ${{ secrets.O2S_HOST }}
+          UTILISATEUR: ${{ secrets.O2S_USER }}
+          CHEMIN: ${{ secrets.O2S_PATH }}
+          CLE: ${{ secrets.O2S_SSH_KEY }}
+        run: |
+          if [ -z "$HOTE" ] || [ -z "$UTILISATEUR" ] || [ -z "$CHEMIN" ] || [ -z "$CLE" ]; then
+            echo "pret=non" >> "$GITHUB_OUTPUT"
+            echo "::notice::Secrets O2Switch absents — déploiement ignoré (rien d'anormal avant la mise en ligne)."
+          else
+            echo "pret=oui" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Préparer la clé SSH
+        if: steps.cfg.outputs.pret == 'oui'
         env:
           CLE: ${{ secrets.O2S_SSH_KEY }}
           HOTE: ${{ secrets.O2S_HOST }}
@@ -40,6 +58,7 @@ jobs:
           ssh-keyscan -p "$PORT" -H "$HOTE" >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Envoyer les fichiers
+        if: steps.cfg.outputs.pret == 'oui'
         env:
           HOTE: ${{ secrets.O2S_HOST }}
           USER: ${{ secrets.O2S_USER }}
@@ -51,6 +70,7 @@ jobs:
             ./ "$USER@$HOTE:$CHEMIN/"
 
       - name: Installer les dépendances si elles ont changé
+        if: steps.cfg.outputs.pret == 'oui'
         env:
           HOTE: ${{ secrets.O2S_HOST }}
           USER: ${{ secrets.O2S_USER }}
@@ -70,6 +90,7 @@ jobs:
           '" || echo "Étape pip ignorée (virtualenv introuvable) — sans conséquence si rien n'a changé."
 
       - name: Redémarrer l'application (Passenger)
+        if: steps.cfg.outputs.pret == 'oui'
         env:
           HOTE: ${{ secrets.O2S_HOST }}
           USER: ${{ secrets.O2S_USER }}
