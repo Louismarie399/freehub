@@ -14,7 +14,7 @@
 </FilesMatch>
 
 # Fichiers nommément protégés (sans extension ou à nom fixe).
-<FilesMatch "^(Dockerfile|\.deployignore|\.gitignore|\.deploy\.env.*|composer\..*|passenger_wsgi\.py|Lancer FreeHub\.command)$">
+<FilesMatch "^(Dockerfile|requirements\.txt|\.deployignore|\.gitignore|\.deploy\.env.*|composer\..*|passenger_wsgi\.py|Lancer FreeHub\.command)$">
   Require all denied
 </FilesMatch>
 
@@ -36,8 +36,11 @@ Options -Indexes
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # Toutes les routes /api/* passent par le routeur PHP — mais seulement une fois
-  # qu'il existe (la condition évite de casser le site pendant la migration).
+  # Toutes les routes /api/* passent par le routeur PHP.
+  # La 1re condition est INDISPENSABLE : sans elle, la cible /api/index.php
+  # correspond à nouveau au motif ^api/ et provoque une boucle de réécriture
+  # infinie (erreur 500). Les fichiers réels sont servis directement.
+  RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{DOCUMENT_ROOT}/api/index.php -f
   RewriteRule ^api/ /api/index.php [L,QSA]
 
