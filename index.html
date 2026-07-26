@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Freehub — Le hub des freelances</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:#fff;font-family:'Poppins',system-ui,sans-serif;color:#0f1b33;-webkit-font-smoothing:antialiased}
+  a{color:#2f6bff;text-decoration:none}
+  a:hover{color:#1e46b8}
+  input,select,textarea,button{font-family:'Poppins',sans-serif}
+  input:focus,select:focus,textarea:focus{border-color:#2f6bff!important;box-shadow:0 0 0 3px rgba(47,107,255,.14)}
+  @keyframes fhfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+  @keyframes fhpop{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+  @keyframes fhfade{from{opacity:0}to{opacity:1}}
+  @keyframes fhdrift{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-7px) rotate(var(--r,0deg))}}
+
+  /* Interactions : gérées en CSS plutôt qu'en style inline. */
+  .nav-login{background:none;border:none;font-size:14.5px;font-weight:700;color:#0f1b33;cursor:pointer;transition:color .2s}
+  .nav-login:hover{color:#2f6bff}
+  .nav-cta{font-size:14.5px;font-weight:700;color:#fff;background:#2f6bff;padding:11px 20px;border:none;border-radius:11px;cursor:pointer;transition:background .2s}
+  .nav-cta:hover{background:#1e46b8}
+  .btn-hero{font-size:15.5px;font-weight:800;color:#fff;background:#2f6bff;padding:16px 30px;border:none;border-radius:13px;cursor:pointer;box-shadow:0 12px 26px -12px rgba(47,107,255,.7);transition:transform .2s,background .2s,box-shadow .2s}
+  .btn-hero:hover{background:#1e46b8;transform:translateY(-2px);box-shadow:0 16px 30px -12px rgba(47,107,255,.7)}
+  .card-prob{border:1px solid rgba(15,27,51,.09);border-radius:16px;padding:28px;transition:transform .25s,box-shadow .25s,border-color .25s}
+  .card-prob:hover{border-color:rgba(47,107,255,.25);transform:translateY(-4px);box-shadow:0 20px 40px -28px rgba(15,27,51,.5)}
+  .btn-white-cta{font-size:17px;font-weight:800;color:#2f6bff;background:#fff;padding:18px 36px;border:none;border-radius:14px;cursor:pointer;transition:transform .2s,box-shadow .2s}
+  .btn-white-cta:hover{transform:translateY(-3px);box-shadow:0 20px 40px -18px rgba(0,0,0,.4)}
+  .btn-blue{width:100%;padding:14px;background:#2f6bff;color:#fff;border:none;border-radius:12px;font-weight:800;font-size:15.5px;cursor:pointer;transition:background .2s}
+  .btn-blue:hover{background:#1e46b8}
+  .btn-blue[disabled]{opacity:.55;cursor:default}
+  .fld{width:100%;padding:12px 14px;border:1.5px solid rgba(15,27,51,.12);border-radius:11px;font-size:14.5px;outline:none;transition:.15s}
+  .fld-label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+  .auth-err{display:none;font-size:13px;font-weight:600;color:#b91c1c;background:#fef2f2;border-radius:9px;padding:10px 12px;line-height:1.45}
+
+  /* Bandeau alpha — tout en haut, au-dessus de la nav */
+  .alpha-bar{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+    padding:9px 24px;background:linear-gradient(90deg,#0f1b33 0%,#1e46b8 55%,#2f6bff 100%);
+    color:#fff;font-size:13px;font-weight:600;letter-spacing:.01em;text-align:center}
+  .alpha-tag{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    background:rgba(255,255,255,.16);padding:3px 9px;border-radius:100px}
+  .alpha-sep{opacity:.45}
+  .alpha-strong{font-weight:700;color:#cfe0ff}
+
+  /* Champ « code d'accès » : mis en avant, saisie en majuscules */
+  .code-box{background:#f4f8ff;border:1.5px dashed #b9cdf6;border-radius:12px;padding:13px 14px}
+  .code-box .fld{background:#fff;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  .code-aide{font-size:11.5px;color:#5b6b85;font-weight:500;margin-top:7px;line-height:1.45}
+
+  /* Bouton Google */
+  .btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:11px;
+    padding:13px;border:1.5px solid rgba(15,27,51,.14);border-radius:12px;background:#fff;
+    font-weight:700;font-size:15px;color:#0f1b33;cursor:pointer;transition:background .15s}
+  .btn-google:hover{background:#f7f9fc}
+  .g-mark{width:19px;height:19px;flex:none}
+  .ou-sep{display:flex;align-items:center;gap:14px;margin:20px 0;color:#a9b3c6;font-size:12.5px;font-weight:600}
+  .ou-sep > div{flex:1;height:1px;background:rgba(15,27,51,.1)}
+</style>
+</head>
+<body>
+
+<div id="top" style="min-width:1180px">
+  <!-- ============ BANDEAU ALPHA ============ -->
+  <div class="alpha-bar">
+    <span class="alpha-tag">Alpha</span>
+    <span>FreeHub est en <span class="alpha-strong">alpha privée jusqu'en septembre 2026</span></span>
+    <span class="alpha-sep">·</span>
+    <span>Accès ultra limité, sur code d'invitation</span>
+  </div>
+
+  <!-- ============ NAV ============ -->
+  <nav id="fhnav" style="position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:16px 48px;background:rgba(255,255,255,.82);backdrop-filter:blur(12px);border-bottom:1px solid rgba(15,27,51,.06);transition:box-shadow .3s">
+    <a href="#top"><img src="assets/freehub-logo.png" alt="Freehub" style="height:26px;display:block"></a>
+    <div style="display:flex;align-items:center;gap:32px;font-size:14.5px;font-weight:600;color:#5b6b85">
+      <a href="#probleme" style="color:#5b6b85">Le problème</a>
+      <a href="#solution" style="color:#5b6b85">La solution</a>
+      <a href="#temoignages" style="color:#5b6b85">Témoignages</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <button class="nav-login" onclick="openAuth('login')">Se connecter</button>
+      <button class="nav-cta" onclick="openAuth('signup')">Créer mon compte</button>
+    </div>
+  </nav>
+
+  <!-- ============ HERO ============ -->
+  <section style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;padding:84px 48px 76px;background:linear-gradient(180deg,#f4f8ff,#fff)">
+    <div>
+      <div data-reveal data-reveal-delay="0" style="display:inline-flex;align-items:center;gap:8px;background:#e6efff;color:#2f6bff;font-weight:700;font-size:13px;padding:7px 14px;border-radius:100px;margin-bottom:22px">🇫🇷 Pensé pour les indépendants français</div>
+      <h1 data-reveal data-reveal-delay="90" style="font-size:54px;line-height:1.04;letter-spacing:-.03em;font-weight:800;margin:0 0 20px">L'administratif ne devrait jamais te bloquer.</h1>
+      <p data-reveal data-reveal-delay="180" style="font-size:18px;line-height:1.55;color:#5b6b85;margin:0 0 30px;max-width:470px">Statuts, cotisations, impôts… On te l'explique simplement, on te donne les bons outils, et on personnalise tout selon ton profil. Tu avances, enfin sereinement.</p>
+      <div data-reveal data-reveal-delay="270" style="display:flex;gap:14px;margin-bottom:22px">
+        <button class="btn-hero" onclick="openAuth('signup')">Commencer gratuitement</button>
+      </div>
+      <div data-reveal data-reveal-delay="360" style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#5b6b85;font-weight:600"><span style="color:#2f6bff;font-weight:800">✓</span> 100% gratuit · Prêt en 2 minutes · Sans carte bancaire</div>
+    </div>
+    <div data-reveal data-reveal-delay="200" style="position:relative">
+      <div style="background:#fff;border:1px solid rgba(15,27,51,.1);border-radius:18px;box-shadow:0 34px 70px -34px rgba(47,107,255,.45);padding:22px;animation:fhfloat 6s ease-in-out infinite">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><span style="font-weight:700;font-size:14px">Ton simulateur de charges</span><span style="font-size:12px;color:#2f6bff;font-weight:700;background:#e6efff;padding:4px 9px;border-radius:7px">Micro-BNC</span></div>
+        <div style="height:150px;border-radius:12px;background:repeating-linear-gradient(45deg,#eef4ff,#eef4ff 11px,#e3edff 11px,#e3edff 22px);display:flex;align-items:center;justify-content:center;color:#7c8bab;font-family:ui-monospace,Menlo,monospace;font-size:12px">graphique · revenu net</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+          <div style="background:#f4f8ff;border-radius:11px;padding:13px"><div style="font-size:12px;color:#5b6b85;font-weight:600">Cotisations</div><div style="font-size:22px;font-weight:800">21,1%</div></div>
+          <div style="background:#f4f8ff;border-radius:11px;padding:13px"><div style="font-size:12px;color:#5b6b85;font-weight:600">Net estimé</div><div style="font-size:22px;font-weight:800;color:#2f6bff">3 940€</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROBLÈME ============ -->
+  <section id="probleme" style="padding:84px 48px">
+    <div data-reveal style="text-align:center;max-width:640px;margin:0 auto 48px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#2f6bff;margin-bottom:12px">On connaît le blocage</div>
+      <h2 style="font-size:40px;line-height:1.08;letter-spacing:-.025em;font-weight:800;margin:0 0 14px">Trop de lois, trop de paperasse, trop de doutes.</h2>
+      <p style="font-size:17px;color:#5b6b85;margin:0;line-height:1.55">En France, la moindre démarche donne l'impression d'être un parcours du combattant. Résultat : on procrastine, on paie trop, ou on n'ose même pas se lancer.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1000px;margin:0 auto">
+      <div class="card-prob" data-reveal data-reveal-delay="0"><div style="font-size:28px;margin-bottom:12px">😵‍💫</div><div style="font-weight:800;font-size:18px;margin-bottom:8px">Le labyrinthe des statuts</div><div style="font-size:14.5px;color:#5b6b85;line-height:1.5">Micro, EURL, SASU… Personne ne t'explique clairement ce qui te convient vraiment.</div></div>
+      <div class="card-prob" data-reveal data-reveal-delay="120"><div style="font-size:28px;margin-bottom:12px">🧾</div><div style="font-weight:800;font-size:18px;margin-bottom:8px">Le brouillard fiscal</div><div style="font-size:14.5px;color:#5b6b85;line-height:1.5">Cotisations, impôts, TVA : impossible de savoir ce qu'il te reste vraiment à la fin.</div></div>
+      <div class="card-prob" data-reveal data-reveal-delay="240"><div style="font-size:28px;margin-bottom:12px">⏳</div><div style="font-weight:800;font-size:18px;margin-bottom:8px">Le « je verrai plus tard »</div><div style="font-size:14.5px;color:#5b6b85;line-height:1.5">Le blocage psychologique s'installe et te fait perdre du temps… et de l'argent.</div></div>
+    </div>
+  </section>
+
+  <!-- ============ TÉMOIGNAGES ============ -->
+  <section id="temoignages" style="padding:84px 48px;background:#f4f8ff;overflow:hidden">
+    <div data-reveal style="text-align:center;max-width:660px;margin:0 auto 52px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#2f6bff;margin-bottom:12px">Ça te parle ?</div>
+      <h2 style="font-size:40px;line-height:1.08;letter-spacing:-.025em;font-weight:800;margin:0 0 14px">Ces phrases, tu te les es déjà dites ?</h2>
+      <p style="font-size:17px;color:#5b6b85;margin:0">Le blocage, c'est humain. On est là pour le lever — un pote à la fois.</p>
+    </div>
+    <div style="max-width:960px;margin:0 auto;display:grid;grid-template-columns:repeat(2,1fr);gap:22px 40px;align-items:start">
+      <div data-reveal data-reveal-delay="0" style="justify-self:start">
+        <div style="--r:-1.5deg;animation:fhdrift 7s ease-in-out infinite;display:flex;gap:13px;align-items:flex-end">
+          <div style="width:44px;height:44px;border-radius:50%;background:#2f6bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">KM</div>
+          <div style="background:#fff;border-radius:20px 20px 20px 5px;padding:16px 20px;box-shadow:0 14px 30px -22px rgba(15,27,51,.6)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« Je comprends rien à mes cotisations. »</div><div style="font-size:12.5px;color:#8a97ad;font-weight:600;margin-top:6px">Karim · développeur freelance</div></div>
+        </div>
+      </div>
+      <div data-reveal data-reveal-delay="140" style="justify-self:end">
+        <div style="--r:1.5deg;animation:fhdrift 8s ease-in-out infinite .5s;display:flex;gap:13px;align-items:flex-end;flex-direction:row-reverse">
+          <div style="width:44px;height:44px;border-radius:50%;background:#0f1b33;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">SB</div>
+          <div style="background:#2f6bff;color:#fff;border-radius:20px 20px 5px 20px;padding:16px 20px;box-shadow:0 14px 30px -20px rgba(47,107,255,.8)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« J'ai peur de faire une erreur qui coûte cher. »</div><div style="font-size:12.5px;color:#cfe0ff;font-weight:600;margin-top:6px">Sofia · consultante</div></div>
+        </div>
+      </div>
+      <div data-reveal data-reveal-delay="80" style="justify-self:start">
+        <div style="--r:1deg;animation:fhdrift 7.5s ease-in-out infinite .8s;display:flex;gap:13px;align-items:flex-end">
+          <div style="width:44px;height:44px;border-radius:50%;background:#5b8dff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">TP</div>
+          <div style="background:#fff;border-radius:20px 20px 20px 5px;padding:16px 20px;box-shadow:0 14px 30px -22px rgba(15,27,51,.6)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« Micro ou société, je choisis quoi ? »</div><div style="font-size:12.5px;color:#8a97ad;font-weight:600;margin-top:6px">Thomas · photographe</div></div>
+        </div>
+      </div>
+      <div data-reveal data-reveal-delay="200" style="justify-self:end">
+        <div style="--r:-1deg;animation:fhdrift 8.5s ease-in-out infinite .3s;display:flex;gap:13px;align-items:flex-end;flex-direction:row-reverse">
+          <div style="width:44px;height:44px;border-radius:50%;background:#1e46b8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">IN</div>
+          <div style="background:#fff;border-radius:20px 20px 5px 20px;padding:16px 20px;box-shadow:0 14px 30px -22px rgba(15,27,51,.6)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« La TVA, ça me dépasse complètement. »</div><div style="font-size:12.5px;color:#8a97ad;font-weight:600;margin-top:6px">Inès · illustratrice</div></div>
+        </div>
+      </div>
+      <div data-reveal data-reveal-delay="160" style="justify-self:start">
+        <div style="--r:-1.5deg;animation:fhdrift 7.2s ease-in-out infinite .6s;display:flex;gap:13px;align-items:flex-end">
+          <div style="width:44px;height:44px;border-radius:50%;background:#7aa0ff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">LC</div>
+          <div style="background:#fff;border-radius:20px 20px 20px 5px;padding:16px 20px;box-shadow:0 14px 30px -22px rgba(15,27,51,.6)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« Je repousse mon immatriculation depuis 6 mois… »</div><div style="font-size:12.5px;color:#8a97ad;font-weight:600;margin-top:6px">Lucas · coach sportif</div></div>
+        </div>
+      </div>
+      <div data-reveal data-reveal-delay="260" style="justify-self:end">
+        <div style="--r:1.5deg;animation:fhdrift 8s ease-in-out infinite .9s;display:flex;gap:13px;align-items:flex-end;flex-direction:row-reverse">
+          <div style="width:44px;height:44px;border-radius:50%;background:#0f1b33;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">CH</div>
+          <div style="background:#fff;border-radius:20px 20px 5px 20px;padding:16px 20px;box-shadow:0 14px 30px -22px rgba(15,27,51,.6)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« On m'a dit que je payais trop, mais où ? »</div><div style="font-size:12.5px;color:#8a97ad;font-weight:600;margin-top:6px">Chloé · rédactrice web</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SOLUTION ============ -->
+  <section id="solution" style="padding:88px 48px">
+    <div data-reveal style="text-align:center;max-width:640px;margin:0 auto 50px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#2f6bff;margin-bottom:12px">Le déclic</div>
+      <h2 style="font-size:40px;line-height:1.08;letter-spacing:-.025em;font-weight:800;margin:0 0 14px">Ce qui change quand tout est clair.</h2>
+      <p style="font-size:17px;color:#5b6b85;margin:0">Bien comprise, la fiscalité te fait gagner de l'argent. Voilà la différence.</p>
+    </div>
+    <div style="max-width:1040px;margin:0 auto;display:grid;grid-template-columns:1fr 64px 1fr;align-items:center;gap:0">
+      <!-- AVANT -->
+      <div data-reveal data-reveal-delay="0" style="background:#f3f5f9;border-radius:22px;padding:36px 32px">
+        <div style="display:inline-block;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#94a1b8;background:#fff;padding:7px 13px;border-radius:8px;margin-bottom:26px">Avant Freehub</div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:#e4e8ef;color:#94a1b8;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✕</span><span style="font-size:16px;color:#5b6b85;line-height:1.45">10 onglets ouverts, 3 forums contradictoires, 0 réponse claire.</span></div>
+          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:#e4e8ef;color:#94a1b8;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✕</span><span style="font-size:16px;color:#5b6b85;line-height:1.45">Tu paies « au cas où » et tu perds de l'argent chaque mois.</span></div>
+          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:#e4e8ef;color:#94a1b8;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✕</span><span style="font-size:16px;color:#5b6b85;line-height:1.45">Le blocage psychologique t'empêche de te lancer.</span></div>
+        </div>
+      </div>
+      <!-- flèche -->
+      <div data-reveal data-reveal-delay="180" style="display:flex;align-items:center;justify-content:center"><div style="width:48px;height:48px;border-radius:50%;background:#2f6bff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;box-shadow:0 14px 26px -12px rgba(47,107,255,.8)">→</div></div>
+      <!-- AVEC -->
+      <div data-reveal data-reveal-delay="120" style="background:#2f6bff;color:#fff;border-radius:22px;padding:36px 32px;box-shadow:0 34px 70px -36px rgba(47,107,255,.9)">
+        <div style="display:inline-block;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#2f6bff;background:#fff;padding:7px 13px;border-radius:8px;margin-bottom:26px">Avec Freehub</div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✓</span><span style="font-size:16px;line-height:1.45">Une seule plateforme, des réponses claires adaptées à ton cas.</span></div>
+          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✓</span><span style="font-size:16px;line-height:1.45">Des simulateurs qui montrent exactement quoi optimiser.</span></div>
+          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✓</span><span style="font-size:16px;line-height:1.45">La confiance de savoir ce que tu fais — et de passer à l'action.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA final ============ -->
+  <section style="padding:20px 48px 90px">
+    <div data-reveal style="max-width:1040px;margin:0 auto;background:#2f6bff;border-radius:26px;padding:64px;text-align:center;color:#fff;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-120px;right:-60px;width:360px;height:360px;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 65%)"></div>
+      <div style="position:relative">
+        <h2 style="font-size:38px;font-weight:800;letter-spacing:-.025em;margin:0 0 14px">Reprends le contrôle de ton activité.</h2>
+        <p style="font-size:18px;opacity:.88;margin:0 0 30px">Rejoins les indépendants qui ont arrêté de subir l'administratif. C'est gratuit.</p>
+        <button class="btn-white-cta" onclick="openAuth('signup')">Créer mon compte gratuit</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer style="padding:34px 48px;border-top:1px solid rgba(15,27,51,.07);display:flex;justify-content:space-between;align-items:center">
+    <img src="assets/freehub-logo.png" alt="Freehub" style="height:22px;display:block">
+    <span style="font-size:13px;color:#8a97ad;font-weight:500">© 2026 Freehub · Le hub des freelances</span>
+  </footer>
+</div>
+
+<!-- ============ MODAL CONNEXION / INSCRIPTION ============ -->
+<!-- Création de compte volontairement minimale : prénom, nom, e-mail, mot de passe.
+     Les questions d'activité (statut, CA) sont posées dans l'onboarding du dashboard,
+     une fois le compte créé — pas de doublon entre les deux. -->
+<div id="authOverlay" style="display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px;background:rgba(15,27,51,.55);backdrop-filter:blur(6px)" onclick="closeAuth()">
+  <div onclick="event.stopPropagation()" style="width:900px;max-width:100%;max-height:92vh;overflow:auto;background:#fff;border-radius:22px;box-shadow:0 50px 100px -30px rgba(15,27,51,.6);animation:fhpop .32s cubic-bezier(.2,.8,.2,1)">
+    <div style="display:grid;grid-template-columns:.85fr 1.1fr">
+      <!-- panneau foncé -->
+      <div style="background:#0f1b33;color:#fff;padding:38px 34px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;min-height:500px">
+        <div style="position:absolute;bottom:-140px;left:-80px;width:400px;height:400px;background:radial-gradient(circle,rgba(47,107,255,.5),transparent 65%)"></div>
+        <div style="position:relative"><img src="assets/freehub-logo-blanc.png" alt="Freehub" style="height:24px;display:block"></div>
+        <div style="position:relative">
+          <h3 id="authPanelTitle" style="font-size:27px;line-height:1.15;letter-spacing:-.02em;font-weight:800;margin:0 0 20px">Ton hub perso pour dompter l'administratif.</h3>
+          <p id="authPanelText" style="font-size:15px;line-height:1.55;color:rgba(255,255,255,.72);margin:0">Crée ton compte en 30 secondes. On personnalise ton espace juste après, ensemble.</p>
+        </div>
+        <div style="position:relative;font-size:13px;color:rgba(255,255,255,.5);line-height:1.5">« Enfin quelqu'un qui m'explique sans me faire flipper. »<br><span style="color:rgba(255,255,255,.75);font-weight:600">Léa · graphiste freelance</span></div>
+      </div>
+      <!-- formulaire -->
+      <div style="padding:36px 40px;display:flex;flex-direction:column;justify-content:center">
+        <div style="display:flex;background:#f0f3f9;border-radius:13px;padding:5px;margin-bottom:26px">
+          <button id="tabSignup" type="button" onclick="setTab('signup')">S'inscrire</button>
+          <button id="tabLogin" type="button" onclick="setTab('login')">Se connecter</button>
+        </div>
+
+        <!-- INSCRIPTION -->
+        <form id="formSignup" onsubmit="return submitAuth(event,'signup')">
+          <h4 style="font-size:22px;font-weight:800;letter-spacing:-.02em;margin:0 0 5px">Crée ton compte</h4>
+          <p style="font-size:14px;color:#5b6b85;margin:0 0 22px">L'essentiel pour démarrer. On personnalise ton espace juste après.</p>
+
+          <!-- Le code d'accès est demandé en premier : il conditionne tout le reste,
+               y compris l'inscription via Google. -->
+          <div class="code-box" data-code-zone style="margin-bottom:16px">
+            <label class="fld-label">Code d'accès <span style="color:#2f6bff">*</span></label>
+            <input class="fld" name="code" placeholder="Ex : ALPHA2026" autocomplete="off" spellcheck="false">
+            <div class="code-aide">🔒 Alpha privée jusqu'en septembre 2026. Le code t'est remis
+              directement par l'équipe FreeHub.</div>
+          </div>
+
+          <button type="button" class="btn-google" data-google-btn onclick="googleAuth('signup')">
+            <svg class="g-mark" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            Continuer avec Google
+          </button>
+          <div class="ou-sep" data-google-btn><div></div>OU<div></div></div>
+
+          <div style="display:flex;flex-direction:column;gap:13px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div><label class="fld-label">Prénom</label><input class="fld" name="prenom" placeholder="Léa" autocomplete="given-name"></div>
+              <div><label class="fld-label">Nom</label><input class="fld" name="nom" placeholder="Martin" autocomplete="family-name"></div>
+            </div>
+            <div><label class="fld-label">Adresse e-mail</label><input class="fld" name="email" type="email" placeholder="lea@exemple.fr" autocomplete="email"></div>
+            <div><label class="fld-label">Mot de passe</label><input class="fld" name="password" type="password" placeholder="8 caractères minimum" autocomplete="new-password"></div>
+            <div id="errSignup" class="auth-err"></div>
+            <button class="btn-blue" type="submit" style="margin-top:4px">Créer mon compte gratuit</button>
+          </div>
+        </form>
+
+        <!-- CONNEXION -->
+        <form id="formLogin" style="display:none" onsubmit="return submitAuth(event,'login')">
+          <h4 style="font-size:22px;font-weight:800;letter-spacing:-.02em;margin:0 0 5px">Content de te revoir 👋</h4>
+          <p style="font-size:14px;color:#5b6b85;margin:0 0 22px">Connecte-toi pour retrouver ton hub.</p>
+
+          <button type="button" class="btn-google" data-google-btn onclick="googleAuth('login')">
+            <svg class="g-mark" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            Continuer avec Google
+          </button>
+          <div class="ou-sep" data-google-btn><div></div>OU<div></div></div>
+
+          <div style="display:flex;flex-direction:column;gap:13px">
+            <div><label class="fld-label">Adresse e-mail</label><input class="fld" name="email" type="email" placeholder="lea@exemple.fr" autocomplete="email"></div>
+            <div><label class="fld-label">Mot de passe</label><input class="fld" name="password" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+            <div id="errLogin" class="auth-err"></div>
+            <button class="btn-blue" type="submit" style="margin-top:4px">Se connecter</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---- Révélation au scroll + ombre de la nav ----
+  (function(){
+    var els = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
+
+    function montrer(el, delai){
+      if(el.dataset.revealed) return;
+      el.dataset.revealed = '1';
+      var afficher = function(){ el.style.opacity = '1'; el.style.transform = 'none'; };
+      if(delai > 0) setTimeout(afficher, delai); else afficher();
+    }
+    function montrerTout(){ els.forEach(function(el){ montrer(el, 0); }); }
+
+    // Sans IntersectionObserver (ou si l'utilisateur limite les animations), on
+    // n'escamote rien : le contenu doit rester lisible en toutes circonstances.
+    var animer = ('IntersectionObserver' in window)
+      && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if(!animer) return initNav();
+
+    els.forEach(function(el){
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(26px)';
+      el.style.transition = 'opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1)';
+    });
+    var io = new IntersectionObserver(function(ents){
+      ents.forEach(function(e){
+        if(!e.isIntersecting) return;
+        var el = e.target;
+        montrer(el, parseInt(el.getAttribute('data-reveal-delay') || '0', 10));
+        io.unobserve(el);
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    els.forEach(function(el){ io.observe(el); });
+
+    // Filet de sécurité : si l'observer ne se déclenche pas (onglet ouvert en
+    // arrière-plan, moteur exotique), on affiche tout plutôt que rien.
+    setTimeout(montrerTout, 2500);
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden) setTimeout(montrerTout, 1200);
+    });
+    initNav();
+
+    function initNav(){
+      var nav = document.getElementById('fhnav');
+      window.addEventListener('scroll', function(){
+        if(nav) nav.style.boxShadow = window.scrollY > 8 ? '0 8px 24px -18px rgba(15,27,51,.5)' : 'none';
+      }, { passive: true });
+    }
+  })();
+
+  // ---- Modal d'authentification ----
+  var TAB_BASE = 'flex:1;padding:10px;border:none;border-radius:9px;font-weight:700;font-size:14.5px;cursor:pointer;transition:all .15s';
+  var TAB_ON   = 'background:#fff;color:#0f1b33;box-shadow:0 2px 6px -2px rgba(15,27,51,.28);' + TAB_BASE;
+  var TAB_OFF  = 'background:transparent;color:#8a97ad;' + TAB_BASE;
+
+  function setTab(mode){
+    var signup = mode === 'signup';
+    document.getElementById('tabSignup').setAttribute('style', signup ? TAB_ON : TAB_OFF);
+    document.getElementById('tabLogin').setAttribute('style', signup ? TAB_OFF : TAB_ON);
+    document.getElementById('formSignup').style.display = signup ? 'block' : 'none';
+    document.getElementById('formLogin').style.display  = signup ? 'none' : 'block';
+    document.getElementById('authPanelTitle').textContent = signup
+      ? "Ton hub perso pour dompter l'administratif."
+      : 'Ravi de te retrouver.';
+    document.getElementById('authPanelText').textContent = signup
+      ? 'Crée ton compte en 30 secondes. On personnalise ton espace juste après, ensemble.'
+      : 'Retrouve ton hub, tes simulateurs et tes conseils personnalisés en un clin d’œil.';
+  }
+
+  function openAuth(mode){
+    mode = mode || 'signup';
+    setTab(mode);
+    document.getElementById('errSignup').style.display = 'none';
+    document.getElementById('errLogin').style.display = 'none';
+    var ov = document.getElementById('authOverlay');
+    ov.style.display = 'flex';
+    ov.style.animation = 'fhfade .25s ease';
+    var champ = document.querySelector('#form' + (mode === 'login' ? 'Login' : 'Signup') + ' input');
+    if(champ) setTimeout(function(){ try { champ.focus(); } catch(e){} }, 60);
+  }
+  function closeAuth(){ document.getElementById('authOverlay').style.display = 'none'; }
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeAuth(); });
+
+  function showErr(mode, msg){
+    var el = document.getElementById(mode === 'login' ? 'errLogin' : 'errSignup');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  // Envoi vers le vrai backend (mêmes endpoints que le dashboard). En cas de
+  // succès, le cookie de session est posé : on part directement sur /app.
+  function submitAuth(ev, mode){
+    ev.preventDefault();
+    var form = ev.target;
+    var btn = form.querySelector('button[type="submit"]');
+    var data = {};
+    Array.prototype.forEach.call(form.querySelectorAll('input'), function(i){ data[i.name] = i.value; });
+
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((data.email || '').trim())){
+      showErr(mode, 'Adresse e-mail invalide.'); return false;
+    }
+    if(mode === 'signup'){
+      if(CODE_REQUIS && !(data.code || '').trim()){
+        showErr(mode, 'Un code d’accès est nécessaire pendant l’alpha privée.'); return false;
+      }
+      if(!(data.prenom || '').trim()){ showErr(mode, 'Indique ton prénom.'); return false; }
+      if((data.password || '').length < 8){
+        showErr(mode, 'Le mot de passe doit faire au moins 8 caractères.'); return false;
+      }
+    } else if(!(data.password || '').length){
+      showErr(mode, 'Entre ton mot de passe.'); return false;
+    }
+
+    var body = mode === 'signup'
+      ? { email:data.email.trim(), password:data.password,
+          prenom:(data.prenom||'').trim(), nom:(data.nom||'').trim(),
+          code:(data.code||'').trim() }
+      : { email:data.email.trim(), password:data.password };
+
+    var label = btn.textContent;
+    btn.disabled = true; btn.textContent = '…';
+    fetch('api/auth/' + mode, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(body),
+    }).then(function(r){
+      return r.json().then(function(d){ return { ok:r.ok, d:d }; },
+                          function(){ return { ok:r.ok, d:{} }; });
+    }).then(function(res){
+      if(res.ok){ window.location.href = 'app'; return; }
+      btn.disabled = false; btn.textContent = label;
+      showErr(mode, (res.d && res.d.error) || 'Une erreur est survenue. Réessaie.');
+    }, function(){
+      btn.disabled = false; btn.textContent = label;
+      showErr(mode, 'Serveur injoignable. Réessaie.');
+    });
+    return false;
+  }
+
+  // Le code d'accès doit accompagner l'inscription via Google : on le passe au
+  // serveur, qui le vérifie au retour avant de créer quoi que ce soit.
+  function googleAuth(mode){
+    var code = '';
+    if(mode === 'signup'){
+      var champ = document.querySelector('#formSignup [name="code"]');
+      code = champ ? champ.value.trim() : '';
+      if(CODE_REQUIS && !code){
+        showErr('signup', 'Renseigne d’abord ton code d’accès, puis continue avec Google.');
+        if(champ) champ.focus();
+        return;
+      }
+    }
+    window.location.href = 'api/auth/google/start?mode=' + mode
+      + (code ? '&code=' + encodeURIComponent(code) : '');
+  }
+
+  // Configuration du serveur : Google actif ? code exigé ?
+  var CODE_REQUIS = true;
+  fetch('api/auth/config', { credentials:'same-origin' })
+    .then(function(r){ return r.json(); })
+    .then(function(cfg){
+      CODE_REQUIS = !!cfg.codeRequis;
+      if(!cfg.codeRequis){
+        [].forEach.call(document.querySelectorAll('[data-code-zone]'), function(el){
+          el.style.display = 'none';
+        });
+      }
+      // Sans identifiants Google configurés, on masque le bouton plutôt que de
+      // proposer un chemin qui échouerait.
+      if(!cfg.google){
+        [].forEach.call(document.querySelectorAll('[data-google-btn]'), function(el){
+          el.style.display = 'none';
+        });
+      }
+    }, function(){});
+
+  // Message renvoyé par le retour Google (?erreur=…).
+  (function(){
+    var m = /[?&]erreur=([^&]+)/.exec(window.location.search);
+    if(!m) return;
+    openAuth('signup');
+    showErr('signup', decodeURIComponent(m[1].replace(/\+/g, ' ')));
+    history.replaceState(null, '', window.location.pathname);
+  })();
+
+  setTab('signup');
+</script>
+</body>
+</html>

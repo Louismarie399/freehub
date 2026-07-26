@@ -1,0 +1,24 @@
+# Configuration Fly.io pour FreeHub.
+# `app` sera renseigné/ajusté par `fly launch` (nom unique sur Fly).
+app = "freehub"
+primary_region = "cdg"          # Paris — au plus près des utilisateurs français
+
+[build]
+
+[env]
+  HOST = "0.0.0.0"
+  PORT = "8080"
+  FH_DATA_DIR = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true            # redirige tout le trafic http -> https
+  auto_stop_machines = "stop"   # s'endort sans trafic (économie), se réveille au 1er appel
+  auto_start_machines = true
+  min_machines_running = 0
+
+# Volume persistant : la base SQLite (comptes + demandes partenaires) y vit et
+# survit aux redéploiements. À créer une fois : `fly volumes create freehub_data`.
+[mounts]
+  source = "freehub_data"
+  destination = "/data"

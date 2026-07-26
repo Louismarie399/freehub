@@ -1,0 +1,35 @@
+# Fichiers exclus du déploiement (rsync --exclude-from).
+# Tout ce qui est listé ici est aussi PROTÉGÉ de la suppression côté serveur :
+# c'est ce qui empêche un déploiement d'effacer la base de production.
+
+# Secrets et données de production
+.env
+freehub.db
+freehub.db-journal
+freehub.db-wal
+freehub.db-shm
+
+# Runtime Passenger (créé sur le serveur)
+tmp/
+
+# Outils de dev / autres hébergeurs
+.git/
+.github/
+.gitignore
+.deployignore
+.deploy.env
+deploy.sh
+Dockerfile
+.dockerignore
+fly.toml
+DEPLOY.md
+MISE-EN-LIGNE-BRIEF.md
+Lancer FreeHub.command
+
+# Divers
+__pycache__/
+*.pyc
+.DS_Store
+*.dmg
+node_modules/
+screenshots/

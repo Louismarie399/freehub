@@ -1,0 +1,6512 @@
+(function(){
+  "use strict";
+
+  // ---------------------------------------------------------------------------
+  // Catalogue des objectifs (données statiques, côté client)
+  // ---------------------------------------------------------------------------
+  // Les domaines donnent leur couleur aux objectifs : on classe par sujet, pas
+  // par objectif. Teintes volontairement plus douces que dans le profil.
+  var DOMAINES = {
+    statut:        { l:'Statut',        c:'#2563eb', soft:'#f2f6ff', ico:'🏛' },
+    fiscalite:     { l:'Fiscalité',     c:'#b45309', soft:'#fffbef', ico:'🧾' },
+    tva:           { l:'TVA',           c:'#7c3aed', soft:'#f7f3ff', ico:'📊' },
+    administratif: { l:'Administratif', c:'#4a6180', soft:'#ecf0f8', ico:'📁' },
+    pilotage:      { l:'Pilotage',      c:'#0f9d6e', soft:'#f0fdf6', ico:'🎛' },
+  };
+  var ORDRE_DOMAINES = ['statut','fiscalite','tva','administratif','pilotage'];
+
+  // ---------------------------------------------------------------------------
+  // Lexique — les mots de l'administratif, expliqués simplement
+  // ---------------------------------------------------------------------------
+  // `cat` reprend les domaines pour la couleur ; `def` = 1 à 3 phrases, sans
+  // jargon. On n'invente aucun chiffre : les définitions restent qualitatives.
+  var LEXIQUE = [
+    { id:'micro', t:'Micro-entreprise', cat:'statut',
+      court:'Le régime simplifié de l’entreprise individuelle.',
+      def:'Un régime simplifié pour exercer en solo : démarches allégées, comptabilité réduite, et des cotisations calculées en pourcentage de ce que tu encaisses. On dit aussi « auto-entreprise ».' },
+    { id:'ei', t:'Entreprise individuelle (EI)', cat:'statut',
+      court:'Tu es l’entreprise, sans créer de société.',
+      def:'Tu exerces en ton nom propre, sans personne morale distincte. La micro-entreprise est une version simplifiée de l’EI.' },
+    { id:'eurl', t:'EURL', cat:'statut',
+      court:'Une SARL à un seul associé.',
+      def:'Une société à responsabilité limitée avec un seul associé. Le dirigeant y est « travailleur non salarié ». Elle sépare ton patrimoine de celui de l’entreprise.' },
+    { id:'sasu', t:'SASU', cat:'statut',
+      court:'Une SAS à un seul associé.',
+      def:'Une société par actions simplifiée avec un seul associé. Le dirigeant y est « assimilé salarié », mieux couvert socialement mais plus coûteux en cotisations.' },
+    { id:'tns', t:'Travailleur non salarié (TNS)', cat:'statut',
+      court:'Le régime social du dirigeant d’EURL ou de micro.',
+      def:'Un statut social où tu cotises à ta propre caisse d’indépendant. Cotisations plus légères qu’un salarié, mais protection sociale plus limitée.' },
+    { id:'assimile', t:'Assimilé salarié', cat:'statut',
+      court:'Le régime social du dirigeant de SASU.',
+      def:'Un dirigeant rattaché au régime général, presque comme un salarié : meilleure couverture (hors chômage), mais cotisations plus élevées.' },
+    { id:'kbis', t:'Extrait Kbis', cat:'statut',
+      court:'La carte d’identité officielle d’une société.',
+      def:'Le document officiel qui prouve l’existence légale de ta société : forme, siège, dirigeant, numéro d’immatriculation.' },
+    { id:'siret', t:'SIRET', cat:'statut',
+      court:'Le numéro d’identification de ton établissement.',
+      def:'Un numéro à 14 chiffres qui identifie ton entreprise et son adresse. Il figure sur tes factures.' },
+    { id:'guichet', t:'Guichet unique', cat:'administratif',
+      court:'Le site officiel pour toutes tes formalités.',
+      def:'La plateforme par laquelle passent désormais création, modification et cessation d’entreprise, à la place des anciens centres de formalités.' },
+    { id:'domiciliation', t:'Domiciliation', cat:'administratif',
+      court:'L’adresse administrative de ton entreprise.',
+      def:'L’adresse officielle de ton activité : ton domicile, un local, ou une société de domiciliation. Elle apparaît sur tes documents et détermine ta CFE.' },
+    { id:'dpae', t:'DPAE', cat:'administratif',
+      court:'La déclaration à faire avant d’embaucher.',
+      def:'La « déclaration préalable à l’embauche » : une formalité obligatoire à réaliser avant l’arrivée d’un salarié.' },
+
+    { id:'abattement', t:'Abattement', cat:'fiscalite',
+      court:'La part de revenu retirée avant impôt.',
+      def:'Un pourcentage déduit de ton chiffre d’affaires pour estimer ton bénéfice, censé représenter tes frais. En micro, il remplace la déduction des dépenses réelles.' },
+    { id:'ir', t:'Impôt sur le revenu (IR)', cat:'fiscalite',
+      court:'L’impôt sur les revenus du foyer.',
+      def:'L’impôt calculé sur l’ensemble des revenus de ton foyer, selon un barème progressif par tranches.' },
+    { id:'is', t:'Impôt sur les sociétés (IS)', cat:'fiscalite',
+      court:'L’impôt sur le bénéfice d’une société.',
+      def:'L’impôt payé par la société sur son bénéfice, avant toute distribution. Il existe un taux réduit sur une première tranche de bénéfice, puis un taux normal.' },
+    { id:'bareme', t:'Barème progressif', cat:'fiscalite',
+      court:'L’impôt par tranches, de plus en plus taxées.',
+      def:'Ton revenu est découpé en tranches, chacune taxée à un taux croissant. Seule la part qui dépasse une tranche est imposée au taux supérieur.' },
+    { id:'vfl', t:'Versement libératoire', cat:'fiscalite',
+      court:'Payer son impôt au fil du chiffre d’affaires.',
+      def:'Une option en micro-entreprise : tu règles ton impôt sur le revenu en même temps que tes cotisations, sous forme d’un petit pourcentage de ton chiffre d’affaires. Intéressant seulement dans certains cas.' },
+    { id:'rfr', t:'Revenu fiscal de référence (RFR)', cat:'fiscalite',
+      court:'Le revenu global qui sert de repère à l’administration.',
+      def:'Un montant calculé par le fisc à partir de tous tes revenus. Il conditionne l’accès à certains dispositifs, comme le versement libératoire.' },
+    { id:'quotient', t:'Quotient familial', cat:'fiscalite',
+      court:'Les « parts » qui allègent l’impôt selon le foyer.',
+      def:'Un système de parts (selon ta situation familiale) qui divise le revenu imposable pour adoucir la progressivité de l’impôt.' },
+    { id:'cfe', t:'CFE', cat:'fiscalite',
+      court:'Un impôt local dû par presque toutes les entreprises.',
+      def:'La « cotisation foncière des entreprises » : un impôt local basé sur ta commune et ton activité, à régler chaque année, souvent en décembre.' },
+    { id:'cotisations', t:'Cotisations sociales', cat:'fiscalite',
+      court:'Ce que tu verses pour ta protection sociale.',
+      def:'Les sommes qui financent ta santé, ta retraite et tes autres droits sociaux. En micro, elles sont un pourcentage de ton chiffre d’affaires ; en société, elles dépendent de ta rémunération.' },
+    { id:'pfu', t:'PFU (flat tax)', cat:'fiscalite',
+      court:'Un prélèvement forfaitaire sur les dividendes.',
+      def:'Le « prélèvement forfaitaire unique » : un taux global appliqué notamment aux dividendes, qui regroupe impôt et prélèvements sociaux.' },
+
+    { id:'franchise', t:'Franchise en base de TVA', cat:'tva',
+      court:'Ne pas facturer la TVA sous un certain seuil.',
+      def:'Un régime qui te dispense de facturer la TVA tant que ton chiffre d’affaires reste sous un seuil. Tu ne la collectes pas, mais tu ne la récupères pas non plus sur tes achats.' },
+    { id:'tva-collectee', t:'TVA collectée', cat:'tva',
+      court:'La TVA que tu factures à tes clients.',
+      def:'La TVA que tu ajoutes à tes prix et encaisses pour le compte de l’État. Ce n’est pas un revenu : tu la reverses.' },
+    { id:'tva-deductible', t:'TVA déductible', cat:'tva',
+      court:'La TVA que tu récupères sur tes achats.',
+      def:'La TVA payée sur tes dépenses professionnelles, que tu peux déduire de la TVA collectée. Tu ne reverses que la différence.' },
+    { id:'tva-intra', t:'TVA intracommunautaire', cat:'tva',
+      court:'Le numéro de TVA pour commercer dans l’UE.',
+      def:'Un numéro de TVA européen qui identifie ton entreprise pour les échanges avec d’autres pays de l’Union.' },
+    { id:'autoliquidation', t:'Autoliquidation', cat:'tva',
+      court:'Le client déclare la TVA à ta place.',
+      def:'Un mécanisme fréquent entre professionnels de pays différents : tu factures sans TVA, et c’est ton client qui la déclare de son côté.' },
+
+    { id:'deductible', t:'Charge déductible', cat:'pilotage',
+      court:'Une dépense qui réduit le bénéfice imposable.',
+      def:'Une dépense engagée dans l’intérêt de l’entreprise, qu’on retire du bénéfice avant impôt. Encore faut-il qu’elle soit justifiée et réellement professionnelle.' },
+    { id:'immobilisation', t:'Immobilisation', cat:'pilotage',
+      court:'Un bien durable étalé dans le temps.',
+      def:'Un achat coûteux et durable (matériel, véhicule) qui ne passe pas en charge d’un coup : sa valeur est répartie sur plusieurs années par l’amortissement.' },
+    { id:'amortissement', t:'Amortissement', cat:'pilotage',
+      court:'Étaler le coût d’un bien sur sa durée d’usage.',
+      def:'La façon de déduire progressivement le prix d’un bien durable, année après année, plutôt qu’en une seule fois.' },
+    { id:'dividendes', t:'Dividendes', cat:'pilotage',
+      court:'La part du bénéfice versée aux associés.',
+      def:'Une partie du bénéfice de la société distribuée à ses associés. En société, c’est une alternative ou un complément à la rémunération.' },
+    { id:'quotepart', t:'Quote-part privée', cat:'pilotage',
+      court:'La part personnelle d’une dépense mixte.',
+      def:'Quand une dépense sert à la fois au pro et au perso (téléphone, voiture), la partie personnelle qu’il faut retirer avant de la déduire.' },
+    { id:'tresorerie', t:'Trésorerie', cat:'pilotage',
+      court:'L’argent réellement disponible tout de suite.',
+      def:'Les liquidités dont tu disposes à un instant donné. La piloter, c’est garder de quoi encaisser les creux et les échéances.' },
+    { id:'acre', t:'ACRE', cat:'fiscalite',
+      court:'Une réduction de cotisations au démarrage.',
+      def:'Un dispositif d’aide à la création qui allège tes cotisations sociales sur une période, si tu y es éligible.' },
+  ];
+
+  function loadLexique(){
+    try { var raw = localStorage.getItem('freehub_lexique'); if(raw) return JSON.parse(raw) || []; }
+    catch(e){}
+    return [];
+  }
+  function saveLexique(){
+    try { localStorage.setItem('freehub_lexique', JSON.stringify(state.lexEpingles)); } catch(e){}
+    pousserServeur();
+  }
+  function terme(id){ return LEXIQUE.filter(function(x){ return x.id === id; })[0]; }
+
+  // ---------------------------------------------------------------------------
+  // Badges & jalons — récompenser les VRAIES étapes franchies, pas les clics.
+  // Chaque badge a un `check()` évalué à chaque rendu ; le premier passage à vrai
+  // le débloque et déclenche une petite célébration.
+  // ---------------------------------------------------------------------------
+  function nbObjectifsFinis(){
+    return catalog.filter(function(o){ return pctOf(o.id).pct === 100; }).length;
+  }
+  function domainesEntames(){
+    var s = {};
+    catalog.forEach(function(o){ if(pctOf(o.id).done > 0) s[o.dom] = 1; });
+    return Object.keys(s).length;
+  }
+  function profilComplet(){
+    return sectionsProfil().every(function(x){ return x.ok; });
+  }
+
+  var BADGES = [
+    { id:'cap', ico:'🧭', t:'Le cap est fixé', d:'Ta première étape d’objectif cochée.',
+      check:function(){ return catalog.some(function(o){ return pctOf(o.id).done > 0; }); } },
+    { id:'premier-fini', ico:'🏁', t:'Premier objectif bouclé', d:'Un parcours mené jusqu’au bout.',
+      check:function(){ return nbObjectifsFinis() >= 1; } },
+    { id:'tous-azimuts', ico:'🗺️', t:'Tous azimuts', d:'Des objectifs entamés dans 3 domaines.',
+      check:function(){ return domainesEntames() >= 3; } },
+    { id:'habitue', ico:'🏆', t:'Habitué des parcours', d:'Trois objectifs bouclés.',
+      check:function(){ return nbObjectifsFinis() >= 3; } },
+    { id:'identite', ico:'👤', t:'Carte d’identité', d:'Prénom, nom et e-mail renseignés.',
+      check:function(){ var p = state.profil; return !!(p.prenom && p.nom && p.email); } },
+    { id:'profil-plein', ico:'✅', t:'Profil au complet', d:'Ton profil rempli à 100 %.',
+      check:function(){ return profilComplet(); } },
+    { id:'sim-1', ico:'📊', t:'Première simulation', d:'Un simulateur lancé sur tes chiffres.',
+      check:function(){ return Object.keys(state.faits).some(function(k){ return /^sim:/.test(k); }); } },
+    { id:'sim-tous', ico:'🧮', t:'Tour du propriétaire', d:'Les cinq simulateurs essayés.',
+      check:function(){ return ['depenses','vl','tva','statut','optim']
+        .every(function(s){ return state.faits['sim:'+s]; }); } },
+    { id:'depenses', ico:'🧾', t:'Œil de lynx', d:'Une analyse de dépenses réalisée.',
+      check:function(){ return !!state.faits['sim:depenses']; } },
+    { id:'lex-1', ico:'📖', t:'Mot à mot', d:'Un premier terme épinglé au lexique.',
+      check:function(){ return state.lexEpingles.length >= 1; } },
+    { id:'lex-8', ico:'📚', t:'Lexique perso', d:'Huit termes épinglés.',
+      check:function(){ return state.lexEpingles.length >= 8; } },
+    { id:'compte', ico:'☁️', t:'À l’abri', d:'Un compte créé pour tout sauvegarder.',
+      check:function(){ return !!state.compte; } },
+  ];
+
+  function loadBadges(){
+    try { var r = localStorage.getItem('freehub_badges'); if(r) return JSON.parse(r) || []; } catch(e){}
+    return [];
+  }
+  function loadFaits(){
+    try { var r = localStorage.getItem('freehub_faits'); if(r) return JSON.parse(r) || {}; } catch(e){}
+    return {};
+  }
+  function marquerFait(cle){
+    if(state.faits[cle]) return;
+    state.faits[cle] = 1;
+    try { localStorage.setItem('freehub_faits', JSON.stringify(state.faits)); } catch(e){}
+    pousserServeur();
+  }
+
+  // Débloque les badges nouvellement mérités et met les célébrations en file.
+  // Appelée à chaque rendu : ne relance jamais render() (pas de boucle).
+  function evaluerBadges(){
+    var nouveaux = [];
+    BADGES.forEach(function(b){
+      if(state.badges.indexOf(b.id) < 0 && b.check()){
+        state.badges.push(b.id);
+        nouveaux.push(b.id);
+      }
+    });
+    if(nouveaux.length){
+      try { localStorage.setItem('freehub_badges', JSON.stringify(state.badges)); } catch(e){}
+      pousserServeur();
+      // Au tout premier chargement, on ne célèbre pas rétroactivement.
+      if(!state.badgesInitialises) return;
+      state.badgeQueue = state.badgeQueue.concat(nouveaux);
+    }
+  }
+  function badge(id){ return BADGES.filter(function(b){ return b.id === id; })[0]; }
+
+  function badgeCelebreHtml(){
+    if(!state.badgeQueue.length) return '';
+    var b = badge(state.badgeQueue[0]);
+    if(!b) return '';
+    return '<div class="overlay bd-overlay" data-action="badge-close">'
+      + '<div class="bd-card" data-action="stop">'
+        + '<div class="bd-halo"></div>'
+        + '<div class="bd-ico">'+b.ico+'</div>'
+        + '<div class="bd-l">Badge débloqué</div>'
+        + '<div class="bd-t">'+esc(b.t)+'</div>'
+        + '<div class="bd-d">'+esc(b.d)+'</div>'
+        + '<button class="btn-primary" data-action="badge-close">Super !</button>'
+      + '</div></div>';
+  }
+
+  // Petit « ? » cliquable à poser après un mot de jargon : il ouvre la fiche du
+  // lexique correspondante, quel que soit l'écran. `terme(id)` garantit que le
+  // terme existe (sinon on n'affiche rien).
+  function lexQ(id){
+    if(!terme(id)) return '';
+    return '<button class="lexq" data-action="lex-open" data-id="'+id+'" '
+      + 'title="Voir la définition" aria-label="Définition">?</button>';
+  }
+  function dom(o){ return DOMAINES[o.dom] || DOMAINES.administratif; }
+
+  // Chaque étape peut pointer vers un simulateur (`sim`) ou un partenaire
+  // (`part`, index dans PARTENAIRES) : c'est ce qui relie les objectifs au reste
+  // de l'app au lieu d'en faire une simple liste à cocher.
+  //
+  // `echeance` : UNIQUEMENT les dates légales réelles. Pas de délai inventé —
+  // on ne met pas la pression sur des étapes qui n'en ont pas.
+  // `pertinent` : à qui l'objectif s'adresse, d'après le profil.
+  var catalog = [
+    { id:'statut', dom:'statut', title:'Choisir son statut de société',
+      desc:'Micro, EURL ou SASU : trancher en confiance.',
+      pertinent:function(p){ return estMicro(p) || /je ne sais pas/i.test(p.forme || ''); },
+      pourquoi:'Tu es en micro : vois à partir de quand une société te rapporterait plus.',
+      steps:[
+        {t:'Comparer micro, EURL et SASU', h:'Les vraies différences, sans jargon.', sim:'statut'},
+        {t:'Estimer ton net par statut', h:'Sur ton chiffre d’affaires réel.', sim:'statut'},
+        {t:'Vérifier ta protection sociale', h:'TNS vs assimilé salarié.'},
+        {t:'Décider et planifier la bascule', h:'Choisir la date et faire les démarches.', part:0},
+      ]},
+    { id:'tva-comprendre', dom:'tva', title:'Comprendre la TVA',
+      desc:'Les bases pour ne plus jamais être perdu·e.',
+      pourquoi:'La TVA revient dans presque toutes les décisions : autant la comprendre une fois.',
+      steps:[
+        {t:'Qu’est-ce que la TVA ?', h:'Le principe en 3 minutes.'},
+        {t:'La franchise en base', h:'Pourquoi tu n’en factures pas encore.'},
+        {t:'TVA collectée vs déductible', h:'Le mécanisme qui change tout.'},
+        {t:'Voir ce que ça donnerait chez toi', h:'Sur tes vrais chiffres.', sim:'tva'},
+      ]},
+    { id:'cfe', dom:'fiscalite', title:'Déclarer la CFE',
+      desc:'La cotisation foncière des entreprises, sans stress.',
+      echeance:{ jour:15, mois:12, quoi:'Paiement de la CFE' },
+      pourquoi:'Elle concerne presque toutes les entreprises, et son avis n’arrive pas par courrier.',
+      steps:[
+        {t:'Créer ton espace pro sur impots.gouv', h:'Indispensable pour recevoir ton avis.'},
+        {t:'Vérifier ton avis de CFE', h:'Disponible en novembre dans ton espace.'},
+        {t:'Vérifier si tu es exonéré·e', h:'1re année ou faible CA : possible exonération.'},
+        {t:'Payer avant le 15 décembre', h:'Prélèvement ou paiement en ligne.'},
+      ]},
+    { id:'tva-passer', dom:'tva', title:'Passer à la TVA',
+      desc:'Basculer proprement en TVA quand c’est le moment.',
+      pertinent:function(p){ return /franchise/i.test(p.tva || ''); },
+      pourquoi:'Tu es en franchise : l’option pour la TVA est parfois gagnante, parfois non.',
+      steps:[
+        {t:'Vérifier ton dépassement de seuil', h:'Les seuils figurent sur ton espace impots.gouv.'},
+        {t:'Chiffrer si l’option est rentable', h:'TVA récupérable contre TVA absorbée.', sim:'tva'},
+        {t:'Choisir ton régime de TVA', h:'Franchise, réel simplifié ou normal.'},
+        {t:'Faire la demande au guichet unique', h:'Obtenir ton numéro de TVA intracom.'},
+        {t:'Mettre à jour ta facturation', h:'Ajouter la TVA sur devis et factures.', part:1},
+      ]},
+    { id:'vfl', dom:'fiscalite', title:'Passer au versement libératoire',
+      desc:'Payer ton impôt au fil de l’eau, si c’est avantageux.',
+      echeance:{ jour:30, mois:9, quoi:'Demande de versement libératoire' },
+      pertinent:estMicro,
+      pourquoi:'Réservé aux micro-entrepreneurs : à comparer avec le barème classique.',
+      steps:[
+        {t:'Vérifier ton éligibilité', h:'Revenu fiscal de référence sous le plafond.', sim:'vl'},
+        {t:'Simuler l’intérêt du versement', h:'Compare avec l’imposition classique.', sim:'vl'},
+        {t:'Faire la demande', h:'Avant le 30 septembre pour l’année suivante.'},
+      ]},
+    { id:'compte-pro', dom:'administratif', title:'Ouvrir un compte pro',
+      desc:'Séparer perso et pro proprement.',
+      pourquoi:'Séparer les flux simplifie toute ta comptabilité, quel que soit ton statut.',
+      steps:[
+        {t:'Vérifier si c’est obligatoire', h:'Au-delà de 10 000 € de CA deux ans de suite.'},
+        {t:'Comparer les comptes pro', h:'Frais, services, dépôt de capital.', part:2},
+        {t:'Ouvrir le compte', h:'Réunir les justificatifs.', part:2},
+      ]},
+    { id:'piloter', dom:'pilotage', title:'Piloter ma société',
+      desc:'Savoir ce qui passe en charge et ce que tu touches vraiment.',
+      pertinent:estSociete,
+      pourquoi:'Tu es en société : rémunération, dividendes et charges se pilotent.',
+      steps:[
+        {t:'Vérifier quelles dépenses passent', h:'Une analyse dépense par dépense.', sim:'depenses'},
+        {t:'Régler rémunération et dividendes', h:'Trouver ton équilibre net / société.', sim:'optim'},
+        {t:'Activer les bons leviers', h:'Mutuelle, prévoyance, retraite, bureau.', sim:'optim'},
+        {t:'Faire valider par un comptable', h:'Les arbitrages sensibles se confirment.', part:3},
+      ]},
+
+    // --- Créer ---
+    { id:'creer-ae', dom:'statut', title:'Les 5 étapes pour créer son auto-entreprise',
+      desc:'Le statut le plus simple pour se lancer, de A à Z.',
+      pourquoi:'Le moyen le plus rapide de démarrer une activité : voici le parcours complet.',
+      steps:[
+        {t:'Vérifier que ton activité est éligible', h:'Certaines activités en sont exclues.'},
+        {t:'Réunir tes justificatifs', h:'Identité, domicile, diplôme si nécessaire.'},
+        {t:'Déclarer ton activité au guichet unique', h:'La déclaration de début d’activité.', part:0},
+        {t:'Récupérer ton SIRET', h:'Il arrive sous quelques jours.'},
+        {t:'Mettre en place ta facturation', h:'Devis, factures, suivi des encaissements.', part:1},
+      ]},
+    { id:'creer-societe', dom:'statut', title:'Les 5 étapes pour créer sa société',
+      desc:'EURL, SASU… les étapes clés jusqu’au Kbis.',
+      pourquoi:'Créer une société suit un parcours précis : on le déroule sans jargon.',
+      steps:[
+        {t:'Choisir ta forme juridique', h:'EURL, SASU, SARL : les vraies différences.', sim:'statut'},
+        {t:'Rédiger tes statuts', h:'Le contrat de base de ta société.', part:0},
+        {t:'Déposer ton capital', h:'Sur un compte dédié à la création.', part:2},
+        {t:'Immatriculer ta société', h:'Le dépôt du dossier au guichet unique.', part:0},
+        {t:'Obtenir ton Kbis', h:'La carte d’identité de ton entreprise.'},
+      ]},
+    { id:'domicilier', dom:'administratif', title:'Pourquoi et comment domicilier son entreprise',
+      desc:'L’adresse de ton entreprise n’est pas un détail.',
+      pourquoi:'Le choix de ton adresse a des effets fiscaux, pratiques et d’image.',
+      steps:[
+        {t:'Comprendre ce qu’est la domiciliation', h:'L’adresse administrative de ton activité.'},
+        {t:'Comparer les options', h:'Domicile, société de domiciliation, local.'},
+        {t:'Choisir ta solution', h:'Selon ton budget et l’image voulue.', part:0},
+        {t:'Déclarer ton adresse', h:'Sur le dossier de ton entreprise.'},
+      ]},
+
+    // --- Facturation ---
+    { id:'facture-elec', dom:'administratif', title:'Tout comprendre sur la facture électronique',
+      desc:'La réforme qui va toucher toutes les entreprises.',
+      pourquoi:'La facturation électronique se généralise : mieux vaut l’anticiper.',
+      steps:[
+        {t:'Comprendre ce qui change', h:'Facture papier vs électronique, et pour qui.'},
+        {t:'Situer ton calendrier d’obligation', h:'La date dépend de la taille de ton entreprise.'},
+        {t:'Choisir un outil compatible', h:'Une plateforme de facturation conforme.', part:1},
+        {t:'Adapter tes factures', h:'Mentions et format électronique.'},
+      ]},
+    { id:'facturer-etranger', dom:'tva', title:'Facturer à l’étranger, comment ça marche',
+      desc:'UE ou hors UE, la TVA change tout.',
+      pourquoi:'Une facture internationale ne se remplit pas comme une facture française.',
+      steps:[
+        {t:'Distinguer UE et hors UE', h:'Les règles ne sont pas les mêmes.'},
+        {t:'Vérifier le statut de ton client', h:'Professionnel ou particulier.'},
+        {t:'Appliquer la bonne TVA', h:'Autoliquidation, exonération ou TVA française.'},
+        {t:'Ajouter les mentions obligatoires', h:'Numéro de TVA intracommunautaire, mention légale.'},
+      ]},
+
+    // --- Déclarations ---
+    { id:'urssaf-1', dom:'fiscalite', title:'Faire sa première déclaration URSSAF',
+      desc:'La première fait peur pour rien.',
+      pertinent:estMicro,
+      pourquoi:'On déroule ta première déclaration, pas à pas, pour la faire sereinement.',
+      steps:[
+        {t:'Connaître ta périodicité', h:'Mensuelle ou trimestrielle, choisie au départ.'},
+        {t:'Calculer ton chiffre d’affaires', h:'Les sommes réellement encaissées.'},
+        {t:'Déclarer sur ton espace URSSAF', h:'Même à zéro, la déclaration est obligatoire.', part:1},
+        {t:'Payer tes cotisations', h:'Prélevées selon ce que tu déclares.'},
+      ]},
+    { id:'impot-ae', dom:'fiscalite', title:'Remplir sa déclaration d’impôt en auto-entreprise',
+      desc:'Reporter ton CA au bon endroit, sans erreur.',
+      pertinent:estMicro,
+      echeance:{ periode:'avril → juin', moisDebut:4, quoi:'Déclaration de revenus' },
+      pourquoi:'Bien déclarer évite les erreurs — et parfois de payer trop d’impôt.',
+      steps:[
+        {t:'Choisir ton mode d’imposition', h:'Versement libératoire ou barème progressif.', sim:'vl'},
+        {t:'Retrouver ton chiffre d’affaires annuel', h:'Le total encaissé sur l’année.'},
+        {t:'Le reporter sur ta déclaration', h:'Dans la bonne case selon ta catégorie.'},
+        {t:'Vérifier avant d’envoyer', h:'L’abattement s’applique automatiquement.'},
+      ]},
+    { id:'impot-societe', dom:'fiscalite', title:'Remplir sa déclaration d’impôt en société',
+      desc:'Résultat, IS, rémunération, dividendes.',
+      pertinent:estSociete,
+      echeance:{ periode:'avril → juin', moisDebut:4, quoi:'Déclaration de revenus' },
+      pourquoi:'La déclaration d’une société a ses règles : on les clarifie une par une.',
+      steps:[
+        {t:'Établir ton résultat', h:'Produits moins charges de l’exercice.'},
+        {t:'Déclarer ton impôt sur les sociétés', h:'Le formulaire de résultat.'},
+        {t:'Déclarer ta rémunération', h:'Sur ta déclaration de revenus personnelle.'},
+        {t:'Traiter tes dividendes', h:'Selon le PFU ou le barème.', sim:'optim'},
+      ]},
+
+    // --- Vie de l'indépendant ---
+    { id:'droits-independant', dom:'administratif', title:'Comprendre mes droits en indépendant',
+      desc:'Chômage, retraite, maladie, naissance : ce à quoi tu as droit.',
+      pourquoi:'Être indépendant ne veut pas dire être sans filet : voici ce qui te protège.',
+      steps:[
+        {t:'Ta protection maladie', h:'Remboursements et indemnités journalières.'},
+        {t:'Ta retraite', h:'Ce que tu cotises et ce que ça t’ouvre.'},
+        {t:'Congé maternité ou paternité', h:'Indemnités et démarches.'},
+        {t:'En cas d’arrêt d’activité', h:'Ce qui existe, et ses limites.'},
+      ]},
+    { id:'embaucher-alternant', dom:'administratif', title:'Les 5 étapes pour embaucher un alternant',
+      desc:'Un renfort peu coûteux, mais un cadre précis.',
+      pourquoi:'L’alternance t’aide à grandir à moindre coût, si le cadre est bien posé.',
+      steps:[
+        {t:'Définir le poste et le rythme', h:'Missions et alternance école / entreprise.'},
+        {t:'Trouver ton alternant', h:'Écoles, plateformes, cooptation.'},
+        {t:'Établir le contrat', h:'Apprentissage ou professionnalisation.'},
+        {t:'Faire la déclaration d’embauche', h:'La DPAE, avant l’arrivée.'},
+        {t:'Activer les aides employeur', h:'Des aides existent selon le contrat.'},
+      ]},
+    { id:'revenu-regulier', dom:'pilotage', title:'Se verser un revenu régulier selon son statut',
+      desc:'Se payer sans mettre sa trésorerie en danger.',
+      pourquoi:'Un revenu régulier, ça s’organise — surtout quand le chiffre d’affaires varie.',
+      steps:[
+        {t:'Comprendre comment tu te paies', h:'Micro : prélèvement libre. Société : salaire et dividendes.'},
+        {t:'Fixer un montant tenable', h:'Ce que ton activité permet vraiment.', sim:'optim'},
+        {t:'Provisionner charges et impôts', h:'Pour ne jamais être pris de court.', part:2},
+        {t:'Automatiser ton versement', h:'Un virement régulier, comme un salaire.'},
+      ]},
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Contenu détaillé des étapes — séparé du catalogue pour rester lisible.
+  // Règle : aucun chiffre ni seuil inventé. On oriente vers les sources
+  // officielles pour les valeurs qui changent (seuils, taux, dates).
+  // Par étape : { intro, faire:[…], vigilance:[…], liens:[{l,url}] }.
+  // ---------------------------------------------------------------------------
+  var IMPOTS = { l:'impots.gouv.fr', url:'https://www.impots.gouv.fr' };
+  var URSSAF = { l:'autoentrepreneur.urssaf.fr', url:'https://www.autoentrepreneur.urssaf.fr' };
+  var GUICHET = { l:'Guichet unique — formalites.entreprises.gouv.fr', url:'https://formalites.entreprises.gouv.fr' };
+  var SPUBLIC = { l:'entreprendre.service-public.fr', url:'https://entreprendre.service-public.fr' };
+
+  var CONTENUS = {
+    statut: [
+      { intro:'Trois familles de statuts, trois logiques différentes. L’idée n’est pas de trouver « le meilleur » dans l’absolu, mais celui qui colle à ton activité.',
+        faire:['Micro-entreprise : le plus simple, cotisations sur le chiffre d’affaires, pas de déduction des charges.',
+               'EURL : une société à l’IR ou à l’IS, dirigeant « travailleur non salarié ».',
+               'SASU : une société à l’IS, dirigeant « assimilé salarié », mieux couvert mais plus coûteux.'],
+        liens:[SPUBLIC] },
+      { intro:'Le vrai comparatif, c’est ce qu’il te reste en poche. Notre simulateur le calcule sur tes chiffres.',
+        faire:['Renseigne ton chiffre d’affaires et tes charges dans ton profil.',
+               'Le simulateur « Quand passer en société » compare les trois côte à côte.'] },
+      { intro:'Le statut détermine ta protection sociale, souvent sous-estimée au moment du choix.',
+        faire:['En TNS (micro, EURL) : cotisations plus légères, couverture plus limitée.',
+               'En assimilé salarié (SASU) : meilleure couverture santé et retraite, hors chômage.'],
+        vigilance:['Aucun statut n’ouvre droit à l’assurance chômage classique pour le dirigeant.'] },
+      { intro:'Une fois le choix fait, la bascule se prépare : rien n’est urgent, mais mieux vaut anticiper.',
+        faire:['Choisis une date de bascule cohérente (souvent en début d’exercice).',
+               'Prépare la création via un accompagnement si tu passes en société.'] },
+    ],
+    'tva-comprendre': [
+      { intro:'La TVA est un impôt sur la consommation que les entreprises collectent pour l’État. Tu n’en es qu’un intermédiaire.',
+        faire:['Tu ajoutes la TVA à tes prix, tu l’encaisses, puis tu la reverses.',
+               'Ce que tu collectes n’est pas un revenu : ça ne t’appartient pas.'] },
+      { intro:'Tant que tu débutes, tu es souvent en « franchise en base » : tu ne factures pas de TVA.',
+        faire:['Tu factures sans TVA, donc des prix plus simples pour les particuliers.',
+               'En contrepartie, tu ne récupères pas la TVA sur tes achats.'],
+        vigilance:['La franchise a des seuils de chiffre d’affaires : au-delà, la TVA devient obligatoire. Les montants sont sur impots.gouv.fr.'],
+        liens:[IMPOTS] },
+      { intro:'Le mécanisme tient en deux mots : collectée moins déductible.',
+        faire:['TVA collectée : celle que tu factures à tes clients.',
+               'TVA déductible : celle que tu paies sur tes achats pro.',
+               'Tu ne reverses que la différence entre les deux.'] },
+      { intro:'La théorie, c’est bien ; sur tes chiffres, c’est plus parlant.',
+        faire:['Ouvre le simulateur « Passer à la TVA » pour voir ce que ça donnerait chez toi.'] },
+    ],
+    cfe: [
+      { intro:'Ton espace professionnel sur impots.gouv.fr est indispensable : c’est là qu’arrive ton avis de CFE, jamais par courrier.',
+        faire:['Crée ton espace pro avec ton SIRET.','Active la réception des avis en ligne.'],
+        liens:[IMPOTS] },
+      { intro:'L’avis de CFE est mis à disposition en fin d’année dans ton espace.',
+        faire:['Consulte-le dès sa mise en ligne, en général à l’automne.','Vérifie la commune et la base retenues.'] },
+      { intro:'Certaines situations ouvrent droit à une exonération, totale ou partielle.',
+        faire:['La première année d’activité est souvent exonérée.','Un chiffre d’affaires faible peut réduire la base.'],
+        vigilance:['Les conditions exactes évoluent : vérifie ton cas sur impots.gouv.fr plutôt que de supposer.'],
+        liens:[IMPOTS] },
+      { intro:'Le paiement se fait en ligne, avant la date limite indiquée sur ton avis (souvent mi-décembre).',
+        faire:['Paie depuis ton espace pro, ou mets en place un prélèvement.'] },
+    ],
+    'tva-passer': [
+      { intro:'Passer à la TVA peut être subi (dépassement de seuil) ou choisi (option volontaire).',
+        faire:['Compare ton chiffre d’affaires aux seuils de franchise, indiqués sur impots.gouv.fr.'],
+        vigilance:['Au-delà des seuils, la TVA n’est plus une option : elle devient obligatoire.'],
+        liens:[IMPOTS] },
+      { intro:'Opter volontairement n’a de sens que si tu récupères plus que tu n’absorbes.',
+        faire:['Le simulateur « Passer à la TVA » chiffre le gain ou la perte sur tes données.'] },
+      { intro:'Plusieurs régimes de déclaration existent selon ton activité et ton volume.',
+        faire:['Franchise, réel simplifié, réel normal : le bon dépend de ta situation.','Renseigne-toi avant de choisir.'],
+        liens:[SPUBLIC] },
+      { intro:'La demande se fait via le guichet unique des formalités.',
+        faire:['Formule ton option pour la TVA.','Tu obtiens un numéro de TVA intracommunautaire.'],
+        liens:[GUICHET] },
+      { intro:'Une fois assujetti, tes documents changent.',
+        faire:['Ajoute la TVA sur tes devis et factures.','Fais apparaître ton numéro de TVA.','Un outil de facturation t’évite les oublis.'] },
+    ],
+    vfl: [
+      { intro:'Le versement libératoire n’est ouvert qu’à certaines conditions de revenu.',
+        faire:['Vérifie ton revenu fiscal de référence sur ton avis d’impôt.'],
+        vigilance:['Le plafond d’éligibilité dépend de ton foyer : les valeurs sont sur impots.gouv.fr.'],
+        liens:[IMPOTS] },
+      { intro:'Avantageux pour les uns, coûteux pour les autres : tout dépend de ton taux d’imposition.',
+        faire:['Le simulateur « Versement libératoire ou impôt classique » tranche sur tes chiffres.'] },
+      { intro:'L’option se demande à l’avance et s’applique l’année suivante.',
+        faire:['Fais ta demande auprès de l’Urssaf, en respectant la date limite annuelle.'],
+        liens:[URSSAF] },
+    ],
+    'compte-pro': [
+      { intro:'Un compte dédié n’est pas toujours obligatoire, mais il simplifie tout.',
+        faire:['En société : un compte professionnel est requis, notamment pour le dépôt de capital.',
+               'En micro : un compte dédié devient obligatoire au-delà d’un certain chiffre d’affaires sur deux ans.'],
+        liens:[SPUBLIC] },
+      { intro:'Compte pro « classique » ou néobanque : compare sur ce qui compte pour toi.',
+        faire:['Frais mensuels, dépôt de capital, encaissements, intégration comptable.'] },
+      { intro:'L’ouverture est rapide, souvent 100 % en ligne.',
+        faire:['Réunis pièce d’identité, justificatif d’activité (Kbis ou SIRET).'] },
+    ],
+    piloter: [
+      { intro:'Avant d’optimiser, il faut savoir ce qui passe vraiment en charge.',
+        faire:['Le simulateur « Mes dépenses » analyse chaque dépense.','Sa conclusion peut redescendre dans ton profil.'] },
+      { intro:'Rémunération et dividendes n’ont ni le même coût, ni la même couverture sociale.',
+        faire:['Le cockpit « Optimiser ma société » te montre l’effet en direct.'] },
+      { intro:'Plusieurs dispositifs sont des charges déductibles pour la société.',
+        faire:['Mutuelle, prévoyance, retraite, bureau à domicile : à activer selon tes besoins.'],
+        vigilance:['Chaque dispositif a ses plafonds d’exonération, non vérifiés par l’outil.'] },
+      { intro:'Les arbitrages fiscaux sensibles se confirment avec un professionnel.',
+        faire:['Fais valider ta stratégie par ton expert-comptable.'] },
+    ],
+    'creer-ae': [
+      { intro:'Toutes les activités ne sont pas ouvertes à la micro-entreprise.',
+        faire:['Vérifie que ton activité est compatible (certaines professions en sont exclues).'],
+        liens:[URSSAF] },
+      { intro:'Le dossier est simple mais demande quelques pièces.',
+        faire:['Pièce d’identité, justificatif de domicile, et diplôme pour les activités réglementées.'] },
+      { intro:'La déclaration de début d’activité passe désormais par le guichet unique.',
+        faire:['Crée ton compte et déclare ton activité en ligne.'],
+        liens:[GUICHET] },
+      { intro:'Ton numéro SIRET arrive ensuite, sous quelques jours.',
+        faire:['Note-le : il figure sur toutes tes factures.'] },
+      { intro:'Dès le premier client, tu factures — autant partir sur de bonnes bases.',
+        faire:['Mets en place devis et factures conformes.','Un outil dédié te fait gagner du temps.'] },
+    ],
+    'creer-societe': [
+      { intro:'Le choix de la forme conditionne fiscalité, statut social et coûts.',
+        faire:['Le simulateur « Quand passer en société » compare EURL et SASU sur tes chiffres.'] },
+      { intro:'Les statuts sont le contrat fondateur de ta société.',
+        faire:['Rédige-les avec soin — un accompagnement évite les erreurs coûteuses.'] },
+      { intro:'Le capital se dépose sur un compte dédié avant l’immatriculation.',
+        faire:['Ouvre un compte, dépose le capital, récupère l’attestation.'] },
+      { intro:'L’immatriculation se fait via le guichet unique.',
+        faire:['Dépose ton dossier complet en ligne.'],
+        liens:[GUICHET] },
+      { intro:'Le Kbis officialise l’existence de ta société.',
+        faire:['Conserve-le : il te sera demandé partout (banque, clients, aides).'] },
+    ],
+    domicilier: [
+      { intro:'Domicilier, c’est fixer l’adresse administrative officielle de ton entreprise.',
+        faire:['Elle apparaît sur tes documents et détermine ta commune de CFE.'] },
+      { intro:'Plusieurs options, avec des conséquences différentes.',
+        faire:['Ton domicile : gratuit, mais adresse visible.','Société de domiciliation : une adresse pro, souvent mieux située.','Un local : si tu reçois du public.'] },
+      { intro:'Le bon choix dépend de ton budget et de l’image voulue.',
+        faire:['Compare les offres de domiciliation selon la localisation et les services.'] },
+      { intro:'L’adresse retenue se déclare sur ton dossier d’entreprise.',
+        faire:['Mets-la à jour au guichet unique en cas de changement.'],
+        liens:[GUICHET] },
+    ],
+    'facture-elec': [
+      { intro:'La facturation électronique va progressivement devenir obligatoire entre entreprises.',
+        faire:['Comprends la différence : une facture PDF envoyée par mail n’est pas une facture électronique au sens de la réforme.'] },
+      { intro:'Le calendrier dépend de la taille de ton entreprise.',
+        faire:['Repère ta date d’entrée dans le dispositif sur les sources officielles.'],
+        vigilance:['Le calendrier a déjà évolué : vérifie les échéances à jour plutôt que de te fier à une date entendue.'],
+        liens:[IMPOTS] },
+      { intro:'Tu devras émettre et recevoir tes factures via une plateforme conforme.',
+        faire:['Choisis un outil de facturation compatible pour être prêt le moment venu.'] },
+      { intro:'Quelques mentions et formats deviennent incontournables.',
+        faire:['Assure-toi que ton outil gère le format électronique attendu.'] },
+    ],
+    'facturer-etranger': [
+      { intro:'La règle de TVA change selon que ton client est dans l’UE ou en dehors.',
+        faire:['Identifie d’abord le pays de ton client.'] },
+      { intro:'Le statut du client (pro ou particulier) change tout.',
+        faire:['Demande son numéro de TVA intracommunautaire s’il est professionnel dans l’UE.'] },
+      { intro:'Selon les cas : TVA française, exonération, ou autoliquidation par le client.',
+        faire:['Vérifie la règle applicable à ta situation précise.'],
+        vigilance:['En cas de doute sur une facture internationale, fais-la relire : les erreurs de TVA se paient cher.'],
+        liens:[SPUBLIC] },
+      { intro:'Les factures transfrontalières exigent des mentions spécifiques.',
+        faire:['Fais figurer les numéros de TVA et la mention légale correspondant au régime (ex. « autoliquidation »).'] },
+    ],
+    'urssaf-1': [
+      { intro:'Tu déclares à l’Urssaf selon la périodicité choisie à ton inscription.',
+        faire:['Vérifie si tu es en déclaration mensuelle ou trimestrielle.'],
+        liens:[URSSAF] },
+      { intro:'Le montant à déclarer, c’est ce que tu as réellement encaissé.',
+        faire:['Additionne tes encaissements de la période, pas tes factures émises.'] },
+      { intro:'La déclaration se fait en ligne, même si tu n’as rien encaissé.',
+        faire:['Déclare sur ton espace autoentrepreneur.urssaf.fr.','Une déclaration à zéro reste obligatoire.'],
+        vigilance:['Oublier une déclaration entraîne des pénalités — mets un rappel.'],
+        liens:[URSSAF] },
+      { intro:'Tes cotisations sont calculées automatiquement sur ce que tu déclares.',
+        faire:['Le prélèvement suit ta déclaration.'] },
+    ],
+    'impot-ae': [
+      { intro:'En micro, ton imposition dépend de l’option choisie : versement libératoire ou barème.',
+        faire:['Le simulateur « Versement libératoire ou impôt classique » t’aide à choisir.'] },
+      { intro:'Le point de départ, c’est ton chiffre d’affaires annuel.',
+        faire:['Récupère le total encaissé sur l’année civile.'] },
+      { intro:'Tu le reportes sur ta déclaration de revenus, dans la case de ta catégorie.',
+        faire:['Vente, prestations de services ou libéral : chaque catégorie a sa case.'],
+        liens:[IMPOTS] },
+      { intro:'L’abattement forfaitaire s’applique tout seul : tu ne déduis pas tes frais réels.',
+        faire:['Vérifie le montant reporté avant de valider.'] },
+    ],
+    'impot-societe': [
+      { intro:'La société déclare son résultat : ce qu’elle a gagné, moins ce qu’elle a dépensé.',
+        faire:['Établis ton résultat de l’exercice.'] },
+      { intro:'L’impôt sur les sociétés se déclare sur un formulaire de résultat dédié.',
+        faire:['La liasse fiscale se télétransmet, souvent via ton comptable.'],
+        liens:[IMPOTS] },
+      { intro:'Ta rémunération de dirigeant, elle, va sur ta déclaration personnelle.',
+        faire:['Reporte-la comme un revenu d’activité.'] },
+      { intro:'Les dividendes ont leur propre traitement fiscal.',
+        faire:['Le cockpit « Optimiser ma société » montre l’effet PFU vs barème.'] },
+    ],
+    'droits-independant': [
+      { intro:'Indépendant ne veut pas dire sans protection — mais elle a ses limites.',
+        faire:['Fais le point sur ce que ton statut couvre réellement.'] },
+      { intro:'Santé : tu es rattaché à l’Assurance Maladie, avec des indemnités sous conditions.',
+        faire:['Vérifie tes droits aux indemnités journalières en cas d’arrêt.'],
+        liens:[URSSAF] },
+      { intro:'Retraite : tu cotises, mais le niveau dépend fortement de ton statut et de ta rémunération.',
+        faire:['Consulte ton relevé de carrière pour anticiper.'] },
+      { intro:'Maternité, paternité, arrêt : des dispositifs existent, avec des montants et durées encadrés.',
+        faire:['Renseigne-toi en amont d’un projet (naissance, pause).'],
+        vigilance:['Le chômage classique ne couvre pas le dirigeant : anticipe une épargne de précaution.'] },
+    ],
+    'embaucher-alternant': [
+      { intro:'Un alternant partage son temps entre l’école et ton entreprise.',
+        faire:['Définis ses missions et le rythme de l’alternance.'] },
+      { intro:'Le recrutement passe souvent par les écoles et les plateformes dédiées.',
+        faire:['Diffuse ton offre, ou contacte directement des centres de formation.'] },
+      { intro:'Deux types de contrats existent : apprentissage et professionnalisation.',
+        faire:['Choisis celui adapté au profil et à la formation.'],
+        liens:[SPUBLIC] },
+      { intro:'La déclaration préalable à l’embauche (DPAE) est obligatoire avant l’arrivée.',
+        faire:['Réalise la DPAE auprès de l’Urssaf.'],
+        vigilance:['Elle doit être faite avant le premier jour, sous peine de sanction.'] },
+      { intro:'Des aides à l’embauche existent pour l’employeur d’alternant.',
+        faire:['Vérifie les aides en vigueur et leurs conditions.'],
+        liens:[SPUBLIC] },
+    ],
+    'revenu-regulier': [
+      { intro:'La façon de te payer dépend de ton statut.',
+        faire:['Micro : tu prélèves librement ce que tu veux.','Société : salaire et/ou dividendes, avec des règles distinctes.'] },
+      { intro:'Le bon montant, c’est celui que ton activité soutient dans la durée.',
+        faire:['Le cockpit « Optimiser ma société » aide à fixer un niveau tenable.'] },
+      { intro:'Mettre de côté charges et impôts évite les mauvaises surprises.',
+        faire:['Provisionne dès l’encaissement, sur un sous-compte dédié.'] },
+      { intro:'Un versement automatique et régulier te donne la stabilité d’un salaire.',
+        faire:['Programme un virement mensuel fixe vers ton compte perso.'] },
+    ],
+  };
+
+  // ---------------------------------------------------------------------------
+  // Nos partenaires
+  // ---------------------------------------------------------------------------
+  // `url`   : lien d'affiliation. Tant qu'il est vide, la fiche affiche un bouton
+  //           inactif « Lien bientôt disponible » — il suffit de coller l'URL ici.
+  // `img`   : le logo, fourni par l'utilisateur, dans assets/partenaires/.
+  // `color` / `grad` : les deux teintes de l'en-tête coloré, relevées sur le logo.
+  // `soft`  : le fond teinté du corps de la carte.
+  // `pitch` + les 3 premiers `points` s'affichent sur la carte ; `desc` et la
+  // liste complète sont réservés à la fiche qui s'ouvre au clic.
+  var PARTENAIRES = [
+    {
+      nom:'LegalPlace', kind:'Juridique & création',
+      img:'assets/partenaires/legalplace.png',
+      color:'#a9762a', grad:'#ddb055', soft:'#fdf7ea',
+      url:'https://www.legalplace.fr/?utm_source=affilae&utm_medium=partner&utm_campaign=ML%20Consulting%20(Louis%20M.)&ae=950',
+      promo:'FREELANCETOI15', promoDetail:'−15 % sur toutes les offres',
+      pitch:'Créer sa société sans avocat ni paperasse : tu réponds à un questionnaire, ils rédigent et déposent.',
+      desc:'Créer sa société ne devrait pas demander trois rendez-vous chez l’avocat et six semaines d’attente. '
+        + 'LegalPlace transforme les formalités en un <b>questionnaire guidé</b> : tu réponds, la plateforme rédige '
+        + 'tes statuts et dépose ton dossier d’immatriculation. Et elle reste là après la création — chaque changement '
+        + 'dans la vie de ta société se règle au même endroit.',
+      points:[
+        'Choisir la bonne forme : micro, EURL, SASU, SARL',
+        'Statuts rédigés et dossier déposé, jusqu’au Kbis',
+        'Domiciliation : une adresse pro sans bureau',
+        'Siège, statuts, associés, dissolution : tout au même endroit',
+        'Contrats prêts à l’emploi : CGV, prestation, pacte d’associés',
+      ],
+    },
+    {
+      nom:'Abby', kind:'Comptabilité micro',
+      img:'assets/partenaires/abby.webp',
+      color:'#0057c2', grad:'#3f95f5', soft:'#eef5ff',
+      url:'https://abby.fr/?partnerCode=MLCONSULTING&utm_source=ML+Consulting+(Louis+M.)&utm_campaign=affiliation&utm_medium=partner&aecid=67a61b7caa39bef2dc02dcd5',
+      promo:'MLCONSULTING', promoDetail:'−25 % sur l’abonnement annuel, ou −25 % les 3 premiers mois en mensuel',
+      pitch:'Tes factures alimentent ton livre de recettes toutes seules, et tu déclares à l’URSSAF sans quitter l’outil.',
+      desc:'En micro-entreprise, ce n’est pas la comptabilité qui fait mal, c’est l’oubli : une déclaration URSSAF '
+        + 'passée, un livre des recettes jamais tenu. Abby travaille en fond — tes factures alimentent '
+        + '<b>automatiquement</b> ton livre de recettes, ton chiffre d’affaires est prêt à déclarer, et tu le déclares '
+        + 'sans quitter l’outil. Pensé pour ceux qui se lancent, avec une version gratuite pour démarrer.',
+      points:[
+        'Devis et factures conformes en quelques secondes',
+        'Livre des recettes et registre des achats automatiques',
+        'Déclaration URSSAF et TVA depuis l’outil',
+        'Synchro bancaire : chaque encaissement rapproché de sa facture',
+        'Suivi client et temps passé, pour facturer au juste prix',
+      ],
+    },
+    {
+      nom:'Qonto', kind:'Compte professionnel',
+      img:'assets/partenaires/qonto.webp',
+      color:'#141414', grad:'#4a4a4a', soft:'#f2f2f1',
+      url:'https://qonto.com/r/cj2xa2', promo:'',
+      pitch:'Le compte pro qui dépose ton capital et envoie chaque dépense chez ton comptable, justificatif compris.',
+      desc:'Le compte pro n’est pas une case à cocher : c’est là que tout transite. Qonto ouvre le tien en ligne, '
+        + 'dépose ton capital pour la création, et surtout <b>fait le lien avec ta comptabilité</b> — chaque paiement '
+        + 'part chez ton expert-comptable avec son justificatif attaché. Plus de 600 000 entreprises l’utilisent en Europe.',
+      points:[
+        'Dépôt de capital en ligne pour créer ta société',
+        'Cartes, virements SEPA, encaissements',
+        'Sous-comptes : provisionner TVA et impôt sans y penser',
+        'Justificatifs rattachés et export vers ton comptable',
+        'Facturation et suivi de TVA intégrés au compte',
+      ],
+    },
+    {
+      nom:'Icon Invest', kind:'Expertise comptable',
+      img:'assets/partenaires/icon-invest.png',
+      color:'#6a1fb0', grad:'#a55ce0', soft:'#f6edff',
+      url:'https://icongroup.fr/invest', promo:'',
+      pitch:'Une équipe jeune qui bosse avec de jeunes entrepreneurs : mêmes modèles, mêmes questions, même langage.',
+      desc:'Un cabinet qui répond « ça dépend » et facture le rendez-vous, tu as déjà donné. Icon Invest, c’est une '
+        + '<b>équipe jeune qui travaille au quotidien avec de jeunes entrepreneurs</b> : mêmes modèles économiques, '
+        + 'mêmes questions, même vocabulaire. La comptabilité est tenue, oui — mais surtout, quelqu’un décroche '
+        + 'quand tu ne sais pas si cette dépense peut passer.',
+      points:[
+        'Tenue comptable et bilan, du premier euro à la clôture',
+        'Un interlocuteur qui connaît ton activité',
+        'Rémunération, dividendes, dépenses : les vrais arbitrages',
+        'Accompagnement financier : structurer, prévoir, décider',
+        'Des réponses en français, pas en jargon fiscal',
+      ],
+    },
+  ];
+
+  var titles = {
+    accueil:    ['Ton hub', 'Accueil',       'Où tu en es, et ce qui vient ensuite.'],
+    objectifs:  ['Parcours','Mes objectifs', 'Choisis un cap, avance étape par étape.'],
+    simulateur: ['Analyse', 'Simulateur',    'Vérifie si une dépense peut être prise en charge par ta société.'],
+    lexique:    ['Comprendre','Lexique',        'Les mots de l’administratif, expliqués simplement. Épingle ceux à retenir.'],
+    calendrier: ['Anticiper','Calendrier',      'Tes échéances de l’année, réunies au même endroit.'],
+    partenaires:['Écosystème','Nos partenaires','Les outils et les gens qu’on recommande pour bien t’entourer.'],
+    profil:     ['Compte',  'Mon profil',    'Toutes tes informations, saisies une fois et réutilisées partout.'],
+  };
+
+  // Profil d'entreprise — centralisé, persisté dans le navigateur (localStorage),
+  // réutilisé par le simulateur. Pré-rempli avec un exemple modifiable.
+  // Profil = source unique de vérité. Chaque champ ici est un champ en moins
+  // dans les simulateurs : ils lisent le profil à l'ouverture (appliquerProfil).
+  var DEFAULT_PROFIL = {
+    // 0 · Identité. Le mot de passe n'est volontairement PAS stocké : sans
+    // backend d'authentification, le garder ici reviendrait à écrire un mot de
+    // passe en clair dans le navigateur.
+    prenom: '',
+    nom: '',
+    email: '',
+    telephone: '',
+    photo: '',            // data URL, redimensionnée à 256 px avant stockage
+    // 1 · Activité
+    activite: 'Monteur vidéo',
+    description: 'Je réalise des montages vidéo à distance pour des créateurs de contenu. J’échange avec eux par mail et WhatsApp et je travaille depuis mon domicile.',
+    categorieFiscale: 'bnc',
+    // 2 · Structure
+    forme: 'SASU',
+    regime: 'Impôt sur les sociétés',
+    versementLiberatoire: 'non',
+    // 3 · Chiffre d'affaires
+    ca: '60000',
+    periodeCa: 'annuel',
+    // 4 · TVA
+    tva: 'Société assujettie à la TVA',
+    tauxVente: '0.2',
+    clientRecup: '70',
+    clientProNon: '10',
+    clientParticuliers: '20',
+    // 5 · Foyer fiscal
+    parts: '1',
+    autresRevenus: '',
+    rfr: '',
+    partsRfr: '',
+    reductions: '',
+    // 6 · Rémunération
+    remMensuelle: '3000',
+    dividendes: '100',
+    tresorerie: '10000',
+    cfe: '',
+    // 7 · Charges professionnelles — liste partagée par 3 simulateurs
+    charges: [
+      { nom:'Logiciels et abonnements', montant:'180', frequence:'mensuelle',
+        tauxTVA:'0.2', deductible:'100', categorie:'fonctionnement' },
+    ],
+  };
+
+  function estMicro(p){
+    return /micro|individuelle/i.test(p.forme || '');
+  }
+  function estSociete(p){
+    return !estMicro(p) && !/je ne sais pas/i.test(p.forme || '');
+  }
+  // Le CA saisi, toujours ramené à l'année.
+  function caProfilAnnuel(p){
+    var v = parseFloat(String(p.ca).replace(/\s/g, '').replace(',', '.')) || 0;
+    return p.periodeCa === 'mensuel' ? v * 12 : v;
+  }
+
+
+  // ---------------------------------------------------------------------------
+  // Paramètres fiscaux par année — à réviser chaque année, jamais en dur ailleurs.
+  // ---------------------------------------------------------------------------
+  // Un seul millésime affiché dans toute l'app : l'utilisateur raisonne en
+  // « ma déclaration de cette année », pas en « année du taux ».
+  var MILLESIME = {
+    revenus: 2025,
+    label: 'revenus 2025',
+    verifieLe: { fiscal:'23/07/2026', tva:'23/07/2026', statut:'ta feuille de calcul (29/08/2024)' },
+  };
+
+  function bandeauMillesimeHtml(jeu){
+    return '<div class="millesime">Paramètres <strong>' + esc(MILLESIME.label) + '</strong>'
+      + ' · vérifiés : ' + esc(MILLESIME.verifieLe[jeu] || '—')
+      + ' · <button class="btn-link" data-action="open-profil" style="display:inline">'
+      + 'à revoir chaque année</button></div>';
+  }
+
+  var FISCAL = {
+    '2025': {
+      anneeRevenus: 2025,
+      anneeDeclaration: 2026,
+      anneeRfr: 2024,              // RFR de l'année N-2 servant à l'éligibilité
+      source: 'economie.gouv.fr · impots.gouv.fr · entreprendre.service-public.fr',
+      verifieLe: '23/07/2026',
+      micro: {
+        venteBIC:   { vl: 0.010, abattement: 0.71, court: 'Vente (micro-BIC)',
+                      label: 'Vente de marchandises, restauration ou hébergement — micro-BIC' },
+        serviceBIC: { vl: 0.017, abattement: 0.50, court: 'Services (micro-BIC)',
+                      label: 'Prestations de services commerciales ou artisanales — micro-BIC' },
+        bnc:        { vl: 0.022, abattement: 0.34, court: 'Libéral (micro-BNC)',
+                      label: 'Activité libérale — micro-BNC' },
+      },
+      abattementMinimum: 305,
+      bareme: [
+        { de: 0,      a: 11600,  taux: 0    },
+        { de: 11600,  a: 29579,  taux: 0.11 },
+        { de: 29579,  a: 84577,  taux: 0.30 },
+        { de: 84577,  a: 181917, taux: 0.41 },
+        { de: 181917, a: null,   taux: 0.45 },
+      ],
+      plafondRfrParPart: 29315,
+      // Volontairement non renseignés : valeurs officielles non fournies dans le
+      // brief. Tant qu'ils sont à null, le calcul les ignore ET le dit dans les
+      // hypothèses affichées — plutôt que d'inventer des seuils.
+      decote: null,
+      plafondQuotientFamilial: null,
+    },
+  };
+
+  // ---------------------------------------------------------------------------
+  // Paramètres du simulateur « Quand passer en société ? »
+  //
+  // ⚠️ ATTENTION : contrairement aux autres simulateurs, le brief ne fournissait
+  // AUCUNE valeur chiffrée. Celles-ci sont des ORDRES DE GRANDEUR destinés à
+  // rendre l'outil utilisable, PAS des taux officiels vérifiés. Elles sont
+  // toutes modifiables par l'utilisateur dans le panneau « Paramètres », et
+  // l'interface affiche un avertissement tant qu'elles n'ont pas été validées.
+  // ---------------------------------------------------------------------------
+  var STATUT_PARAMS = {
+    annee: 2026,
+    source: 'Feuille de calcul de l’utilisateur (L. Marie, 29/08/2024)',
+    valide: false,          // partiellement : voir PARAM_SOURCE ci-dessous
+    micro: {
+      // Cotisations sociales du micro-entrepreneur, en % du CA encaissé
+      cotisations: { venteBIC: 0.123, serviceBIC: 0.212, bnc: 0.246 },
+      // Abattement fiscal (identique au simulateur versement libératoire)
+      abattement: { venteBIC: 0.71, serviceBIC: 0.50, bnc: 0.34 },
+      vlTaux:     { venteBIC: 0.01, serviceBIC: 0.017, bnc: 0.022 },
+    },
+    is: { tauxReduit: 0.15, plafondReduit: 42500, tauxNormal: 0.25 },
+    pfu: 0.30,              // prélèvement forfaitaire unique sur les dividendes
+    cfe: 500,               // cotisation foncière des entreprises (très variable)
+    eurl: { cotisationsTNS: 0.44 },              // en % de la rémunération versée
+    // Calibré pour que le coût total colle au « 88 % du net » de la feuille :
+    // (1 + 0,466) / (1 − 0,22) = 1,88.
+    sasu: { patronales: 0.466, salariales: 0.22 },
+    abattementSalaire: 0.10,                     // abattement de 10 % pour l'IR
+  };
+
+  // Provenance de chaque paramètre : ce qui vient de la feuille de calcul de
+  // l'utilisateur, et ce qui reste une estimation. Affiché dans l'interface pour
+  // qu'on ne confonde jamais un chiffre confirmé avec un ordre de grandeur.
+  var PARAM_SOURCE = {
+    'eurl.cotisationsTNS': 'confirme',
+    'sasu.patronales':     'confirme',
+    'sasu.salariales':     'confirme',
+    'is.tauxReduit':       'confirme',
+    'is.tauxNormal':       'confirme',
+    'pfu':                 'confirme',
+    'is.plafondReduit':    'estime',
+    'cfe':                 'estime',
+    'micro.cotisations':   'estime',
+    'abattementSalaire':   'estime',
+  };
+  var PARAM_BADGE = {
+    confirme: { l:'Confirmé', bg:'#dcfce7', c:'#15803d',
+                t:'Valeur reprise de ta feuille de calcul.' },
+    estime:   { l:'À confirmer', bg:'#fef3c7', c:'#b45309',
+                t:'Ordre de grandeur : ta feuille de calcul ne donne pas cette valeur.' },
+  };
+
+  // Impôt sur les sociétés, avec le taux réduit sur la première tranche.
+  function calculIS(benefice, P){
+    if(!(benefice > 0)) return 0;
+    var reduit = Math.min(benefice, P.is.plafondReduit);
+    var normal = Math.max(0, benefice - P.is.plafondReduit);
+    return reduit * P.is.tauxReduit + normal * P.is.tauxNormal;
+  }
+
+  // Calcule les trois statuts pour un chiffre d'affaires donné.
+  // Tout est déterministe : aucune IA n'intervient.
+  function calculerStatuts(f, caAnnuel){
+    var P = state.statut ? state.statut.params : STATUT_PARAMS;
+    var bareme = FISCAL['2025'];
+    var ca = Math.max(0, caAnnuel);
+    var cat = f.categorie || 'bnc';
+    var parts = Math.max(1, parseFloat(f.parts) || 1);
+    var charges = Math.max(0, parseFloat(f.chargesAnnuelles) || 0);
+    var invest = Math.max(0, parseFloat(f.investissement) || 0);
+    var remSouhaitee = Math.max(0, (parseFloat(f.remMensuelle) || 0) * 12);
+    var tauxDiv = Math.min(1, Math.max(0, (parseFloat(f.dividendes) || 0) / 100));
+
+    // ---- Auto-entreprise ----
+    // Point clé : les charges ne sont PAS déductibles, elles sortent de la poche.
+    function micro(){
+      var cot = ca * P.micro.cotisations[cat];
+      var cfe = P.cfe;
+      var ir, assiette = ca * (1 - P.micro.abattement[cat]);
+      if(f.versementLiberatoire === 'oui') ir = ca * P.micro.vlTaux[cat];
+      else ir = impotBareme(assiette, parts, bareme);
+      var net = ca - cot - ir - cfe - charges - invest;
+      return { ca:ca, charges:charges + invest, chargesDeductibles:false,
+               cotisations:cot, fiscalite:ir + cfe, ir:ir, cfe:cfe,
+               dividendes:0, net:net, remuneration:0, plafonnee:false };
+    }
+
+    // ---- EURL (gérant TNS, à l'IS) ----
+    function eurl(){
+      var dispo = ca - charges - invest;
+      // On ne peut pas se verser plus que ce que l'entreprise peut supporter.
+      var rem = Math.max(0, Math.min(remSouhaitee, dispo / (1 + P.eurl.cotisationsTNS)));
+      var cot = rem * P.eurl.cotisationsTNS;
+      var resultat = dispo - rem - cot;
+      var is = calculIS(Math.max(0, resultat), P);
+      var apresIS = Math.max(0, resultat - is);
+      var div = apresIS * tauxDiv;
+      var pfu = div * P.pfu;
+      var irRem = impotBareme(rem * (1 - P.abattementSalaire), parts, bareme);
+      var net = (rem - irRem) + (div - pfu);
+      return { ca:ca, charges:charges + invest, chargesDeductibles:true,
+               cotisations:cot, fiscalite:is + pfu + irRem, is:is, pfu:pfu, ir:irRem,
+               remuneration:rem, resultat:resultat, dividendes:div, net:net,
+               plafonnee: rem < remSouhaitee - 1 };
+    }
+
+    // ---- SASU (président assimilé salarié, à l'IS) ----
+    function sasu(){
+      var dispo = ca - charges - invest;
+      // La rémunération saisie est un NET souhaité : on remonte au brut.
+      var brutSouhaite = remSouhaitee / (1 - P.sasu.salariales);
+      var coutMax = dispo / (1 + P.sasu.patronales);
+      var brut = Math.max(0, Math.min(brutSouhaite, coutMax));
+      var patronales = brut * P.sasu.patronales;
+      var salariales = brut * P.sasu.salariales;
+      var netAvantIR = brut - salariales;
+      var resultat = dispo - brut - patronales;
+      var is = calculIS(Math.max(0, resultat), P);
+      var apresIS = Math.max(0, resultat - is);
+      var div = apresIS * tauxDiv;
+      var pfu = div * P.pfu;
+      var irRem = impotBareme(netAvantIR * (1 - P.abattementSalaire), parts, bareme);
+      var net = (netAvantIR - irRem) + (div - pfu);
+      return { ca:ca, charges:charges + invest, chargesDeductibles:true,
+               cotisations:patronales + salariales, fiscalite:is + pfu + irRem,
+               is:is, pfu:pfu, ir:irRem, remuneration:netAvantIR, brut:brut,
+               resultat:resultat, dividendes:div, net:net,
+               plafonnee: brut < brutSouhaite - 1 };
+    }
+
+    return { micro:micro(), eurl:eurl(), sasu:sasu() };
+  }
+
+  // Cherche le CA à partir duquel un statut dépasse l'auto-entreprise.
+  // Les niveaux de CA où l'activité n'est pas viable (revenu négatif dans l'un
+  // des deux statuts) sont ignorés : y comparer deux pertes n'a aucun sens.
+  // Répond à la question de l'utilisateur : « à partir de QUAND ? »
+  // On part donc de son CA actuel et on monte — chercher en dessous produirait
+  // des croisements parasites (à très bas CA la rémunération est plafonnée et
+  // la société peut sembler gagnante alors que rien n'est viable).
+  // Retourne { deja:true } si la société est déjà devant, { ca } sinon, ou null.
+  function pointDeBascule(f, cle, caActuel){
+    var depart = Math.max(5000, Math.round(caActuel || 0));
+    var r0 = calculerStatuts(f, depart);
+    if(r0.micro.net > 0 && r0[cle].net > r0.micro.net) return { deja:true, ca:depart };
+    for(var ca = depart; ca <= 400000; ca += 1000){
+      var r = calculerStatuts(f, ca);
+      if(r.micro.net <= 0 || r[cle].net <= 0) continue;
+      if(r[cle].net > r.micro.net) return { deja:false, ca:ca };
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Simulateur « Optimiser ma société » — moteur (temps réel, sans IA)
+  // Réutilise STATUT_PARAMS : mêmes taux, donc mêmes réserves de validation.
+  // ---------------------------------------------------------------------------
+  var OPTIM_CATEGORIES = [
+    { v:'fonctionnement', l:'Fonctionnement', ex:'Logiciels, abonnements' },
+    { v:'vehicule',       l:'Véhicule',       ex:'Achat, LOA, carburant, entretien' },
+    { v:'deplacement',    l:'Déplacements',   ex:'Train, avion, hôtel, restaurant' },
+    { v:'local',          l:'Local',          ex:'Loyer, coworking, internet' },
+    { v:'assurance',      l:'Assurances',     ex:'RC Pro, mutuelle, prévoyance' },
+    { v:'investissement', l:'Investissements',ex:'Ordinateur, caméra, mobilier' },
+    { v:'communication',  l:'Communication',  ex:'Publicité, sponsoring, événements' },
+  ];
+
+  // Leviers activables : chacun est une charge déductible supplémentaire.
+  // ⚠️ Les plafonds d'exonération propres à chaque dispositif ne sont PAS
+  // vérifiés (le brief ne les chiffre pas) — seul le mécanisme de déduction
+  // est simulé. C'est indiqué à l'utilisateur.
+  var OPTIM_LEVIERS = [
+    { v:'mutuelle',    l:'Mutuelle santé',        def:80,  unite:'mois', social:true },
+    { v:'prevoyance',  l:'Prévoyance',            def:60,  unite:'mois', social:true },
+    { v:'rcpro',       l:'RC Pro',                def:400, unite:'an' },
+    { v:'per',         l:'Plan d’épargne retraite',def:200, unite:'mois', social:true },
+    { v:'ticketsResto',l:'Titres-restaurant',     def:100, unite:'mois' },
+    { v:'ik',          l:'Indemnités kilométriques',def:150,unite:'mois' },
+    { v:'bureau',      l:'Bureau à domicile',     def:100, unite:'mois' },
+  ];
+
+  function totalLeviers(leviers){
+    return OPTIM_LEVIERS.reduce(function(s, L){
+      var m = parseFloat(leviers[L.v]) || 0;
+      return s + (L.unite === 'mois' ? m * 12 : m);
+    }, 0);
+  }
+
+  function chargesOptimAnnuelles(charges){
+    return charges.reduce(function(s, c){
+      var m = parseFloat(c.montant) || 0;
+      var annuel = c.frequence === 'mensuelle' ? m * 12 : m;
+      var ded = Math.min(1, Math.max(0, (parseFloat(c.deductible) || 0) / 100));
+      return s + annuel * ded;
+    }, 0);
+  }
+
+  // TVA récupérable sur les charges (réutilise la formule du simulateur TVA).
+  function tvaRecupOptim(charges, assujetti){
+    if(!assujetti) return 0;
+    return charges.reduce(function(s, c){
+      var m = parseFloat(c.montant) || 0;
+      var annuel = c.frequence === 'mensuelle' ? m * 12 : m;
+      var t = parseFloat(c.tauxTVA) || 0;
+      var ded = Math.min(1, Math.max(0, (parseFloat(c.deductible) || 0) / 100));
+      return s + tvaDansTTC(annuel, t) * ded;
+    }, 0);
+  }
+
+  function calculerOptim(f, charges, leviers, statut, caAnnuel){
+    var P = state.statut.params;
+    var bareme = FISCAL['2025'];
+    var ca = Math.max(0, caAnnuel);
+    var parts = Math.max(1, parseFloat(f.parts) || 1);
+    var assujetti = f.tva === 'oui';
+
+    var chargesDed = chargesOptimAnnuelles(charges);
+    var tvaRecup = tvaRecupOptim(charges, assujetti);
+    // Si la société récupère la TVA, la charge réelle est le HT.
+    var chargesReelles = chargesDed - tvaRecup;
+    var leviersTotal = totalLeviers(leviers);
+    var chargesTotales = chargesReelles + leviersTotal;
+
+    var remSouhaitee = Math.max(0, (parseFloat(f.remMensuelle) || 0) * 12);
+    var tresoCible = Math.max(0, parseFloat(f.tresorerie) || 0);
+    var tauxDiv = Math.min(1, Math.max(0, (parseFloat(f.dividendes) || 0) / 100));
+
+    var dispo = ca - chargesTotales;
+    var rem, cotisations, brut = 0, patronales = 0, salariales = 0, netAvantIR;
+
+    if(statut === 'sasu'){
+      var brutSouhaite = remSouhaitee / (1 - P.sasu.salariales);
+      brut = Math.max(0, Math.min(brutSouhaite, Math.max(0, dispo) / (1 + P.sasu.patronales)));
+      patronales = brut * P.sasu.patronales;
+      salariales = brut * P.sasu.salariales;
+      cotisations = patronales + salariales;
+      netAvantIR = brut - salariales;
+      rem = netAvantIR;
+    } else {
+      rem = Math.max(0, Math.min(remSouhaitee, Math.max(0, dispo) / (1 + P.eurl.cotisationsTNS)));
+      cotisations = rem * P.eurl.cotisationsTNS;
+      netAvantIR = rem;
+    }
+
+    var coutRemuneration = (statut === 'sasu') ? (brut + patronales) : (rem + cotisations);
+    var resultat = dispo - coutRemuneration;
+    var is = calculIS(Math.max(0, resultat), P);
+    var apresIS = Math.max(0, resultat - is);
+
+    // La trésorerie conservée n'est pas distribuable.
+    var distribuable = Math.max(0, apresIS - tresoCible);
+    var dividendes = distribuable * tauxDiv;
+    var pfu = dividendes * P.pfu;
+    var tresorerieFinale = apresIS - dividendes;
+
+    var irRem = impotBareme(netAvantIR * (1 - P.abattementSalaire), parts, bareme);
+    var argentPerso = (netAvantIR - irRem) + (dividendes - pfu);
+    var prelevements = cotisations + is + pfu + irRem;
+
+    return {
+      ca:ca, assujetti:assujetti, chargesDed:chargesDed, tvaRecup:tvaRecup,
+      chargesReelles:chargesReelles, leviersTotal:leviersTotal, chargesTotales:chargesTotales,
+      statut:statut, remuneration:netAvantIR, brut:brut, patronales:patronales,
+      salariales:salariales, cotisations:cotisations, coutRemuneration:coutRemuneration,
+      resultat:resultat, is:is, apresIS:apresIS, tresoCible:tresoCible,
+      distribuable:distribuable, dividendes:dividendes, pfu:pfu,
+      tresorerieFinale:tresorerieFinale, ir:irRem, argentPerso:argentPerso,
+      prelevements:prelevements,
+      tauxPrelevement: ca > 0 ? prelevements / ca : 0,
+      plafonnee: (statut === 'sasu' ? brut * (1 + P.sasu.patronales) : rem * (1 + P.eurl.cotisationsTNS))
+                 < (remSouhaitee * (statut === 'sasu' ? 1.2 : 1.4)) && rem < remSouhaitee - 1,
+    };
+  }
+
+  // --- Scores de santé (règles PRODUIT, pas des règles fiscales) ---
+  function scoresOptim(r, leviers){
+    var borne = function(v){ return Math.max(0, Math.min(100, Math.round(v))); };
+    // Rémunération : part du CA effectivement versée au dirigeant
+    var ratioRem = r.ca > 0 ? r.remuneration / r.ca : 0;
+    var remScore = borne(ratioRem <= 0 ? 0 : (ratioRem < 0.15 ? ratioRem / 0.15 * 55
+                        : ratioRem <= 0.45 ? 100 : 100 - (ratioRem - 0.45) * 180));
+    // Trésorerie : combien de mois de fonctionnement le matelas couvre.
+    // On compare aux charges ET au coût de la rémunération : comparer aux seules
+    // charges donnait des scores absurdes quand elles sont faibles.
+    var mensuelFonctionnement = (r.chargesTotales + r.coutRemuneration) / 12;
+    var mois = mensuelFonctionnement > 0 ? r.tresorerieFinale / mensuelFonctionnement
+                                         : (r.tresorerieFinale > 0 ? 6 : 0);
+    var tresoScore = borne(mois <= 0 ? 0 : (mois < 3 ? mois / 3 * 65 : mois <= 9 ? 100
+                          : 100 - (mois - 9) * 2.5));
+    // Fiscal : taux de prélèvement global
+    var tp = r.tauxPrelevement;
+    var fiscalScore = borne(tp <= 0.25 ? 100 : tp >= 0.55 ? 20 : 100 - (tp - 0.25) * 265);
+    // Charges : part du CA déduite (trop peu = on paie de l'impôt sur tout)
+    var ratioCh = r.ca > 0 ? r.chargesTotales / r.ca : 0;
+    var chargesScore = borne(ratioCh <= 0 ? 25 : ratioCh < 0.10 ? 40 + ratioCh / 0.10 * 45
+                            : ratioCh <= 0.40 ? 100 : 100 - (ratioCh - 0.40) * 200);
+    // Social : leviers de protection activés
+    var actifs = ['mutuelle','prevoyance','per'].filter(function(k){ return (parseFloat(leviers[k])||0) > 0; }).length;
+    var socialScore = borne(actifs / 3 * 70 + (r.statut === 'sasu' ? 30 : 15));
+    var scores = { remuneration:remScore, tresorerie:tresoScore, fiscal:fiscalScore,
+                   charges:chargesScore, social:socialScore };
+    scores.global = Math.round((remScore + tresoScore + fiscalScore + chargesScore + socialScore) / 5);
+    return scores;
+  }
+
+  // --- Import depuis les autres simulateurs (l'écosystème) ---
+  function depensesImportables(){
+    var out = [];
+    // 1) Simulateur TVA : montant, fréquence, taux, part récupérable
+    (state.tva.depenses || []).forEach(function(d){
+      if(!(d.nom || '').trim() || !(parseFloat(d.montant) > 0)) return;
+      out.push({ nom:d.nom, montant:d.montant, frequence:d.frequence || 'mensuelle',
+                 tauxTVA:d.taux || '0.2', deductible:String(parseFloat(d.recup) || 0),
+                 categorie:'fonctionnement', source:'Simulateur TVA' });
+    });
+    // 2) Simulateur de dépenses : la déductibilité vient de l'analyse IA
+    var derniere = (state.historique || [])[0];
+    if(derniere && derniere.depenses){
+      derniere.depenses.forEach(function(d, i){
+        if(!(d.nom || '').trim() || !(parseFloat(d.montant) > 0)) return;
+        var res = derniere.result && derniere.result.depenses && derniere.result.depenses[i];
+        var st = res && res.statut;
+        var ded = st === 'vert' ? '100' : (st === 'orange' ? '50' : (st === 'rouge' ? '0' : '50'));
+        out.push({ nom:d.nom, montant:d.montant, frequence:'annuelle', tauxTVA:'0.2',
+                   deductible:ded, categorie:'fonctionnement',
+                   source:'Analyse de dépenses' + (st ? ' (' + STATUT[st].label + ')' : '') });
+      });
+    }
+    return out;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Paramètres du simulateur TVA — à réviser chaque année.
+  // ---------------------------------------------------------------------------
+  var TVA_PARAMS = {
+    annee: 2026,
+    source: 'impots.gouv.fr · entreprendre.service-public.fr',
+    verifieLe: '23/07/2026',
+    tauxVente: [
+      { v:'0.2',   l:'20 % — taux normal' },
+      { v:'0.1',   l:'10 % — taux intermédiaire' },
+      { v:'0.055', l:'5,5 % — taux réduit' },
+      { v:'0.021', l:'2,1 % — taux particulier' },
+    ],
+    tauxDepense: [
+      { v:'0.2',   l:'20 %' }, { v:'0.1',   l:'10 %' },
+      { v:'0.055', l:'5,5 %' }, { v:'0.021', l:'2,1 %' },
+      { v:'0',     l:'0 % / sans TVA' },
+    ],
+    // Seuils de franchise en base : volontairement non renseignés — le brief ne
+    // les chiffre pas et inventer un seuil fiscal serait pire que ne rien dire.
+    seuilsFranchise: null,
+    // Seuils de recommandation : règles PRODUIT, pas des règles fiscales.
+    seuilFavorable: 0.01,      // gain net > 1 % du CA
+    seuilDefavorable: -0.01,   // perte nette > 1 % du CA
+    baisseVentes: { aucune:0, faible:0.05, moderee:0.10, importante:0.20 },
+    // Catégories dont la TVA est souvent limitée ou exclue.
+    categoriesSensibles: ['vehicule','carburant','restaurant','hebergement','cadeau','mixte','logement'],
+  };
+
+  // ---------------------------------------------------------------------------
+  // Moteur de calcul TVA (déterministe et testable — l'IA ne calcule rien ici)
+  // ---------------------------------------------------------------------------
+  // TVA comprise dans un montant TTC.
+  // Piège classique : TTC / 1,2 donne le HT, PAS la TVA.
+  function tvaDansTTC(ttc, taux){
+    if(!(ttc > 0) || !(taux > 0)) return 0;
+    return ttc * taux / (1 + taux);
+  }
+
+  // Un achat unique ne doit jamais être multiplié par douze.
+  function annualiser(montant, frequence){
+    var m = parseFloat(montant) || 0;
+    return frequence === 'mensuelle' ? m * 12 : m;
+  }
+
+  function calculerTVA(f, depenses){
+    var p = TVA_PARAMS;
+    var ca = Math.max(0, parseFloat(f.ca) || 0);
+    if(f.caMensuel) ca = ca * 12;
+    var taux = parseFloat(f.tauxVente) || 0;
+
+    var pRecup = (parseFloat(f.partRecup) || 0) / 100;
+    var pProNon = (parseFloat(f.partProNon) || 0) / 100;
+    var pParticuliers = (parseFloat(f.partParticuliers) || 0) / 100;
+    var pSensible = pProNon + pParticuliers;   // ceux pour qui la TVA est un coût
+
+    // --- TVA récupérable sur les dépenses ---
+    var lignes = (depenses || []).map(function(d){
+      var ttcAnnuel = annualiser(d.montant, d.frequence);
+      var t = parseFloat(d.taux) || 0;
+      var theorique = tvaDansTTC(ttcAnnuel, t);
+      var coef = Math.min(1, Math.max(0, (parseFloat(d.recup) || 0) / 100));
+      return {
+        nom: d.nom || 'Dépense', ttcAnnuel: ttcAnnuel, taux: t,
+        theorique: theorique, coef: coef, recuperable: theorique * coef,
+        sensible: p.categoriesSensibles.indexOf(d.categorie) !== -1,
+        categorie: d.categorie || '',
+      };
+    });
+    var tvaRecuperable = lignes.reduce(function(s, l){ return s + l.recuperable; }, 0);
+    var coutsAdmin = Math.max(0, parseFloat(f.coutsAdmin) || 0);
+
+    // --- Un scénario = un taux de répercussion par groupe de clients ---
+    // rRecup / rSensible ∈ [0,1] : part de la TVA ajoutée au prix actuel.
+    function scenario(rRecup, rSensible){
+      var absorbee = 0, collectee = 0, caHT = 0, hausseTTC = 0;
+      [{ ca: ca * pRecup, r: rRecup }, { ca: ca * pSensible, r: rSensible }].forEach(function(s){
+        if(!(s.ca > 0)) return;
+        var nouveauTTC = s.ca * (1 + taux * s.r);   // prix actuel + part de TVA répercutée
+        var ht = nouveauTTC / (1 + taux);
+        absorbee += Math.max(0, s.ca - ht);         // ce que l'entrepreneur perd en HT
+        collectee += nouveauTTC - ht;               // encaissé pour être reversé (pas un revenu)
+        caHT += ht;
+        hausseTTC += nouveauTTC - s.ca;
+      });
+      return {
+        absorbee: absorbee, collectee: collectee, caHT: caHT, hausseTTC: hausseTTC,
+        gain: tvaRecuperable - absorbee - coutsAdmin,
+      };
+    }
+
+    // --- Scénario retenu selon la stratégie déclarée ---
+    var rRecup = 1, rSensible = 1;
+    if(f.strategie === 'conserver'){ rRecup = 0; rSensible = 0; }
+    else if(f.strategie === 'adapter'){
+      rRecup = 1;
+      rSensible = Math.min(1, Math.max(0, (parseFloat(f.repercussionSensible) || 0) / 100));
+    }
+    var principal = scenario(rRecup, rSensible);
+
+    // --- Les trois scénarios de référence ---
+    var scenarios = {
+      ajoutee: scenario(1, 1),
+      conservee: scenario(0, 0),
+      mixte: scenario(1, 0),
+    };
+
+    // --- Risque commercial : chiffré à part, jamais fondu dans le gain ---
+    var baisse = p.baisseVentes[f.baisseVentes] !== undefined ? p.baisseVentes[f.baisseVentes] : null;
+    var perteCommerciale = (baisse === null) ? null : ca * pSensible * baisse;
+
+    // --- Avis ---
+    var sommeParts = Math.round((pRecup + pProNon + pParticuliers) * 100);
+    var incomplet = !(ca > 0) || !(taux > 0) || sommeParts !== 100
+                    || f.strategie === 'inconnu' || f.exoneree === 'oui' || f.exoneree === 'partiel';
+    var relatif = ca > 0 ? principal.gain / ca : 0;
+    var avis;
+    if(incomplet) avis = 'gris';
+    else if(relatif > p.seuilFavorable) avis = 'vert';
+    else if(relatif < p.seuilDefavorable) avis = 'rouge';
+    else avis = 'orange';
+
+    return {
+      params: p, ca: ca, taux: taux,
+      parts: { recup:pRecup, proNon:pProNon, particuliers:pParticuliers, sensible:pSensible },
+      segments: {
+        recup: ca * pRecup, proNon: ca * pProNon,
+        particuliers: ca * pParticuliers, sensible: ca * pSensible,
+      },
+      lignes: lignes, tvaRecuperable: tvaRecuperable, coutsAdmin: coutsAdmin,
+      principal: principal, scenarios: scenarios,
+      perteCommerciale: perteCommerciale, baisse: baisse,
+      avis: avis, relatif: relatif, sommeParts: sommeParts,
+      strategie: f.strategie, exoneree: f.exoneree,
+      rRecup: rRecup, rSensible: rSensible,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Moteur de calcul fiscal (déterministe, aucun appel à l'IA)
+  // ---------------------------------------------------------------------------
+  // Impôt sur le revenu au barème progressif, avec quotient familial.
+  function impotBareme(revenuImposable, parts, p){
+    if(!(revenuImposable > 0) || !(parts > 0)) return 0;
+    var parPart = revenuImposable / parts;
+    var impot = 0;
+    p.bareme.forEach(function(tr){
+      var haut = (tr.a === null) ? Infinity : tr.a;
+      if(parPart > tr.de) impot += (Math.min(parPart, haut) - tr.de) * tr.taux;
+    });
+    return impot * parts;
+  }
+
+  // Tranche dans laquelle tombe un revenu PAR PART.
+  function trancheDe(revenuParPart, p){
+    var t = p.bareme[0];
+    p.bareme.forEach(function(tr){ if(revenuParPart > tr.de) t = tr; });
+    return t;
+  }
+
+  // Bénéfice imposable micro = CA − abattement (jamais inférieur à l'abattement minimum).
+  function beneficeMicro(ca, abattement, minAbat){
+    if(!(ca > 0)) return 0;
+    var abat = Math.max(ca * abattement, minAbat);
+    return Math.max(0, ca - abat);
+  }
+
+  // Comparaison complète des deux options.
+  function comparerVL(f){
+    var p = FISCAL[f.annee] || FISCAL['2025'];
+    var cat = p.micro[f.categorie] || p.micro.bnc;
+    var ca = Math.max(0, parseFloat(f.ca) || 0);
+    var autres = Math.max(0, parseFloat(f.autresRevenus) || 0);
+    var parts = Math.max(1, parseFloat(f.parts) || 1);
+
+    // Option A — versement libératoire : assis sur le chiffre d'affaires.
+    var vl = ca * cat.vl;
+
+    // Option B — barème progressif : on ne retient que le SURCOÛT dû à la micro.
+    var benefice = beneficeMicro(ca, cat.abattement, p.abattementMinimum);
+    var impotSans = impotBareme(autres, parts, p);
+    var impotAvec = impotBareme(autres + benefice, parts, p);
+    var coutClassique = Math.max(0, impotAvec - impotSans);
+
+    // Réductions/crédits éventuels : ils réduisent l'impôt réellement dû, donc
+    // peuvent annuler tout ou partie du surcoût de la micro.
+    var reductions = Math.max(0, parseFloat(f.reductions) || 0);
+    if(reductions > 0){
+      var apres = Math.max(0, impotAvec - reductions);
+      var avant = Math.max(0, impotSans - reductions);
+      coutClassique = Math.max(0, apres - avant);
+    }
+
+    var ecart = coutClassique - vl;   // > 0 → le VL fait économiser
+
+    // Position dans le barème, avant et après la micro.
+    var parPartAvant = autres / parts;
+    var parPartApres = (autres + benefice) / parts;
+
+    // Éligibilité au versement libératoire (RFR de N-2).
+    var rfr = parseFloat(f.rfr);
+    var partsRfr = Math.max(1, parseFloat(f.partsRfr) || parts);
+    var plafond = p.plafondRfrParPart * partsRfr;
+    var eligible = (f.rfr === '' || f.rfr === null || isNaN(rfr)) ? null : (rfr <= plafond);
+
+    return {
+      params: p, cat: cat, ca: ca, autres: autres, parts: parts,
+      vl: vl, vlMensuel: vl / 12,
+      benefice: benefice, impotSans: impotSans, impotAvec: impotAvec,
+      coutClassique: coutClassique, coutMensuel: coutClassique / 12,
+      ecart: ecart, ecartMensuel: ecart / 12,
+      parPartAvant: parPartAvant, parPartApres: parPartApres,
+      trancheAvant: trancheDe(parPartAvant, p), trancheApres: trancheDe(parPartApres, p),
+      eligible: eligible, plafondRfr: plafond, rfr: isNaN(rfr) ? null : rfr,
+      reductions: reductions,
+    };
+  }
+
+  // Historique des simulations — conservé dans le navigateur, 20 dernières.
+  function loadHistorique(){
+    try {
+      var raw = localStorage.getItem('freehub_historique');
+      if(raw){ var a = JSON.parse(raw); if(Array.isArray(a)) return a; }
+    } catch(e){}
+    return [];
+  }
+  function saveHistorique(h){
+    try { localStorage.setItem('freehub_historique', JSON.stringify(h.slice(0, 20))); } catch(e){}
+    pousserServeur();
+  }
+  // Historique propre au comparateur : chaque simulateur garde ses simulations.
+  function loadHistVL(){
+    try {
+      var raw = localStorage.getItem('freehub_hist_vl');
+      if(raw){ var a = JSON.parse(raw); if(Array.isArray(a)) return a; }
+    } catch(e){}
+    return [];
+  }
+  function saveHistVL(h){
+    try { localStorage.setItem('freehub_hist_vl', JSON.stringify(h.slice(0, 20))); } catch(e){}
+    pousserServeur();
+  }
+  // Scénarios sauvegardés du simulateur d'optimisation.
+  // Les taux ajustés par l'utilisateur étaient perdus au rechargement.
+  function loadParams(){
+    var base = JSON.parse(JSON.stringify(STATUT_PARAMS));
+    try {
+      var raw = localStorage.getItem('freehub_params');
+      if(raw){
+        var enr = JSON.parse(raw);
+        ['micro','is','eurl','sasu'].forEach(function(k){
+          if(enr[k]) Object.assign(base[k], enr[k]);
+        });
+        ['pfu','cfe','abattementSalaire'].forEach(function(k){
+          if(enr[k] !== undefined) base[k] = enr[k];
+        });
+      }
+    } catch(e){}
+    return base;
+  }
+  function saveParams(P){
+    try { localStorage.setItem('freehub_params', JSON.stringify(P)); } catch(e){}
+    pousserServeur();
+  }
+
+  // Objectifs choisis + étapes cochées. Sans ça, tout se perdait au rechargement.
+  var OBJECTIFS_DEFAUT = {
+    added: ['statut','tva-comprendre','cfe'],
+    checks: { 'statut:0':true, 'statut:1':true, 'tva-comprendre:0':true },
+  };
+  function loadObjectifs(){
+    try {
+      var raw = localStorage.getItem('freehub_objectifs');
+      if(raw){
+        var o = JSON.parse(raw);
+        return { added: Array.isArray(o.added) ? o.added : OBJECTIFS_DEFAUT.added.slice(),
+                 checks: o.checks || {} };
+      }
+    } catch(e){}
+    return { added: OBJECTIFS_DEFAUT.added.slice(),
+             checks: Object.assign({}, OBJECTIFS_DEFAUT.checks) };
+  }
+  function saveObjectifs(){
+    try {
+      localStorage.setItem('freehub_objectifs',
+        JSON.stringify({ added: state.added, checks: state.checks }));
+    } catch(e){}
+    pousserServeur();
+  }
+
+  function loadScenarios(){
+    try {
+      var raw = localStorage.getItem('freehub_scenarios');
+      if(raw){ var a = JSON.parse(raw); if(Array.isArray(a)) return a; }
+    } catch(e){}
+    return [];
+  }
+  function saveScenarios(s){
+    try { localStorage.setItem('freehub_scenarios', JSON.stringify(s.slice(0, 12))); } catch(e){}
+    pousserServeur();
+  }
+  function loadHistTVA(){
+    try {
+      var raw = localStorage.getItem('freehub_hist_tva');
+      if(raw){ var a = JSON.parse(raw); if(Array.isArray(a)) return a; }
+    } catch(e){}
+    return [];
+  }
+  function saveHistTVA(h){
+    try { localStorage.setItem('freehub_hist_tva', JSON.stringify(h.slice(0, 20))); } catch(e){}
+    pousserServeur();
+  }
+
+  // Statuts du simulateur : couleur, fond, icône, libellé.
+  var STATUT = {
+    vert:   { bg:'#16a34a', color:'#15803d', soft:'#dcfce7', icon:'✓', label:'A priori justifiable' },
+    orange: { bg:'#f59e0b', color:'#c2410c', soft:'#ffedd5', icon:'!', label:'Possible sous conditions' },
+    rouge:  { bg:'#dc2626', color:'#b91c1c', soft:'#fee2e2', icon:'✕', label:'Difficilement justifiable' },
+    gris:   { bg:'#64748b', color:'#475569', soft:'#f1f5f9', icon:'?', label:'Analyse impossible en l’état' },
+  };
+
+  // Options des menus déroulants du formulaire (d'après le brief produit).
+  var SIM_OPTIONS = {
+    forme: ['Micro-entreprise','Entreprise individuelle','EURL','SASU','SARL','SAS','Autre société','Je ne sais pas'],
+    regime: ['Impôt sur les sociétés','Impôt sur le revenu','Je ne sais pas'],
+    tva: ['Société assujettie à la TVA','Franchise en base de TVA','Exonération particulière','Je ne sais pas'],
+    usage: ['Exclusivement professionnelle','Majoritairement professionnelle','Mixte professionnelle et personnelle','Principalement personnelle','Je ne sais pas'],
+    beneficiaire: ["L'entreprise",'Le dirigeant','Un salarié','Un client','Un prospect','Plusieurs personnes','Autre'],
+    justificatif: ['Facture au nom de la société','Facture au nom du dirigeant','Ticket de caisse','Relevé bancaire uniquement','Aucun justificatif pour le moment'],
+  };
+
+
+  // Les 7 blocs du profil. Chaque bloc porte sa couleur, son icône, et la liste
+  // des simulateurs qui s'en servent — pour que l'utilisateur sache pourquoi il
+  // remplit un champ. `si` masque un bloc ou un champ hors contexte.
+  // Les blocs du profil. Chaque bloc : sa couleur, son icône, ses champs, et un
+  // résumé affiché quand il est replié. `si` masque un bloc ou un champ hors contexte.
+  var PROFIL_SECTIONS = [
+    {
+      id:'identite', titre:'Profil', ico:'👤', color:'#db2777', soft:'#fdf2f8',
+      resume:function(p){
+        var n = ((p.prenom||'') + ' ' + (p.nom||'')).trim();
+        return n ? n + (p.email ? ' · ' + p.email : '') : 'À compléter';
+      },
+      champs:[
+        { k:'prenom', l:'Prénom', ph:'Louis' },
+        { k:'nom', l:'Nom', ph:'Martin' },
+        { k:'email', l:'Adresse e-mail', type:'email', ph:'louis@exemple.fr' },
+        { k:'telephone', l:'Téléphone', type:'tel', ph:'06 12 34 56 78' },
+      ],
+      // Bloc spécial rendu à la main (photo + mot de passe).
+      extra:'identite',
+    },
+    {
+      id:'activite', titre:'Activité', ico:'🧑‍💻', color:'#2563eb', soft:'#eff5ff',
+      resume:function(p){
+        return (p.activite || 'À compléter') + ' · ' + valeurProfil('categorieFiscale');
+      },
+      champs:[
+        { k:'activite', l:'Activité principale', large:true, ph:'Ex : monteur vidéo, consultant marketing…' },
+        { k:'description', l:'Comment tu travailles', textarea:true, large:true,
+          ph:'Ex : à distance pour des créateurs, depuis mon domicile…',
+          aide:'Sert à l’analyse de tes dépenses : plus c’est précis, plus le verdict est juste.' },
+        { k:'categorieFiscale', l:'Catégorie fiscale', lex:'abattement', large:true, options:[
+            {v:'venteBIC', l:'Vente, restauration, hébergement (BIC)'},
+            {v:'serviceBIC', l:'Prestations de services (BIC)'},
+            {v:'bnc', l:'Activité libérale (BNC)'},
+            {v:'inconnu', l:'Je ne sais pas'} ],
+          aide:'Elle fixe ton abattement et le taux du versement libératoire.' },
+      ],
+    },
+    {
+      id:'structure', titre:'Structure', ico:'🏛', color:'#7c3aed', soft:'#f5f0ff',
+      resume:function(p){ return (p.forme || 'À compléter') + ' · ' + (p.regime || ''); },
+      champs:[
+        { k:'forme', l:'Forme juridique', options:SIM_OPTIONS.forme.map(function(x){ return {v:x,l:x}; }) },
+        { k:'regime', l:'Régime d’imposition', options:SIM_OPTIONS.regime.map(function(x){ return {v:x,l:x}; }) },
+        { k:'versementLiberatoire', l:'Versement libératoire', lex:'vfl', si:estMicro, options:[
+            {v:'non', l:'Non — barème progressif'}, {v:'oui', l:'Oui'} ] },
+      ],
+    },
+    {
+      id:'ca', titre:'Chiffre d’affaires', ico:'📈', color:'#059669', soft:'#ecfdf5',
+      resume:function(p){ return valeurProfil('ca'); },
+      champs:[
+        { k:'ca', l:'Montant encaissé', type:'number', ph:'60 000',
+          aide:'Ce que tes clients te paient, avant cotisations et dépenses.' },
+        { k:'periodeCa', l:'Période', options:[
+            {v:'annuel', l:'par an'}, {v:'mensuel', l:'par mois'} ] },
+      ],
+    },
+    {
+      id:'tva', titre:'TVA et clients', ico:'🧾', color:'#0891b2', soft:'#ecfeff',
+      resume:function(p){ return (p.tva || 'À compléter') + ' · clients ' + valeurProfil('clientele'); },
+      champs:[
+        { k:'tva', l:'Ta situation', lex:'franchise', large:true,
+          options:SIM_OPTIONS.tva.map(function(x){ return {v:x,l:x}; }) },
+        { k:'tauxVente', l:'Taux de TVA de tes ventes', large:true, options:TVA_PARAMS.tauxVente },
+        { k:'clientRecup', l:'Clients qui récupèrent la TVA', type:'number', suffixe:'%',
+          aide:'Sociétés et pros assujettis.' },
+        { k:'clientProNon', l:'Pros qui ne la récupèrent pas', type:'number', suffixe:'%',
+          aide:'Micro en franchise, associations.' },
+        { k:'clientParticuliers', l:'Particuliers', type:'number', suffixe:'%',
+          aide:'Ils supportent le prix TTC.' },
+      ],
+      total:{ cles:['clientRecup','clientProNon','clientParticuliers'], attendu:100,
+              l:'Répartition de ta clientèle' },
+    },
+    {
+      id:'foyer', titre:'Foyer fiscal', ico:'🏠', color:'#ca8a04', soft:'#fefce8',
+      resume:function(p){
+        return (p.parts || '1') + ' part' + (parseFloat(p.parts) > 1 ? 's' : '')
+             + ' · autres revenus ' + valeurProfil('autresRevenus');
+      },
+      champs:[
+        { k:'parts', l:'Parts fiscales', options:[
+            {v:'1',l:'1'},{v:'1.5',l:'1,5'},{v:'2',l:'2'},{v:'2.5',l:'2,5'},
+            {v:'3',l:'3'},{v:'3.5',l:'3,5'},{v:'4',l:'4'} ],
+          aide:'Célibataire = 1 · Couple = 2 · + 0,5 par enfant.' },
+        { k:'autresRevenus', l:'Autres revenus du foyer', type:'number', ph:'30 000',
+          aide:'Hors ton activité : salaires, conjoint, pensions, foncier…' },
+        { k:'rfr', l:'Revenu fiscal de référence N−2', lex:'rfr', type:'number', ph:'25 000',
+          aide:'Sur ton avis d’impôt. Sert à vérifier ton éligibilité au versement libératoire.' },
+        { k:'partsRfr', l:'Parts à cette année-là', options:[
+            {v:'',l:'— même qu’aujourd’hui —'},
+            {v:'1',l:'1'},{v:'1.5',l:'1,5'},{v:'2',l:'2'},{v:'2.5',l:'2,5'},
+            {v:'3',l:'3'},{v:'3.5',l:'3,5'},{v:'4',l:'4'} ] },
+        { k:'reductions', l:'Réductions et crédits d’impôt', type:'number', ph:'0',
+          aide:'Emploi à domicile, garde d’enfants, dons…' },
+      ],
+    },
+    {
+      id:'remuneration', titre:'Rémunération', ico:'💶', color:'#4d7c0f', soft:'#f5fbe8',
+      resume:function(p){ return valeurProfil('remuneration') + ' · ' + valeurProfil('dividendes') + ' en dividendes'; },
+      note:'Ce que tu te verses — ou ce que tu te verserais si tu passais en société.',
+      champs:[
+        { k:'remMensuelle', l:'Rémunération nette voulue', type:'number', ph:'3 000', suffixe:'€ / mois' },
+        { k:'dividendes', l:'Bénéfices distribués en dividendes', lex:'dividendes', type:'number', ph:'100', suffixe:'%',
+          aide:'0 % = tout reste dans la société.' },
+        { k:'tresorerie', l:'À laisser dans la société', lex:'tresorerie', type:'number', ph:'10 000', suffixe:'€ / an',
+          aide:'Ce matelas n’est pas distribué.' },
+        { k:'cfe', l:'Ta CFE', lex:'cfe', type:'number', ph:'500', suffixe:'€ / an',
+          aide:'Sur ton avis de CFE, dans ton espace impots.gouv. Très variable selon la commune.' },
+      ],
+    },
+  ];
+  // Petit utilitaire sûr : la valeur existe-t-elle en localStorage ?
+  function localStorageOk(cle){
+    try { return localStorage.getItem(cle) !== null; } catch(e){ return true; }
+  }
+
+  function loadProfil(){
+    try {
+      var raw = localStorage.getItem('freehub_profil');
+      if(raw) return Object.assign({}, DEFAULT_PROFIL, JSON.parse(raw));
+    } catch(e){}
+    return Object.assign({}, DEFAULT_PROFIL);
+  }
+  function saveProfil(p){
+    try { localStorage.setItem('freehub_profil', JSON.stringify(p)); } catch(e){}
+    pousserServeur();
+  }
+
+  // ---------------------------------------------------------------------------
+  // État
+  // ---------------------------------------------------------------------------
+  var state = {
+    tab: 'accueil',
+    objectifOuvert: null,   // objectif déplié dans l'onglet Mes objectifs
+    added: loadObjectifs().added,
+    checks: loadObjectifs().checks,
+    objFiltre: null,        // domaine filtré dans Mes objectifs
+    objVoirFinis: false,    // afficher les objectifs déjà maîtrisés
+    objectifsVus: false,    // le badge « New » disparaît une fois l'onglet ouvert
+    lexEpingles: loadLexique(),  // ids des termes épinglés dans « mon lexique »
+    lexRecherche: '',       // filtre de recherche du lexique
+    lexMonLexique: false,   // n'afficher que mes termes épinglés
+    lexOuvert: null,        // id du terme dont la fiche est ouverte (pop-up)
+    stepOuvert: null,       // index de l'étape dépliée (null = l'étape en cours)
+    // Onboarding au premier lancement : tant que le drapeau n'est pas posé.
+    onboarding: { actif: !localStorageOk('freehub_onboarded'), etape: 0, rep: {} },
+    // Compte (optionnel) : null = déconnecté, sinon { email }.
+    compte: null, authOpen: false, authMode: 'login', authErr: '', authBusy: false,
+    syncEtat: '',           // '' | 'en cours' | 'ok' | 'erreur'
+    // Badges & jalons
+    badges: loadBadges(), faits: loadFaits(), badgeQueue: [], badgesInitialises: false,
+    profil: loadProfil(),
+    profilReturn: 'simulateur',
+    profilSaved: false,
+    profilSection: null,  // id de la section dépliée dans le profil
+    importInfo: null,     // retour après un import de sauvegarde
+    partOpen: null,       // index du partenaire dont la fiche est ouverte
+    // Formulaire « devenir partenaire » (ouvert à tous).
+    partForm: false, partFormBusy: false, partFormDone: false, partFormErr: '',
+    historique: loadHistorique(),
+    sim: {
+      open: null,           // null = liste des simulateurs ; 'depenses' = simulateur ouvert
+      step: 'form',         // form | result | error
+      analyzing: false,     // pop-up « Analyse en cours »
+      consent: false,
+      consentOpen: false,   // pop-up d'avertissement avant l'analyse
+      depenses: [ { nom:'', montant:'', motif:'' } ],
+      formError: null,
+      result: null,         // { depenses:[…], synthese:{…} }
+      openResult: 0,        // index du résultat déplié
+      error: null,
+    },
+    // Comparateur versement libératoire / impôt classique (100 % calculé, sans IA)
+    vl: {
+      step: 'form',         // form | result
+      form: { annee:'2025', categorie:'', ca:'', caMensuel:false, autresRevenus:'',
+              parts:'1', rfr:'', partsRfr:'', reductions:'' },
+      result: null,
+      formError: null,
+      historique: loadHistVL(),
+    },
+    // Simulateur « Optimiser ma société » — cockpit temps réel
+    optim: {
+      statut: 'eurl',          // eurl | sasu
+      form: { caAnnuel:'80000', caMensuel:false, tva:'oui', remMensuelle:'3000',
+              dividendes:'100', tresorerie:'10000', parts:'1', objectif:'revenu' },
+      charges: [ { nom:'Logiciels et abonnements', montant:'180', frequence:'mensuelle',
+                   tauxTVA:'0.2', deductible:'100', categorie:'fonctionnement' } ],
+      leviers: { mutuelle:0, prevoyance:0, rcpro:0, per:0, ticketsResto:0, ik:0, bureau:0 },
+      projection: null,
+      scenarios: loadScenarios(),
+      importInfo: null,        // message après un import
+    },
+    // Simulateur « Quand passer en société ? » — recalcul en temps réel
+    statut: {
+      params: loadParams(),
+      paramsSaved: false,
+      mode: 'tous',            // eurl | sasu | tous
+      form: { categorie:'bnc', caAnnuel:'48000', caMensuel:false, versementLiberatoire:'non',
+              parts:'1', remMensuelle:'2500', dividendes:'100', investissement:'0' },
+      charges: [ { nom:'Logiciels et abonnements', montant:'150', frequence:'mensuelle' } ],
+      avance: false,           // panneau des paramètres fiscaux
+      projection: null,        // CA du curseur (null = CA réel saisi)
+    },
+    // Simulateur de passage à la TVA (calcul déterministe, sans IA)
+    tva: {
+      step: 'form',
+      form: { franchise:'oui', exoneree:'non', ca:'', caMensuel:false, tauxVente:'0.2',
+              partRecup:'', partProNon:'', partParticuliers:'', strategie:'',
+              repercussionSensible:'50', coutsAdmin:'', baisseVentes:'aucune' },
+      depenses: [ { nom:'', montant:'', frequence:'mensuelle', taux:'0.2', recup:'100', categorie:'' } ],
+      result: null,
+      formError: null,
+      historique: loadHistTVA(),
+    },
+  };
+
+  function setState(patch){ Object.assign(state, patch); render(); }
+
+  // ---------------------------------------------------------------------------
+  // Compte & synchronisation (optionnels — l'app marche sans)
+  // ---------------------------------------------------------------------------
+  function apiJson(method, path, body){
+    return fetch(path, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'same-origin',
+    }).then(function(r){
+      return r.json().then(function(d){ return { ok:r.ok, status:r.status, data:d }; },
+                           function(){ return { ok:r.ok, status:r.status, data:{} }; });
+    });
+  }
+
+  // Le paquet synchronisé = les mêmes clés que l'export de sauvegarde.
+  function paquetLocal(){
+    var d = {};
+    CLES_SAUVEGARDE.forEach(function(k){
+      var v = null; try { v = localStorage.getItem(k); } catch(e){}
+      if(v !== null) d[k] = v;
+    });
+    return d;
+  }
+
+  var syncTimer = null;
+  // Envoi différé : on regroupe les changements rapprochés en un seul envoi.
+  function pousserServeur(){
+    if(!state.compte) return;
+    if(syncTimer) clearTimeout(syncTimer);
+    var badge = document.querySelector('.compte-sync');
+    if(badge){ badge.textContent = '⟳ Synchronisation…'; }
+    syncTimer = setTimeout(function(){
+      apiJson('PUT', 'api/data', { donnees: paquetLocal() }).then(function(res){
+        state.syncEtat = res.ok ? 'ok' : 'erreur';
+        var b = document.querySelector('.compte-sync');
+        if(b) b.textContent = res.ok ? '✓ Synchronisé' : '⚠ Synchro impossible';
+      }, function(){
+        state.syncEtat = 'erreur';
+        var b = document.querySelector('.compte-sync');
+        if(b) b.textContent = '⚠ Synchro impossible';
+      });
+    }, 900);
+  }
+
+  // Applique un paquet reçu du serveur au stockage local, puis recharge l'état.
+  function appliquerPaquet(donnees){
+    Object.keys(donnees || {}).forEach(function(k){
+      if(CLES_SAUVEGARDE.indexOf(k) < 0) return;
+      try { localStorage.setItem(k, donnees[k]); } catch(e){}
+    });
+    state.profil = loadProfil();
+    var ob = loadObjectifs(); state.added = ob.added; state.checks = ob.checks;
+    state.historique = loadHistorique();
+    state.vl.historique = loadHistVL();
+    state.tva.historique = loadHistTVA();
+    state.optim.scenarios = loadScenarios();
+    state.statut.params = loadParams();
+    state.lexEpingles = loadLexique();
+    state.badges = loadBadges();
+    state.faits = loadFaits();
+    // Le questionnaire d'arrivée a déjà été rempli sur un autre appareil ? On le
+    // referme au lieu de le rejouer.
+    if(localStorageOk('freehub_onboarded')) state.onboarding.actif = false;
+    appliquerProfil();
+  }
+
+  // Reprend l'identité du compte dans le profil : prénom et nom sont saisis à
+  // l'inscription (landing), donc jamais redemandés dans l'onboarding.
+  function identiteDepuisCompte(c){
+    var p = state.profil, change = false;
+    if(c.prenom && !(p.prenom || '').trim()){ p.prenom = c.prenom; change = true; }
+    if(c.nom    && !(p.nom || '').trim()){    p.nom    = c.nom;    change = true; }
+    if(c.email  && !(p.email || '').trim()){  p.email  = c.email;  change = true; }
+    if(change) saveProfil(p);
+  }
+
+  // Au chargement : y a-t-il une session ouverte ? Si oui, on tire les données.
+  // Sinon, un visiteur arrivé sur /app sans compte ni données locales est
+  // renvoyé vers la landing (le point d'entrée public).
+  function verifierSession(){
+    apiJson('GET', 'api/auth/me').then(function(res){
+      if(!res.ok){
+        if(!aDesDonneesLocales()) window.location.replace('./');
+        return;
+      }
+      state.compte = { email: res.data.email, prenom: res.data.prenom, nom: res.data.nom };
+      identiteDepuisCompte(state.compte);
+      apiJson('GET', 'api/data').then(function(d){
+        if(d.ok && d.data.donnees && Object.keys(d.data.donnees).length){
+          appliquerPaquet(d.data.donnees);
+          identiteDepuisCompte(state.compte);   // le compte fait foi pour l'identité
+        } else {
+          pousserServeur();   // compte vide : on l'ensemence avec le local
+        }
+        state.syncEtat = 'ok';
+        render();
+      });
+    }, function(){ /* serveur injoignable : on reste en local */ });
+  }
+
+  // Y a-t-il déjà un usage local ? Le drapeau est relevé AVANT le premier rendu
+  // (voir plus bas) : le rendu lui-même écrit des clés — les badges notamment —
+  // qui fausseraient la mesure. Sert à ne pas éjecter vers la landing quelqu'un
+  // qui utilise l'outil sans compte.
+  function aDesDonneesLocales(){ return usageLocalInitial; }
+
+  // ---------------------------------------------------------------------------
+  // Profil → simulateurs
+  // ---------------------------------------------------------------------------
+  // Appelée à l'ouverture d'un simulateur et à l'enregistrement du profil.
+  // Tout ce qui vient d'ici a disparu des formulaires : c'est le cœur de la
+  // promesse « on ne te redemande jamais deux fois la même chose ».
+  function appliquerProfil(){
+    var p = state.profil;
+    // La CFE du profil remplace l'estimation par défaut (ta feuille la laisse
+    // en case rouge : c'est bien une donnée propre à chaque entreprise).
+    var cfeProfil = parseFloat(p.cfe);
+    if(cfeProfil >= 0 && String(p.cfe).trim() !== '') state.statut.params.cfe = cfeProfil;
+    var caAn = String(caProfilAnnuel(p) || '');
+    var franchise = /franchise/i.test(p.tva) ? 'oui'
+                  : (/assujettie/i.test(p.tva) ? 'non' : 'inconnu');
+
+    // 2 · Versement libératoire
+    Object.assign(state.vl.form, {
+      categorie: p.categorieFiscale || '',
+      ca: caAn, caMensuel: false,
+      autresRevenus: p.autresRevenus, parts: p.parts,
+      rfr: p.rfr, partsRfr: p.partsRfr || p.parts, reductions: p.reductions,
+    });
+
+    // 3 · Passage à la TVA
+    Object.assign(state.tva.form, {
+      franchise: franchise,
+      exoneree: /exonération/i.test(p.tva) ? 'oui' : 'non',
+      ca: caAn, caMensuel: false,
+      tauxVente: p.tauxVente,
+      partRecup: p.clientRecup, partProNon: p.clientProNon,
+      partParticuliers: p.clientParticuliers,
+    });
+    state.tva.depenses = (p.charges || []).map(function(c){
+      return { nom:c.nom, montant:c.montant, frequence:c.frequence,
+               taux:c.tauxTVA, recup:c.deductible, categorie:c.categorie };
+    });
+    if(!state.tva.depenses.length){
+      state.tva.depenses = [ { nom:'', montant:'', frequence:'mensuelle',
+                               taux:'0.2', recup:'100', categorie:'' } ];
+    }
+
+    // 4 · Quand passer en société
+    Object.assign(state.statut.form, {
+      categorie: p.categorieFiscale === 'inconnu' ? 'bnc' : (p.categorieFiscale || 'bnc'),
+      caAnnuel: caAn, caMensuel: false,
+      versementLiberatoire: p.versementLiberatoire,
+      parts: p.parts, remMensuelle: p.remMensuelle, dividendes: p.dividendes,
+    });
+    state.statut.charges = (p.charges || []).map(function(c){
+      return { nom:c.nom, montant:c.montant, frequence:c.frequence };
+    });
+
+    // 5 · Optimiser ma société
+    if(/sasu|^sas$/i.test(p.forme)) state.optim.statut = 'sasu';
+    else if(/eurl|sarl/i.test(p.forme)) state.optim.statut = 'eurl';
+    Object.assign(state.optim.form, {
+      caAnnuel: caAn, caMensuel: false,
+      tva: franchise === 'oui' ? 'non' : 'oui',
+      parts: p.parts, remMensuelle: p.remMensuelle,
+      dividendes: p.dividendes, tresorerie: p.tresorerie,
+    });
+    state.optim.charges = (p.charges || []).map(function(c){
+      return { nom:c.nom, montant:c.montant, frequence:c.frequence,
+               tauxTVA:c.tauxTVA, deductible:c.deductible,
+               categorie:c.categorie, source:c.source };
+    });
+  }
+
+  // Rappel compact du profil, en tête de chaque simulateur : ce qui a été repris
+  // et un accès direct pour le corriger. `cles` = champs à montrer.
+  var PROFIL_LIBELLES = {
+    activite:'Activité', categorieFiscale:'Catégorie', forme:'Forme', regime:'Régime',
+    versementLiberatoire:'Versement libératoire', ca:'Chiffre d’affaires', tva:'TVA',
+    tauxVente:'Taux de TVA', clientele:'Clientèle', parts:'Parts fiscales',
+    autresRevenus:'Autres revenus', rfr:'RFR N−2', remuneration:'Rémunération',
+    dividendes:'Dividendes', tresorerie:'Trésorerie gardée', charges:'Charges',
+  };
+
+  function valeurProfil(k){
+    var p = state.profil;
+    switch(k){
+      case 'ca': return fmtEur(caProfilAnnuel(p)) + ' / an';
+      case 'categorieFiscale': {
+        var m = { venteBIC:'Vente (BIC)', serviceBIC:'Services (BIC)',
+                  bnc:'Libéral (BNC)', inconnu:'Non précisée' };
+        return m[p.categorieFiscale] || 'Non précisée';
+      }
+      case 'tauxVente': return fmtPct(parseFloat(p.tauxVente) || 0);
+      case 'clientele': return (p.clientRecup||0)+' / '+(p.clientProNon||0)+' / '+(p.clientParticuliers||0)+' %';
+      case 'remuneration': return fmtEur(p.remMensuelle) + ' / mois';
+      case 'dividendes': return (p.dividendes || 0) + ' %';
+      case 'tresorerie': return fmtEur(p.tresorerie) + ' / an';
+      case 'cfe': return String(p.cfe).trim() ? fmtEur(p.cfe) + ' / an' : 'Estimée à ' + fmtEur(STATUT_PARAMS.cfe);
+      case 'charges': {
+        var n = (p.charges || []).length;
+        var t = (p.charges || []).reduce(function(a, c){
+          return a + annualiser(parseFloat(c.montant) || 0, c.frequence); }, 0);
+        return n + (n > 1 ? ' charges · ' : ' charge · ') + fmtEur(t) + ' / an';
+      }
+      case 'versementLiberatoire': return p.versementLiberatoire === 'oui' ? 'Oui' : 'Non';
+      case 'autresRevenus': return p.autresRevenus ? fmtEur(p.autresRevenus) + ' / an' : 'Non renseigné';
+      case 'rfr': return p.rfr ? fmtEur(p.rfr) : 'Non renseigné';
+      default: return String(p[k] || 'Non renseigné');
+    }
+  }
+
+  // Sections du profil dont chaque simulateur a besoin, pour l'alerte ciblée.
+  var BESOINS_SIM = {
+    depenses: ['activite','structure'],
+    vl:       ['activite','ca','foyer'],
+    tva:      ['tva','ca','charges'],
+    statut:   ['activite','ca','foyer','remuneration','charges'],
+    optim:    ['structure','ca','remuneration','charges'],
+  };
+
+  function profilBandeHtml(cles){
+    var items = cles.map(function(k){
+      return '<div class="pb-item"><span class="pb-k">'+esc(PROFIL_LIBELLES[k] || k)+'</span>'
+        + '<span class="pb-v">'+esc(valeurProfil(k))+'</span></div>';
+    }).join('');
+
+    // Ce qui manque pour que CE simulateur soit fiable.
+    var besoins = BESOINS_SIM[state.sim.open] || [];
+    var secs = sectionsProfil();
+    var manque = secs.filter(function(s){ return besoins.indexOf(s.id) >= 0 && !s.ok; });
+    var alerte = manque.length
+      ? '<div class="pb-manque">⚠ À compléter pour un résultat fiable : <strong>'
+        + manque.map(function(s){ return esc(s.titre); }).join(', ') + '</strong></div>'
+      : '';
+
+    return '<div class="pbande'+(manque.length?' incomplet':'')+'">'
+      + '<div class="pbande-h"><span class="pbande-ico">🗂</span>'
+        + '<span class="pbande-t">D’après ton profil</span>'
+        + '<button class="pbande-btn" data-action="open-profil">Modifier →</button></div>'
+      + '<div class="pb-items">'+items+'</div>'
+      + alerte
+      + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+  function obj(id){ return catalog.find(function(c){ return c.id === id; }); }
+  function pctOf(id){
+    var o = obj(id);
+    var done = o.steps.filter(function(_, i){ return state.checks[id+':'+i]; }).length;
+    return { done:done, total:o.steps.length, pct:Math.round(done / o.steps.length * 100) };
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
+
+  // ---------------------------------------------------------------------------
+  // Templates
+  // ---------------------------------------------------------------------------
+  // Icônes de nav : traits fins, monochromes (currentColor) — plus sobres que
+  // des emojis colorés sur le fond bleu nuit.
+  var NAV_ICONES = {
+    accueil:    '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/>',
+    objectifs:  '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/>',
+    simulateur: '<line x1="4" y1="7.5" x2="20" y2="7.5"/><circle cx="9" cy="7.5" r="2.3"/>'
+              + '<line x1="4" y1="16.5" x2="20" y2="16.5"/><circle cx="15" cy="16.5" r="2.3"/>',
+    partenaires:'<circle cx="9" cy="9" r="3"/><path d="M3.6 19c0-3 2.4-5 5.4-5s5.4 2 5.4 5"/>'
+              + '<path d="M16 6.6a3 3 0 0 1 0 5.6"/><path d="M17 14.2c2.1.5 3.6 2.2 3.6 4.6"/>',
+    lexique:    '<path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"/><path d="M5 18a2 2 0 0 1 2-2h11"/>'
+              + '<line x1="9" y1="8" x2="14" y2="8"/>',
+    calendrier: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><line x1="3.5" y1="9" x2="20.5" y2="9"/>'
+              + '<line x1="8" y1="3" x2="8" y2="6"/><line x1="16" y1="3" x2="16" y2="6"/>',
+  };
+  function navHtml(){
+    var tabs = [ {key:'accueil',label:'Accueil'}, {key:'objectifs',label:'Mes objectifs'},
+                 {key:'calendrier',label:'Calendrier'},
+                 {key:'simulateur',label:'Simulateur'}, {key:'lexique',label:'Lexique'},
+                 {key:'partenaires',label:'Nos partenaires'} ];
+    return tabs.map(function(t){
+      var on = state.tab === t.key;
+      return '<button class="nav-row'+(on?' on':'')+'" data-action="tab" data-tab="'+t.key+'">'
+        + '<span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          + 'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+NAV_ICONES[t.key]+'</svg></span>'
+        + '<span class="nav-text">'+esc(t.label)+'</span>'
+        + (t.key === 'objectifs' ? '<span class="nav-badge">New</span>' : '')
+        + '</button>';
+    }).join('');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Accueil — « où j'en suis ? » en un écran
+  // ---------------------------------------------------------------------------
+  // Échéances récurrentes. On ne met ici QUE des dates déjà affirmées ailleurs
+  // dans l'app : pas d'échéance inventée. `objectif` relie au parcours associé.
+  var ECHEANCES = [
+    { jour:30, mois:9,  titre:'Demande de versement libératoire',
+      note:'Pour en bénéficier l’année suivante.', objectif:'vfl' },
+    { jour:15, mois:12, titre:'Paiement de la CFE',
+      note:'Dans ton espace pro sur impots.gouv.', objectif:'cfe' },
+  ];
+
+  function prochaineEcheance(){
+    var now = new Date();
+    var candidates = ECHEANCES.map(function(e){
+      var d = new Date(now.getFullYear(), e.mois - 1, e.jour);
+      if(d < now) d = new Date(now.getFullYear() + 1, e.mois - 1, e.jour);
+      return { e:e, date:d, jours:Math.ceil((d - now) / 86400000) };
+    }).sort(function(a, b){ return a.date - b.date; });
+    return candidates[0] || null;
+  }
+
+  // Le net estimé part du profil et du statut déclaré : c'est le chiffre que
+  // l'utilisateur veut voir en premier en ouvrant l'app.
+  function netEstime(caOverride){
+    var p = state.profil;
+    var ca = (caOverride != null && caOverride > 0) ? caOverride : caProfilAnnuel(p);
+    if(!(ca > 0)) return null;
+    var f = {
+      categorie: p.categorieFiscale === 'inconnu' ? 'bnc' : (p.categorieFiscale || 'bnc'),
+      parts: p.parts || '1',
+      chargesAnnuelles: (p.charges || []).reduce(function(a, c){
+        return a + annualiser(parseFloat(c.montant) || 0, c.frequence); }, 0),
+      investissement: 0,
+      remMensuelle: p.remMensuelle, dividendes: p.dividendes,
+      versementLiberatoire: p.versementLiberatoire,
+    };
+    var r = calculerStatuts(f, ca);
+    var cle = estMicro(p) ? 'micro' : (/sasu|^sas$/i.test(p.forme) ? 'sasu' : 'eurl');
+    return { ca:ca, cle:cle, res:r[cle], tous:r,
+             label: STATUT_LABELS[cle] || cle,
+             part: ca > 0 ? Math.round(r[cle].net / ca * 100) : 0 };
+  }
+
+  // L'action du moment : ce qui débloque le plus, dans l'ordre.
+  function actionDuMoment(){
+    var secs = sectionsProfil();
+    var trou = secs.filter(function(x){ return !x.ok; })[0];
+    if(trou){
+      return { ico:'🗂', titre:'Complète « '+trou.titre+' »',
+        texte:'Il manque '+trou.manquants.join(', ').toLowerCase()
+          + ' — sans ça, tes simulateurs travaillent à l’aveugle.',
+        cta:'Compléter mon profil', action:'open-profil', data:'' };
+    }
+    // Sinon : la prochaine étape non faite du parcours le plus avancé.
+    // On propose d'abord de finir ce qui est entamé, sinon ce que le profil désigne.
+    var candidats = state.added.filter(function(id){ return !!obj(id); }).map(function(id){
+      var o = obj(id), pr = pctOf(id);
+      return { id:id, pct:pr.pct, done:pr.done, o:o,
+               reco: o.pertinent && o.pertinent(state.profil) };
+    }).filter(function(x){ return x.pct < 100; })
+      .sort(function(a, b){
+        if((a.done > 0) !== (b.done > 0)) return a.done > 0 ? -1 : 1;
+        if(a.reco !== b.reco) return a.reco ? -1 : 1;
+        return b.pct - a.pct;
+      });
+    if(candidats.length){
+      var c = candidats[0], st = c.o.steps[c.done];
+      return { ico:'🎯', titre:st.t, texte:c.o.title + ' · ' + st.h,
+        cta:'Reprendre où j’en suis', action:'view', data:c.id, color:dom(c.o).c };
+    }
+    return { ico:'🎉', titre:'Tous tes objectifs sont bouclés',
+      texte:'Tu as fait le tour — explore les simulateurs pour affiner tes chiffres.',
+      cta:'Revoir mes parcours', action:'tab', data:'' };
+  }
+
+  // Met à jour le hero en direct pendant le glissement, sans re-render : sinon
+  // le curseur perdrait le focus à chaque cran.
+  function majAccueilProjection(ca){
+    var n = netEstime(ca);
+    if(!n) return;
+    var host = document.querySelector('.acc-hero');
+    if(!host) return;
+    var reel = caProfilAnnuel(state.profil);
+    var proj = Math.round(ca) !== Math.round(reel);
+    host.querySelector('.acc-hero-n').innerHTML = fmtEur(n.res.net / 12) + '<span> / mois</span>';
+    host.querySelector('.acc-hero-s').textContent = 'soit ' + fmtEur(n.res.net)
+      + ' sur l’année, sur ' + fmtEur(ca) + ' encaissés';
+    host.querySelector('.acc-hero-r').innerHTML = anneauCa(n.res, ca, 132);
+    host.querySelector('.acc-slider-val').textContent = fmtEur(ca);
+    var badge = host.querySelector('.acc-proj-badge');
+    if(badge) badge.style.display = proj ? 'inline-flex' : 'none';
+  }
+
+  function accueilHtml(){
+    var p = state.profil;
+    var prenom = (p.prenom || '').trim();
+    var net = netEstime();
+    var ech = prochaineEcheance();
+    var act = actionDuMoment();
+
+    // --- Bandeau : le chiffre qu'on vient chercher ---
+    var hero;
+    if(net){
+      var caReel = caProfilAnnuel(p);
+      var maxCa = Math.max(150000, Math.round(caReel * 2 / 5000) * 5000);
+      hero = '<div class="acc-hero">'
+        + '<div class="acc-hero-top">'
+          + '<div class="acc-hero-l">'
+            + '<div class="acc-bonjour">'+(prenom ? 'Bonjour '+esc(prenom) : 'Bonjour')
+              + '<span class="acc-proj-badge" style="display:none">Projection</span></div>'
+            + '<div class="acc-hero-k">Ce qui te reste vraiment, en '+esc(net.label)+'</div>'
+            + '<div class="acc-hero-n">'+fmtEur(net.res.net / 12)+'<span> / mois</span></div>'
+            + '<div class="acc-hero-s">soit '+fmtEur(net.res.net)+' sur l’année, sur '
+              + fmtEur(net.ca)+' encaissés</div>'
+          + '</div>'
+          + '<div class="acc-hero-r">'+anneauCa(net.res, net.ca, 132)+'</div>'
+        + '</div>'
+        + '<div class="acc-slider">'
+          + '<div class="acc-slider-h">Et si ton chiffre d’affaires était de '
+            + '<span class="acc-slider-val">'+fmtEur(caReel)+'</span> par an ?</div>'
+          + '<input type="range" data-accueil-ca min="10000" max="'+maxCa+'" step="1000" '
+            + 'value="'+caReel+'">'
+          + '<div class="acc-slider-b"><span>10 k€</span>'
+            + '<button class="acc-slider-reset" data-action="acc-ca-reset">Revenir à mon CA réel</button>'
+            + '<span>'+Math.round(maxCa/1000)+' k€</span></div>'
+        + '</div>'
+        + '</div>';
+    } else {
+      hero = '<div class="acc-hero vide">'
+        + '<div class="acc-hero-l">'
+          + '<div class="acc-bonjour">'+(prenom ? 'Bonjour '+esc(prenom) : 'Bienvenue')+'</div>'
+          + '<div class="acc-hero-k">On ne connaît pas encore ton chiffre d’affaires</div>'
+          + '<div class="acc-hero-s">Renseigne-le et cet écran te dira, en direct, '
+            + 'ce qu’il te reste vraiment chaque mois.</div>'
+          + '<button class="acc-hero-cta" data-action="open-profil">Compléter mon profil →</button>'
+        + '</div></div>';
+    }
+
+    // --- Trois cartes : échéance, action, profil ---
+    var carteEch = ech
+      ? '<button class="acc-card" style="--c:#b45309" data-action="view" data-id="'+ech.e.objectif+'">'
+        + '<div class="acc-card-h"><span class="acc-ico">📅</span>Prochaine échéance</div>'
+        + '<div class="acc-card-t">'+esc(ech.e.titre)+'</div>'
+        + '<div class="acc-card-d">'+esc(ech.e.note)+'</div>'
+        + '<div class="acc-card-f"><strong>'+ech.date.toLocaleDateString('fr-FR',
+            { day:'numeric', month:'long' })+'</strong><span>dans '+ech.jours+' jours</span></div>'
+        + '</button>'
+      : '';
+
+    var carteAct = '<button class="acc-card" style="--c:'+(act.color || '#2f6bff')+'"'
+      + ' data-action="'+act.action+'"'+(act.data ? ' data-id="'+act.data+'"' : '')
+      + (act.action === 'tab' ? ' data-tab="objectifs"' : '')+'>'
+      + '<div class="acc-card-h"><span class="acc-ico">'+act.ico+'</span>À faire maintenant</div>'
+      + '<div class="acc-card-t">'+esc(act.titre)+'</div>'
+      + '<div class="acc-card-d">'+esc(act.texte)+'</div>'
+      + '<div class="acc-card-f"><strong>'+esc(act.cta)+' →</strong></div>'
+      + '</button>';
+
+    var secs = sectionsProfil();
+    var faits = secs.reduce(function(a, x){ return a + x.faits; }, 0);
+    var total = secs.reduce(function(a, x){ return a + x.total; }, 0);
+    var pctProfil = total ? Math.round(faits / total * 100) : 100;
+    var carteProfil = '<button class="acc-card" style="--c:#7c3aed" data-action="open-profil">'
+      + '<div class="acc-card-h"><span class="acc-ico">🗂</span>Ton profil</div>'
+      + '<div class="acc-card-ring">'+anneauSection(pctProfil, '#7c3aed', 62)+'</div>'
+      + '<div class="acc-card-d">'+faits+' information'+(faits>1?'s':'')+' sur '+total
+        + '. Plus il est complet, plus tes simulateurs sont justes.</div>'
+      + '<div class="acc-card-f"><strong>'+(pctProfil === 100 ? 'Le revoir' : 'Le compléter')+' →</strong></div>'
+      + '</button>';
+
+    // --- Objectifs en cours, en compact ---
+    var enCours = state.added.filter(function(id){ return !!obj(id); })
+      .map(function(id){ return obj(id); }).slice(0, 4).map(function(o){
+      var id = o.id, pr = pctOf(id), d = dom(o);
+      return '<button class="acc-obj" style="--c:'+d.c+'" data-action="view" data-id="'+id+'">'
+        + anneauSection(pr.pct, d.c, 30)
+        + '<span class="acc-obj-t">'+esc(o.title)+'</span>'
+        + '<span class="acc-obj-p">'+pr.done+'/'+pr.total+'</span>'
+        + '</button>';
+    }).join('');
+
+    // Bande de badges : débloqués en couleur, à débloquer en grisé.
+    var nbDebloques = state.badges.length;
+    var pastilles = BADGES.map(function(b){
+      var on = state.badges.indexOf(b.id) >= 0;
+      return '<div class="acc-badge'+(on?' on':'')+'" title="'+esc(b.t)+' — '+esc(b.d)+'">'
+        + '<span class="acc-badge-i">'+(on?b.ico:'🔒')+'</span>'
+        + '<span class="acc-badge-t">'+esc(b.t)+'</span>'
+      + '</div>';
+    }).join('');
+    var blocBadges = '<div class="acc-bloc">'
+      + '<div class="acc-bloc-h">Tes hauts faits'
+        + '<span class="acc-badge-compte">'+nbDebloques+' / '+BADGES.length+'</span></div>'
+      + '<div class="acc-badges">'+pastilles+'</div>'
+    + '</div>';
+
+    return '<div class="view">'
+      + hero
+      + '<div class="acc-cards">'+carteEch+carteAct+carteProfil+'</div>'
+      + '<div class="acc-bloc">'
+        + '<div class="acc-bloc-h">Tes objectifs'
+          + '<button class="btn-link" data-action="tab" data-tab="objectifs">Tout voir →</button></div>'
+        + '<div class="acc-objs">'+enCours+'</div>'
+      + '</div>'
+      + blocBadges
+      + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Objectifs — la vue détaillée est imbriquée, plus d'onglet séparé
+  // ---------------------------------------------------------------------------
+  // Le raccourci d'une étape : soit un simulateur, soit un partenaire.
+  var SIM_LIBELLES = {
+    depenses:'Analyser mes dépenses', vl:'Comparer les deux options',
+    tva:'Simuler le passage à la TVA', statut:'Comparer les statuts',
+    optim:'Ouvrir le cockpit',
+  };
+
+  function etapeActionHtml(st){
+    if(st.sim){
+      return '<button class="step-cta" data-action="goto-sim" data-sim="'+esc(st.sim)+'">'
+        + '📊 ' + esc(SIM_LIBELLES[st.sim] || 'Ouvrir le simulateur') + ' →</button>';
+    }
+    if(st.part !== undefined){
+      var pa = PARTENAIRES[st.part];
+      if(!pa) return '';
+      return '<button class="step-cta part" style="--c:'+pa.color+'"'
+        + ' data-action="goto-part" data-i="'+st.part+'">'
+        + '🤝 ' + esc(pa.nom) + (pa.promo ? ' · code ' + esc(pa.promo) : '') + ' →</button>';
+    }
+    return '';
+  }
+
+  // Un objectif « en cours » = au moins une étape cochée, pas encore fini.
+  function etatObjectif(id){
+    var p = pctOf(id);
+    return p.pct === 100 ? 'fait' : (p.done > 0 ? 'encours' : 'neuf');
+  }
+
+  // Les étapes en points : on lit d'un coup où on en est et ce qu'il reste.
+  function pointsEtapes(id, color){
+    var o = obj(id), faites = pctOf(id).done;
+    return '<span class="obj-pts">' + o.steps.map(function(_, i){
+      return '<i class="'+(i < faites ? 'on' : '')+'"'
+        + (i < faites ? ' style="background:'+color+'"' : '')+'></i>';
+    }).join('') + '</span>';
+  }
+
+  // Libellés courts, pour tenir sur une tuile.
+  var SIM_COURT = {
+    depenses:'Mes dépenses', vl:'Versement libératoire',
+    tva:'Passer à la TVA', statut:'Comparer les statuts', optim:'Cockpit',
+  };
+
+  // Les raccourcis d'un objectif, sans doublon : simulateurs puis partenaires.
+  function liensObjectif(o){
+    var sims = [], parts = [];
+    o.steps.forEach(function(st){
+      if(st.sim && sims.indexOf(st.sim) < 0) sims.push(st.sim);
+      if(st.part !== undefined && parts.indexOf(st.part) < 0) parts.push(st.part);
+    });
+    return { sims:sims, parts:parts };
+  }
+
+  // Affichés en clair sur la tuile — même si l'étape n'est pas encore atteinte :
+  // c'est ce qui donne envie d'aller voir.
+  function liensTuileHtml(o){
+    var l = liensObjectif(o);
+    var chips = l.sims.map(function(k){
+      return '<span class="tui-lien" data-action="goto-sim" data-sim="'+k+'">'
+        + '📊 '+esc(SIM_COURT[k] || 'Simulateur')+'</span>';
+    }).concat(l.parts.map(function(i){
+      var pa = PARTENAIRES[i];
+      if(!pa) return '';
+      return '<span class="tui-lien part" style="--p:'+pa.color+'"'
+        + ' data-action="goto-part" data-i="'+i+'">🤝 '+esc(pa.nom)+'</span>';
+    }));
+    return chips.length ? '<span class="tui-liens">'+chips.join('')+'</span>' : '';
+  }
+
+  function echeanceCourte(o){
+    if(!o.echeance) return '';
+    // Certaines échéances n'ont pas de date fixe mais une période (ex. la
+    // déclaration de revenus, dont la date limite varie selon le département).
+    if(o.echeance.periode) return '<span class="obj-ech">📅 '+esc(o.echeance.periode)+'</span>';
+    var now = new Date();
+    var dt = new Date(now.getFullYear(), o.echeance.mois - 1, o.echeance.jour);
+    if(dt < now) dt = new Date(now.getFullYear() + 1, o.echeance.mois - 1, o.echeance.jour);
+    return '<span class="obj-ech">📅 '
+      + dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + '</span>';
+  }
+
+  // `dispo` : objectif pas encore choisi — présenté plus sobrement, avec un +.
+  function objectifTuileHtml(id, dispo){
+    var o = obj(id), d = dom(o), etat = etatObjectif(id), pr = pctOf(id);
+    var pertinent = o.pertinent && o.pertinent(state.profil);
+    var sous = etat === 'fait' ? 'Parcours terminé'
+      : (etat === 'encours' ? 'Prochaine : ' + o.steps[pr.done].t : o.desc);
+
+    var coin = dispo
+      ? '<span class="tui-add" data-action="obj-add" data-id="'+id+'" title="Ajouter à mes objectifs">+</span>'
+      : (etat === 'fait' ? '<span class="tui-ok">✓</span>'
+          : '<span class="tui-x" data-action="obj-remove" data-id="'+id+'" title="Retirer de mes objectifs">×</span>');
+
+    return '<button class="tui '+etat+(dispo?' dispo':'')+(pertinent&&dispo?' reco':'')+'"'
+      + ' style="--c:'+d.c+';--s:'+d.soft+'" data-action="'+(dispo?'obj-add':'view')+'" data-id="'+id+'">'
+      + '<span class="tui-h">'
+        + '<span class="tui-ico">'+d.ico+'</span>'
+        + '<span class="tui-dom">'+esc(d.l)+'</span>'
+        + (pertinent && dispo ? '<span class="tui-reco">Pour toi</span>' : '')
+        + coin
+      + '</span>'
+      + '<span class="tui-t">'+esc(o.title)+'</span>'
+      + '<span class="tui-d">'+esc(dispo ? (o.pourquoi || o.desc) : sous)+'</span>'
+      + liensTuileHtml(o)
+      + '<span class="tui-f">'
+        + (dispo ? '<span class="tui-nb">'+o.steps.length+' étapes</span>' : pointsEtapes(id, d.c))
+        + echeanceCourte(o)
+      + '</span>'
+      + '</button>';
+  }
+
+  function objectifsHtml(){
+    // Un objectif ouvert : on affiche son parcours, à la place de la grille.
+    if(state.objectifOuvert && obj(state.objectifOuvert)
+       && state.added.indexOf(state.objectifOuvert) >= 0){
+      return '<div class="view">' + objectifDetailHtml(state.objectifOuvert) + '</div>';
+    }
+
+    var p = state.profil;
+    var mesIds = state.added.filter(function(id){ return !!obj(id); });
+
+    // Ordre : ce qu'on a commencé d'abord, puis ce qui reste à démarrer.
+    var poids = function(id){
+      var e = etatObjectif(id);
+      return e === 'encours' ? 0 : (e === 'fait' ? 2 : 1);
+    };
+    var tries = mesIds.slice().sort(function(a, b){ return poids(a) - poids(b); });
+    var filtre = function(id){ return !state.objFiltre || obj(id).dom === state.objFiltre; };
+    var actifs = tries.filter(function(id){ return filtre(id) && etatObjectif(id) !== 'fait'; });
+    var finis  = tries.filter(function(id){ return filtre(id) && etatObjectif(id) === 'fait'; });
+
+    // Disponibles : ceux qu'on n'a pas encore choisis. Les pertinents d'abord.
+    var dispos = catalog.filter(function(o){ return mesIds.indexOf(o.id) < 0; })
+      .filter(function(o){ return !state.objFiltre || o.dom === state.objFiltre; })
+      .sort(function(a, b){
+        var ra = a.pertinent && a.pertinent(p) ? 0 : 1;
+        var rb = b.pertinent && b.pertinent(p) ? 0 : 1;
+        return ra - rb;
+      });
+
+    // --- En-tête : la progression ne compte QUE les objectifs choisis ---
+    var etapesFaites = 0, etapesTotal = 0, nbEnCours = 0, nbFinis = 0;
+    mesIds.forEach(function(id){
+      var pr = pctOf(id);
+      etapesFaites += pr.done; etapesTotal += pr.total;
+      if(etatObjectif(id) === 'encours') nbEnCours++;
+      if(etatObjectif(id) === 'fait') nbFinis++;
+    });
+    var pctGlobal = etapesTotal ? Math.round(etapesFaites / etapesTotal * 100) : 0;
+    var aDemarrer = mesIds.length - nbEnCours - nbFinis;
+    var entete = '<div class="obj-tete">'
+      + '<div class="obj-tete-r">'+anneauSection(pctGlobal, '#2f6bff', 58)+'</div>'
+      + '<div><div class="obj-tete-t">Ton parcours administratif</div>'
+        + '<div class="obj-tete-s">'+etapesFaites+' étape'+(etapesFaites>1?'s':'')+' franchie'
+          + (etapesFaites>1?'s':'')+' sur '+etapesTotal+' — sur les '+mesIds.length
+          + ' objectif'+(mesIds.length>1?'s':'')+' que tu as choisi'+(mesIds.length>1?'s':'')+'</div>'
+        + '<div class="obj-tete-c">'
+          + '<span><b>'+nbEnCours+'</b> en cours</span>'
+          + '<span><b>'+aDemarrer+'</b> à démarrer</span>'
+          + '<span><b>'+nbFinis+'</b> maîtrisé'+(nbFinis>1?'s':'')+'</span>'
+        + '</div></div>'
+      + '</div>';
+
+    // --- Filtres par domaine, en pastilles colorées ---
+    var pastilles = '<button class="fpill'+(state.objFiltre?'':' on')+'"'
+      + ' data-action="obj-filtre" data-dom="">Tous</button>'
+      + ORDRE_DOMAINES.filter(function(k){
+          return catalog.some(function(o){ return o.dom === k; });
+        }).map(function(k){
+          var dd = DOMAINES[k], on = state.objFiltre === k;
+          return '<button class="fpill'+(on?' on':'')+'" style="--c:'+dd.c+'"'
+            + ' data-action="obj-filtre" data-dom="'+k+'">'+dd.ico+' '+esc(dd.l)+'</button>';
+        }).join('');
+
+    // --- Maîtrisés : repliés, pour ne pas encombrer ---
+    var blocFinis = '';
+    if(finis.length){
+      blocFinis = '<button class="obj-finis-h" data-action="obj-voir-finis">'
+        + '<span class="obj-finis-c">✓</span>'+finis.length+' objectif'+(finis.length>1?'s':'')
+        + ' maîtrisé'+(finis.length>1?'s':'')
+        + '<span class="obj-finis-x">'+(state.objVoirFinis?'Masquer':'Afficher')+'</span></button>'
+        + (state.objVoirFinis ? '<div class="tuis">'+finis.map(function(id){
+            return objectifTuileHtml(id, false); }).join('')+'</div>' : '');
+    }
+
+    // --- À ajouter ---
+    var blocDispos = dispos.length
+      ? '<div class="obj-sep">'
+        + '<span class="obj-sep-t">Ajouter un objectif</span>'
+        + '<span class="obj-sep-s">'+dispos.length+' parcours disponible'+(dispos.length>1?'s':'')+'</span>'
+      + '</div>'
+      + '<div class="tuis">'+dispos.map(function(o){ return objectifTuileHtml(o.id, true); }).join('')+'</div>'
+      : '';
+
+    return '<div class="view">'
+      + entete
+      + '<div class="fpills">'+pastilles+'</div>'
+      + (actifs.length
+          ? '<div class="tuis">'+actifs.map(function(id){ return objectifTuileHtml(id, false); }).join('')+'</div>'
+          : '<div class="obj-vide">Aucun objectif en cours ici — ajoute-en un ci-dessous.</div>')
+      + blocFinis
+      + blocDispos
+      + '</div>';
+  }
+
+  // Contenu détaillé d'une étape : un texte d'intro, des points « à faire »,
+  // des points de vigilance, et des liens vers les sites officiels.
+  function contenuEtapeHtml(d){
+    var h = '';
+    if(d.intro) h += '<p class="sc-intro">'+d.intro+'</p>';
+    if(d.faire && d.faire.length){
+      h += '<div class="sc-bloc"><div class="sc-l">À faire</div><ul class="sc-liste">'
+        + d.faire.map(function(x){ return '<li>'+x+'</li>'; }).join('') + '</ul></div>';
+    }
+    if(d.vigilance && d.vigilance.length){
+      h += '<div class="sc-bloc"><div class="sc-l warn">À surveiller</div><ul class="sc-liste warn">'
+        + d.vigilance.map(function(x){ return '<li>'+x+'</li>'; }).join('') + '</ul></div>';
+    }
+    if(d.liens && d.liens.length){
+      h += '<div class="sc-liens">' + d.liens.map(function(a){
+        return '<a class="sc-lien" href="'+esc(a.url)+'" target="_blank" rel="noopener">'
+          + '🔗 '+esc(a.l)+'</a>'; }).join('') + '</div>';
+    }
+    return '<div class="step-contenu">'+h+'</div>';
+  }
+
+  function objectifDetailHtml(curId){
+    var cur = obj(curId), cp = pctOf(curId), dd = dom(cur);
+
+    // Une étape ne s'ouvre que si la précédente est cochée : le parcours reste
+    // linéaire, et on ne peut pas se déclarer plus avancé qu'on ne l'est.
+    var premiereNonFaite = cur.steps.findIndex(function(_, i){ return !state.checks[curId+':'+i]; });
+    var steps = cur.steps.map(function(st, i){
+      var done = !!state.checks[curId+':'+i];
+      var last = i === cur.steps.length - 1;
+      var verrouillee = !done && premiereNonFaite !== -1 && i > premiereNonFaite;
+      var circle = done
+        ? 'background:'+dd.c+';border:2px solid '+dd.c+';color:#fff'
+        : (i === premiereNonFaite ? 'border-color:'+dd.c+';color:'+dd.c : '');
+      var line = done ? 'background:'+dd.c : '';
+      // Le contenu détaillé vit à part (CONTENUS), pour ne pas alourdir le catalogue.
+      var d = (CONTENUS[curId] || [])[i];
+      // La 1re étape non faite est ouverte d'office ; sinon on suit stepOuvert.
+      var ouverte = !verrouillee && (state.stepOuvert === i
+                    || (state.stepOuvert === null && i === premiereNonFaite));
+      var contenu = d ? contenuEtapeHtml(d) : '';
+
+      return '<div class="step'+(done?' done':'')+(verrouillee?' lock':'')
+        + (i === premiereNonFaite ? ' now':'')+(ouverte?' open':'')+'">'
+        + '<div class="step-rail">'
+          + '<button class="step-circle"'+(verrouillee?' disabled':' data-action="step-check" data-i="'+i+'"')
+            + ' style="'+circle+'">'+(done?'✓':(i+1))+'</button>'
+          + (last ? '' : '<div class="step-line" style="'+line+'"></div>')
+        + '</div>'
+        + '<div class="step-body">'
+          + '<div class="step-hd"'+(verrouillee?'':' data-action="step-expand" data-i="'+i+'"')+'>'
+            + '<div><div class="step-title">'+esc(st.t)+'</div>'
+              + '<div class="step-hint">'+esc(st.h)+'</div></div>'
+            + (contenu && !verrouillee ? '<span class="step-chev">▾</span>' : '')
+          + '</div>'
+          + (verrouillee ? '<div class="step-lock">🔒 Coche l’étape précédente pour valider celle-ci</div>'
+                         : (contenu
+                             ? '<div class="step-wrap"><div class="step-inner">'+contenu
+                               + etapeActionHtml(st)+'</div></div>'
+                             : etapeActionHtml(st)))
+        + '</div>'
+        + '</div>';
+    }).join('');
+
+    // Échéance légale, uniquement si l'objectif en a une réelle.
+    var ech = '';
+    if(cur.echeance){
+      if(cur.echeance.periode){
+        ech = '<div class="detail-ech">📅 <strong>'+esc(cur.echeance.quoi)+'</strong> — chaque année, '
+          + 'période <strong>'+esc(cur.echeance.periode)+'</strong> (date limite variable selon le département)</div>';
+      } else {
+        var now = new Date();
+        var date = new Date(now.getFullYear(), cur.echeance.mois - 1, cur.echeance.jour);
+        if(date < now) date = new Date(now.getFullYear() + 1, cur.echeance.mois - 1, cur.echeance.jour);
+        ech = '<div class="detail-ech">📅 <strong>'+esc(cur.echeance.quoi)+'</strong> — avant le '
+          + date.toLocaleDateString('fr-FR', { day:'numeric', month:'long' })+'</div>';
+      }
+    }
+
+    return '<button class="retour" data-action="obj-close">← Tous mes objectifs</button>'
+      + '<div class="detail" data-key="'+curId+'" style="--c:'+dd.c+';border-top:4px solid '+dd.c+'">'
+      + '<div class="detail-head">'
+        + '<div><div class="detail-tag"><span class="detail-ico" style="background:'+dd.soft+'">'
+          + dd.ico+'</span>'
+          + '<span class="tag" style="color:'+dd.c+'">'+esc(dd.l)+'</span></div>'
+          + '<div class="detail-title">'+esc(cur.title)+'</div>'
+          + '<div class="detail-desc">'+esc(cur.desc)+'</div></div>'
+        + '<div class="detail-ring">'+anneauSection(cp.pct, dd.c, 74)
+          + '<div class="detail-ring-l">'+cp.done+' / '+cp.total+' étapes</div></div>'
+      + '</div>'
+      + ech
+      + (cp.pct === 100
+          ? '<div class="obj-fini">🎉 Objectif bouclé — bien joué.</div>' : '')
+      + '<div class="steps">'+steps+'</div>'
+      + '</div>';
+  }
+
+
+
+  // ===========================================================================
+  // Simulateur : optimiser ma société (cockpit temps réel)
+  // ===========================================================================
+  var OPTIM_OBJECTIFS = [
+    { v:'revenu',    l:'Maximiser mon revenu personnel' },
+    { v:'impots',    l:'Réduire mes impôts' },
+    { v:'tresorerie',l:'Conserver de la trésorerie' },
+    { v:'investir',  l:'Investir' },
+    { v:'immobilier',l:'Préparer un achat immobilier' },
+    { v:'social',    l:'Optimiser ma protection sociale' },
+  ];
+
+  function caOptim(){
+    var f = state.optim.form;
+    if(state.optim.projection !== null) return state.optim.projection;
+    var ca = parseFloat(f.caAnnuel) || 0;
+    return f.caMensuel ? ca * 12 : ca;
+  }
+  function caOptimReel(){
+    var f = state.optim.form;
+    var ca = parseFloat(f.caAnnuel) || 0;
+    return f.caMensuel ? ca * 12 : ca;
+  }
+
+  function optimResultat(){
+    var o = state.optim;
+    return calculerOptim(o.form, o.charges, o.leviers, o.statut, caOptim());
+  }
+
+  // --- Anneau de score ---
+  function anneauScore(valeur, label, taille){
+    taille = taille || 74;
+    var r = (taille - 10) / 2, c = 2 * Math.PI * r;
+    var couleur = valeur >= 70 ? STATUT.vert.bg : (valeur >= 40 ? STATUT.orange.bg : STATUT.rouge.bg);
+    return '<div class="score">'
+      + '<svg viewBox="0 0 '+taille+' '+taille+'" style="width:'+taille+'px;height:'+taille+'px">'
+        + '<circle cx="'+(taille/2)+'" cy="'+(taille/2)+'" r="'+r+'" fill="none" stroke="#e7edf6" stroke-width="7"/>'
+        + '<circle cx="'+(taille/2)+'" cy="'+(taille/2)+'" r="'+r+'" fill="none" stroke="'+couleur+'" '
+          + 'stroke-width="7" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" '
+          + 'stroke-dashoffset="'+(c * (1 - valeur/100)).toFixed(1)+'" '
+          + 'transform="rotate(-90 '+(taille/2)+' '+(taille/2)+')"/>'
+        + '<text x="'+(taille/2)+'" y="'+(taille/2 + 5)+'" text-anchor="middle" font-size="16" '
+          + 'font-weight="800" fill="#0f1b33">'+valeur+'</text>'
+      + '</svg>'
+      + '<div class="score-l">'+esc(label)+'</div></div>';
+  }
+
+  // --- Répartition du chiffre d'affaires (barre empilée) ---
+  function repartitionOptim(r){
+    var parts = [
+      { l:'Charges',      v:r.chargesTotales, c:'#94a3b8' },
+      { l:'Cotisations',  v:r.cotisations,    c:'#f59e0b' },
+      { l:'Impôts (IS, PFU, IR)', v:r.is + r.pfu + r.ir, c:'#ef4444' },
+      { l:'Ta rémunération nette', v:Math.max(0, r.remuneration - r.ir), c:'#2f6bff' },
+      { l:'Dividendes nets', v:Math.max(0, r.dividendes - r.pfu), c:'#10b981' },
+      { l:'Trésorerie conservée', v:Math.max(0, r.tresorerieFinale), c:'#0f1b33' },
+    ].filter(function(p){ return p.v > 0; });
+    var total = parts.reduce(function(s,p){ return s + p.v; }, 0) || 1;
+    var segments = parts.map(function(p){
+      return '<div class="rep-seg" style="width:'+(p.v/total*100)+'%;background:'+p.c+'" title="'
+        + esc(p.l)+'"></div>';
+    }).join('');
+    var legende = parts.map(function(p){
+      return '<div class="rep-item"><span class="rep-dot" style="background:'+p.c+'"></span>'
+        + '<span class="rep-l">'+esc(p.l)+'</span>'
+        + '<span class="rep-v">'+fmtEur(p.v)+'</span></div>';
+    }).join('');
+    return '<div class="card"><div class="card-title">Où va ton chiffre d’affaires</div>'
+      + '<div class="rep-bar">'+segments+'</div>'
+      + '<div class="rep-list">'+legende+'</div></div>';
+  }
+
+  // --- Tableau d'optimisation avec indicateurs ---
+  function tableauOptimisation(r, scores){
+    var o = state.optim;
+    var lignes = [];
+    var ajout = function(label, etat, commentaire){
+      var st = etat === 'ok' ? STATUT.vert : (etat === 'moyen' ? STATUT.orange : STATUT.rouge);
+      lignes.push('<tr><td><strong>'+esc(label)+'</strong></td>'
+        + '<td><span class="pill" style="background:'+st.soft+';color:'+st.color+'">'+st.icon+'</span></td>'
+        + '<td>'+esc(commentaire)+'</td></tr>');
+    };
+
+    ajout('Rémunération',
+      scores.remuneration >= 70 ? 'ok' : (scores.remuneration >= 40 ? 'moyen' : 'non'),
+      scores.remuneration >= 70 ? 'Ta rémunération représente une part cohérente de ton chiffre d’affaires.'
+        : (r.remuneration <= 0 ? 'Tu ne te verses rien : tout passe en dividendes ou reste dans la société.'
+           : 'Le curseur salaire / dividendes mérite d’être testé dans les deux sens.'));
+
+    ajout('Dividendes',
+      r.distribuable <= 0 ? 'moyen' : (r.dividendes > 0 ? 'ok' : 'moyen'),
+      r.distribuable <= 0 ? 'Rien de distribuable : le résultat est absorbé par la rémunération et la trésorerie.'
+        : (r.dividendes > 0 ? 'Tu distribues ' + fmtEur(r.dividendes) + ', soumis au PFU ('+fmtEur(r.pfu)+').'
+           : 'Aucun dividende distribué : le bénéfice reste dans la société.'));
+
+    ajout('Trésorerie',
+      scores.tresorerie >= 70 ? 'ok' : (scores.tresorerie >= 40 ? 'moyen' : 'non'),
+      r.tresorerieFinale <= 0 ? 'Aucune réserve : ta société n’a pas de matelas de sécurité.'
+        : 'Il resterait ' + fmtEur(r.tresorerieFinale) + ' dans la société.');
+
+    ajout('Charges déductibles',
+      scores.charges >= 70 ? 'ok' : (scores.charges >= 40 ? 'moyen' : 'non'),
+      r.chargesTotales <= 0 ? 'Aucune charge renseignée : ton résultat imposable est maximal.'
+        : fmtEur(r.chargesTotales) + ' de charges viennent réduire ton résultat imposable.');
+
+    ['mutuelle','prevoyance','rcpro'].forEach(function(k){
+      var L = OPTIM_LEVIERS.filter(function(x){ return x.v === k; })[0];
+      var m = parseFloat(o.leviers[k]) || 0;
+      ajout(L.l, m > 0 ? 'ok' : 'non',
+        m > 0 ? 'Prise en charge par la société, déduite du résultat.'
+              : 'Non renseignée — un levier à étudier avec ton expert-comptable.');
+    });
+
+    ajout('TVA récupérée',
+      !r.assujetti ? 'moyen' : (r.tvaRecup > 0 ? 'ok' : 'non'),
+      !r.assujetti ? 'Tu n’es pas assujetti : aucune TVA récupérable sur tes achats.'
+        : (r.tvaRecup > 0 ? fmtEur(r.tvaRecup) + ' de TVA récupérée sur tes charges.'
+           : 'Aucune TVA récupérable détectée sur tes charges.'));
+
+    return '<div class="card"><div class="card-title">Tableau d’optimisation</div>'
+      + '<div class="recap-scroll"><table class="recap-t" style="min-width:0"><tbody>'
+      + lignes.join('') + '</tbody></table></div></div>';
+  }
+
+  // --- Suggestions (pistes de réflexion, jamais des recommandations) ---
+  function suggestionsOptim(r, scores){
+    var o = state.optim, s = [];
+    var P = state.statut.params;
+
+    // Comparer salaire vs dividendes : on teste une variante
+    if(r.ca > 0 && r.distribuable > 1000){
+      var variante = calculerOptim(
+        Object.assign({}, o.form, { remMensuelle: String((parseFloat(o.form.remMensuelle)||0) + 500) }),
+        o.charges, o.leviers, o.statut, caOptim());
+      var delta = variante.argentPerso - r.argentPerso;
+      if(Math.abs(delta) > 200){
+        s.push(delta > 0
+          ? 'En te versant 500 € de plus par mois, ton revenu personnel net augmenterait d’environ '
+            + fmtEur(delta) + ' par an : la rémunération est ici moins coûteuse que la distribution.'
+          : 'En te versant 500 € de plus par mois, tu perdrais environ ' + fmtEur(-delta)
+            + ' par an : à ton niveau, les dividendes ressortent plus efficaces que le salaire.');
+      }
+    }
+    if(scores.tresorerie < 40 && r.tresorerieFinale < r.chargesTotales / 4)
+      s.push('Ta société ne conserve presque rien. Garder l’équivalent de quelques mois de charges '
+           + '(' + fmtEur(r.chargesTotales / 4) + ' environ) donnerait de la marge en cas de coup dur.');
+    if(r.tresorerieFinale > r.chargesTotales * 1.5 && r.chargesTotales > 0)
+      s.push('Ta trésorerie est confortable (' + fmtEur(r.tresorerieFinale) + '). Une partie pourrait '
+           + 'financer du matériel professionnel, déductible et générateur de TVA récupérable.');
+    if((parseFloat(o.leviers.mutuelle)||0) === 0 || (parseFloat(o.leviers.prevoyance)||0) === 0)
+      s.push('Mutuelle et prévoyance prises en charge par la société sont des charges déductibles qui '
+           + 'améliorent ta protection sans passer par du salaire net imposé.');
+    if(r.assujetti && r.tvaRecup === 0 && r.chargesTotales > 0)
+      s.push('Aucune TVA récupérable n’est détectée alors que tu es assujetti : vérifie les taux de TVA '
+           + 'renseignés sur tes charges.');
+    if(!r.assujetti && r.chargesTotales > r.ca * 0.2)
+      s.push('Tes charges sont importantes et tu n’es pas assujetti à la TVA : le simulateur « Passer à '
+           + 'la TVA » te dira si l’option serait rentable.');
+    if(r.tauxPrelevement > 0.45)
+      s.push('Ton taux de prélèvement global atteint ' + fmtPct(r.tauxPrelevement) + '. Tester d’autres '
+           + 'répartitions salaire / dividendes / trésorerie peut faire une vraie différence.');
+
+    // Adapter selon l'objectif déclaré
+    var parObjectif = {
+      revenu:'Ton objectif est de maximiser ton revenu : compare surtout la ligne « Argent personnel » entre plusieurs réglages.',
+      impots:'Ton objectif est de réduire tes impôts : regarde l’effet des charges déductibles et des leviers sociaux sur l’IS.',
+      tresorerie:'Ton objectif est de conserver de la trésorerie : augmente le curseur « conservé dans la société » et observe l’IS.',
+      investir:'Ton objectif est d’investir : ajoute l’investissement en charge et vois l’effet immédiat sur le résultat imposable.',
+      immobilier:'Ton objectif est un achat immobilier : une rémunération régulière et déclarée pèse souvent plus qu’un revenu global élevé auprès des banques.',
+      social:'Ton objectif est ta protection sociale : le salaire et les leviers (mutuelle, prévoyance, retraite) comptent davantage que les dividendes.',
+    };
+    if(parObjectif[o.form.objectif]) s.unshift(parObjectif[o.form.objectif]);
+    return s;
+  }
+
+  function optimFormHtml(){
+    var o = state.optim, f = o.form;
+    var champ = function(nom, label, valeur, opts){
+      opts = opts || {};
+      var inner;
+      if(opts.options){
+        inner = '<select data-optim-field="'+nom+'">' + opts.options.map(function(op){
+          return '<option value="'+esc(op.v)+'"'+(String(valeur)===String(op.v)?' selected':'')+'>'
+            + esc(op.l)+'</option>'; }).join('') + '</select>';
+      } else {
+        inner = '<input data-optim-field="'+nom+'" type="'+(opts.type||'text')+'" value="'+esc(valeur||'')
+          + '" placeholder="'+esc(opts.ph||'')+'"'+(opts.type==='number'?' min="0" step="any"':'')+'>';
+      }
+      return '<div class="field"><label>'+esc(label)+'</label>'+inner
+        + (opts.aide ? '<div class="field-eg">'+esc(opts.aide)+'</div>' : '') + '</div>';
+    };
+
+    var chargesHtml = o.charges.map(function(c, i){
+      return '<div class="ocharge">'
+        + '<div class="ocharge-1">'
+          + '<input data-ocharge-field="nom" data-i="'+i+'" value="'+esc(c.nom||'')+'" placeholder="Nom">'
+          + '<button class="icon-btn danger" data-action="ocharge-remove" data-i="'+i+'" title="Supprimer">✕</button>'
+        + '</div>'
+        + '<div class="ocharge-2">'
+          + '<input data-ocharge-field="montant" data-i="'+i+'" type="number" min="0" step="any" '
+            + 'value="'+esc(c.montant||'')+'" placeholder="0 €">'
+          + '<select data-ocharge-field="frequence" data-i="'+i+'">'
+            + '<option value="mensuelle"'+(c.frequence==='mensuelle'?' selected':'')+'>/ mois</option>'
+            + '<option value="annuelle"'+(c.frequence==='annuelle'?' selected':'')+'>/ an</option>'
+          + '</select>'
+          + '<select data-ocharge-field="tauxTVA" data-i="'+i+'">'
+            + TVA_PARAMS.tauxDepense.map(function(t){
+                return '<option value="'+t.v+'"'+(String(c.tauxTVA)===String(t.v)?' selected':'')+'>TVA '+t.l+'</option>';
+              }).join('')
+          + '</select>'
+          + '<select data-ocharge-field="deductible" data-i="'+i+'">'
+            + [['100','Déductible'],['50','50 %'],['0','Non déductible']].map(function(d){
+                return '<option value="'+d[0]+'"'+(String(c.deductible)===d[0]?' selected':'')+'>'+d[1]+'</option>';
+              }).join('')
+          + '</select>'
+        + '</div>'
+        + (c.source ? '<div class="ocharge-src">Importé — '+esc(c.source)+'</div>' : '')
+        + '</div>';
+    }).join('');
+
+    var importables = depensesImportables().length;
+
+    var leviersHtml = OPTIM_LEVIERS.map(function(L){
+      var v = parseFloat(o.leviers[L.v]) || 0;
+      var actif = v > 0;
+      return '<div class="levier'+(actif?' on':'')+'">'
+        + '<button class="levier-t" data-action="levier-toggle" data-k="'+L.v+'">'
+          + '<span class="levier-check">'+(actif?'✓':'')+'</span>'
+          + '<span>'+esc(L.l)+'</span></button>'
+        + (actif ? '<div class="levier-m"><input data-levier-field="'+L.v+'" type="number" min="0" '
+            + 'step="any" value="'+v+'"><span>€ / '+L.unite+'</span></div>' : '')
+        + '</div>';
+    }).join('');
+
+    return '<div class="card statut-form">'
+      + profilBandeHtml(['forme','ca','tva','parts','remuneration','tresorerie','cfe','charges'])
+      + '<div class="card-title">Propre à cette simulation</div>'
+      + '<div class="seg-group" style="width:100%;margin-bottom:16px">'
+        + '<button class="seg'+(o.statut==='eurl'?' on':'')+'" data-action="optim-statut" data-s="eurl" style="flex:1">EURL</button>'
+        + '<button class="seg'+(o.statut==='sasu'?' on':'')+'" data-action="optim-statut" data-s="sasu" style="flex:1">SASU</button>'
+      + '</div>'
+      + champ('objectif', 'Ton objectif principal', f.objectif, { options:OPTIM_OBJECTIFS })
+      + '<div class="field"><label>Dividendes distribués : <strong>'+esc(f.dividendes)+' %</strong> du distribuable</label>'
+        + '<input data-optim-range="dividendes" type="range" min="0" max="100" step="5" value="'+esc(f.dividendes)+'"></div>'
+
+      + '<div class="card-title" style="margin-top:24px">Tes charges</div>'
+      + '<div class="field-eg" style="margin-bottom:10px">Reprises de ton profil — ajustables ici pour tester.</div>'
+      + (importables > 0
+          ? '<button class="btn-import" data-action="optim-import">↓ Reprendre la déductibilité analysée '
+            + 'sur '+importables+' dépense'+(importables>1?'s':'')+'</button>'
+          : '')
+      + (o.importInfo ? '<div class="import-info">'+esc(o.importInfo)+'</div>' : '')
+      + '<div class="ocharges">'+chargesHtml+'</div>'
+      + '<button class="btn-link" data-action="ocharge-add">+ Ajouter une charge</button>'
+
+      + '<div class="card-title" style="margin-top:24px">Leviers d’optimisation</div>'
+      + '<div class="field-eg" style="margin-bottom:10px">Chacun est une charge déductible pour la société. '
+        + 'Les plafonds d’exonération propres à chaque dispositif ne sont pas vérifiés ici.</div>'
+      + '<div class="leviers">'+leviersHtml+'</div>'
+      + '</div>';
+  }
+
+  function optimResultsHtml(){
+    var o = state.optim;
+    var r = optimResultat();
+    var scores = scoresOptim(r, o.leviers);
+    var suggestions = suggestionsOptim(r, scores);
+    var estSasu = o.statut === 'sasu';
+
+    var ligne = function(label, valeur, opts){
+      opts = opts || {};
+      return '<div class="vl-line'+(opts.fort?' fort':'')+'"><span>'+esc(label)+'</span>'
+        + '<span'+(opts.couleur?' style="color:'+opts.couleur+'"':'')+'>'+valeur+'</span></div>';
+    };
+
+    var tableauPrincipal = '<div class="card"><div class="card-title">Ton tableau de bord</div>'
+      + ligne('Chiffre d’affaires', fmtEur(r.ca))
+      + ligne('Charges déductibles', '− ' + fmtEur(r.chargesTotales))
+      + (r.assujetti && r.tvaRecup > 0
+          ? ligne('dont TVA récupérée', '+ ' + fmtEur(r.tvaRecup), { couleur:STATUT.vert.color }) : '')
+      + ligne(estSasu ? 'Salaire brut' : 'Rémunération du gérant',
+              '− ' + fmtEur(estSasu ? r.brut : r.remuneration))
+      + ligne(estSasu ? 'Charges patronales' : 'Cotisations TNS',
+              '− ' + fmtEur(estSasu ? r.patronales : r.cotisations))
+      + ligne('Résultat avant impôt', fmtEur(r.resultat), { fort:true })
+      + ligne('Impôt sur les sociétés', '− ' + fmtEur(r.is))
+      + ligne('Dividendes distribués', fmtEur(r.dividendes))
+      + ligne('PFU sur dividendes', '− ' + fmtEur(r.pfu))
+      + ligne('Impôt sur le revenu', '− ' + fmtEur(r.ir))
+      + '<div class="vl-line fort" style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px">'
+        + '<span>Argent personnel disponible</span>'
+        + '<span style="color:'+STATUT.vert.color+'">'+fmtEur(r.argentPerso)+'</span></div>'
+      + ligne('soit par mois', fmtEur(r.argentPerso / 12))
+      + ligne('Trésorerie laissée dans la société', fmtEur(r.tresorerieFinale))
+      + (r.plafonnee ? '<div class="vl-note" style="background:#fffbeb">Ta rémunération souhaitée dépasse '
+          + 'ce que le chiffre d’affaires permet : elle a été ramenée au maximum possible.</div>' : '')
+      + '</div>';
+
+    var scoresHtml = '<div class="card"><div class="card-title">Santé de ta société</div>'
+      + '<div class="scores">'
+        + anneauScore(scores.global, 'Global', 86)
+        + anneauScore(scores.remuneration, 'Rémunération')
+        + anneauScore(scores.tresorerie, 'Trésorerie')
+        + anneauScore(scores.fiscal, 'Fiscalité')
+        + anneauScore(scores.charges, 'Charges')
+        + anneauScore(scores.social, 'Social')
+      + '</div>'
+      + '<div class="field-eg">Indicateurs indicatifs, calculés à partir de règles simples (part de la '
+        + 'rémunération, mois de charges couverts, taux de prélèvement…). Ce ne sont pas des normes fiscales.</div>'
+      + '</div>';
+
+    var suggestionsHtml = suggestions.length
+      ? '<div class="card tinted"><div class="card-title">Pistes de réflexion</div>'
+        + '<ul class="res-list">' + suggestions.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')
+        + '</ul>'
+        + '<div class="field-eg">Ces pistes sont générées à partir de tes chiffres. Elles ne remplacent pas '
+          + 'l’avis d’un expert-comptable.</div></div>'
+      : '';
+
+    var scen = o.scenarios.length
+      ? '<div class="card"><div class="card-title">Mes scénarios</div>'
+        + '<div class="scen-list">' + o.scenarios.map(function(s, i){
+            return '<div class="scen">'
+              + '<button class="scen-load" data-action="scen-load" data-i="'+i+'">'
+                + '<div class="scen-n">'+esc(s.nom)+'</div>'
+                + '<div class="scen-m">'+esc(s.statut.toUpperCase())+' · CA '+fmtEur(s.ca)
+                  + ' · '+fmtEur(s.argentPerso)+' perso</div></button>'
+              + '<button class="icon-btn danger" data-action="scen-delete" data-i="'+i+'" title="Supprimer">✕</button>'
+              + '</div>';
+          }).join('') + '</div></div>'
+      : '';
+
+    return '<div class="optim-top">'
+        + '<div class="optim-kpi"><div class="optim-kpi-l">Argent personnel</div>'
+          + '<div class="optim-kpi-v">'+fmtEur(r.argentPerso)+'</div>'
+          + '<div class="optim-kpi-s">'+fmtEur(r.argentPerso/12)+' par mois</div></div>'
+        + '<div class="optim-kpi"><div class="optim-kpi-l">Trésorerie conservée</div>'
+          + '<div class="optim-kpi-v">'+fmtEur(r.tresorerieFinale)+'</div>'
+          + '<div class="optim-kpi-s">dans la société</div></div>'
+        + '<div class="optim-kpi"><div class="optim-kpi-l">Prélèvements totaux</div>'
+          + '<div class="optim-kpi-v">'+fmtEur(r.prelevements)+'</div>'
+          + '<div class="optim-kpi-s">'+fmtPct(r.tauxPrelevement)+' du chiffre d’affaires</div></div>'
+      + '</div>'
+      + scoresHtml
+      + '<div class="vl-cards">' + tableauPrincipal + repartitionOptim(r) + '</div>'
+      + tableauOptimisation(r, scores)
+      + suggestionsHtml
+      + scen
+      + simPartenaireHtml(3, 'Ces arbitrages méritent un œil expert. Icon Invest optimise ta '
+          + 'société à tes côtés, avec une équipe qui parle ton langage.');
+  }
+
+  function optimHtml(){
+    var ca = caOptimReel();
+    var maxCurseur = Math.max(250000, Math.round(ca * 2 / 10000) * 10000);
+    var proj = state.optim.projection;
+    return '<div class="sim-wrap">'
+      + '<div class="statut-bar">'
+        + '<div class="proj" style="max-width:520px">'
+          + '<div class="proj-l">Projection du chiffre d’affaires'
+            + (proj !== null ? ' <button class="btn-link" data-action="optim-reset-proj">— revenir à '
+                + fmtEur(ca) + '</button>' : '') + '</div>'
+          + '<input type="range" data-optim-range="projection" min="20000" max="'+maxCurseur+'" step="5000" '
+            + 'value="'+(proj !== null ? proj : ca)+'">'
+          + '<div class="proj-v" id="optim-proj-value">'+fmtEur(proj !== null ? proj : ca)+'</div>'
+        + '</div>'
+        + '<button class="btn-primary" data-action="scen-save">Enregistrer ce scénario</button>'
+      + '</div>'
+      + '<div class="statut-layout">'
+        + optimFormHtml()
+        + '<div id="optim-results">' + optimResultsHtml() + '</div>'
+      + '</div>'
+      + '<div class="final-note">Estimation indicative fondée sur les informations renseignées et sur des '
+        + 'paramètres sociaux et fiscaux <strong>à valider</strong>. Elle ne constitue ni un conseil '
+        + 'juridique, ni fiscal, ni comptable. Certaines optimisations dépendent de ta situation '
+        + 'personnelle, de ton activité et de la nature exacte de tes dépenses ; les plafonds d’exonération '
+        + 'des dispositifs (mutuelle, prévoyance, épargne retraite, titres-restaurant…) ne sont pas '
+        + 'vérifiés ici. Avant toute décision importante, fais valider ta stratégie par un expert-comptable.</div>'
+      + '</div>';
+  }
+
+  function renderOptimResults(){
+    var zone = document.getElementById('optim-results');
+    if(zone) zone.innerHTML = optimResultsHtml();
+  }
+
+  // ===========================================================================
+  // Simulateur : quand passer en société ? (temps réel, sans IA)
+  // ===========================================================================
+  var STATUT_LABELS = { micro:'Auto-entreprise', eurl:'EURL', sasu:'SASU' };
+
+  function totalCharges(){
+    return state.statut.charges.reduce(function(s, c){
+      var m = parseFloat(c.montant) || 0;
+      return s + (c.frequence === 'mensuelle' ? m * 12 : m);
+    }, 0);
+  }
+
+  function statutInputs(){
+    var f = state.statut.form;
+    return {
+      categorie: f.categorie, parts: f.parts,
+      chargesAnnuelles: totalCharges(), investissement: f.investissement,
+      remMensuelle: f.remMensuelle, dividendes: f.dividendes,
+      versementLiberatoire: f.versementLiberatoire,
+    };
+  }
+
+  function caReel(){
+    var f = state.statut.form;
+    var ca = parseFloat(f.caAnnuel) || 0;
+    return f.caMensuel ? ca * 12 : ca;
+  }
+  function caAffiche(){
+    return state.statut.projection !== null ? state.statut.projection : caReel();
+  }
+  function statutsVisibles(){
+    var m = state.statut.mode;
+    return m === 'eurl' ? ['micro','eurl'] : (m === 'sasu' ? ['micro','sasu'] : ['micro','eurl','sasu']);
+  }
+
+  // Classe une ligne du tableau : vert = meilleur, rouge = moins bon.
+  function couleursLigne(valeurs, plusHautEstMieux){
+    var cles = Object.keys(valeurs).filter(function(k){ return isFinite(valeurs[k]); });
+    if(cles.length < 2) return {};
+    var tri = cles.slice().sort(function(a, b){
+      return plusHautEstMieux ? valeurs[b] - valeurs[a] : valeurs[a] - valeurs[b];
+    });
+    var res = {};
+    // Si tout est identique, pas de couleur.
+    if(Math.abs(valeurs[tri[0]] - valeurs[tri[tri.length-1]]) < 1) return {};
+    res[tri[0]] = STATUT.vert.color;
+    res[tri[tri.length-1]] = STATUT.rouge.color;
+    if(tri.length > 2) res[tri[1]] = STATUT.orange.color;
+    return res;
+  }
+
+  // --- Graphique d'évolution : 3 courbes + croisements ---
+  function grapheEvolution(){
+    var f = statutInputs();
+    var cles = statutsVisibles();
+    var maxCA = Math.max(150000, caAffiche() * 1.4);
+    var minCA = 10000, pas = (maxCA - minCA) / 48;
+    var series = {}; cles.forEach(function(k){ series[k] = []; });
+    var maxNet = 0;
+    for(var ca = minCA; ca <= maxCA + 1; ca += pas){
+      var r = calculerStatuts(f, ca);
+      cles.forEach(function(k){
+        series[k].push({ ca: ca, net: r[k].net });
+        if(r[k].net > maxNet) maxNet = r[k].net;
+      });
+    }
+    if(maxNet <= 0) maxNet = 1;
+
+    var W = 820, H = 300, PL = 58, PR = 14, PT = 14, PB = 34;
+    var x = function(ca){ return PL + (ca - minCA) / (maxCA - minCA) * (W - PL - PR); };
+    var y = function(net){ return PT + (1 - Math.max(0, net) / maxNet) * (H - PT - PB); };
+    var couleurs = { micro:'#2f6bff', eurl:'#10b981', sasu:'#8b5cf6' };
+
+    var lignes = cles.map(function(k){
+      var pts = series[k].map(function(p){ return x(p.ca).toFixed(1) + ',' + y(p.net).toFixed(1); }).join(' ');
+      return '<polyline points="'+pts+'" fill="none" stroke="'+couleurs[k]+'" stroke-width="2.5" '
+        + 'stroke-linejoin="round" stroke-linecap="round"/>';
+    }).join('');
+
+    // Repères horizontaux
+    var grille = '', etiquettes = '';
+    for(var i = 0; i <= 4; i++){
+      var v = maxNet * i / 4, yy = y(v);
+      grille += '<line x1="'+PL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+yy.toFixed(1)
+        + '" stroke="#e7edf6" stroke-width="1"/>';
+      etiquettes += '<text x="'+(PL-8)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" font-size="10" '
+        + 'fill="#8a97ad" font-weight="600">'+Math.round(v/1000)+'k</text>';
+    }
+    // Repères verticaux
+    for(var c = 25000; c < maxCA; c += 25000){
+      etiquettes += '<text x="'+x(c).toFixed(1)+'" y="'+(H-12)+'" text-anchor="middle" font-size="10" '
+        + 'fill="#8a97ad" font-weight="600">'+Math.round(c/1000)+'k</text>';
+    }
+
+    // Position actuelle
+    var caNow = caAffiche();
+    var repere = '<line x1="'+x(caNow).toFixed(1)+'" y1="'+PT+'" x2="'+x(caNow).toFixed(1)+'" y2="'+(H-PB)
+      + '" stroke="#0f1b33" stroke-width="1.5" stroke-dasharray="4 3"/>'
+      + '<text x="'+x(caNow).toFixed(1)+'" y="'+(PT+11)+'" text-anchor="middle" font-size="10" '
+      + 'font-weight="800" fill="#0f1b33">'+fmtEur(caNow)+'</text>';
+
+    // Croisements avec l'auto-entreprise
+    var croisements = '';
+    ['eurl','sasu'].forEach(function(k){
+      if(cles.indexOf(k) === -1) return;
+      var b = pointDeBascule(f, k, caAffiche());
+      if(b === null || b.deja || b.ca > maxCA) return;
+      var r = calculerStatuts(f, b.ca);
+      croisements += '<circle cx="'+x(b.ca).toFixed(1)+'" cy="'+y(r[k].net).toFixed(1)
+        + '" r="5" fill="#fff" stroke="'+couleurs[k]+'" stroke-width="2.5"/>';
+    });
+
+    var legende = cles.map(function(k){
+      return '<span class="lg"><span class="lg-dot" style="background:'+couleurs[k]+'"></span>'
+        + esc(STATUT_LABELS[k]) + '</span>';
+    }).join('');
+
+    return '<div class="card"><div class="card-title">Ton revenu net selon ton chiffre d’affaires</div>'
+      + '<div class="graph-legend">'+legende+'</div>'
+      + '<svg viewBox="0 0 '+W+' '+H+'" class="graph" preserveAspectRatio="none">'
+        + grille + lignes + croisements + repere + etiquettes
+      + '</svg>'
+      + '<div class="field-eg">Les cercles marquent le moment où une société dépasse l’auto-entreprise. '
+        + 'La ligne pointillée est ta position actuelle.</div>'
+      + '</div>';
+  }
+
+  // --- Zone recalculée à chaque frappe ---
+  // « Où part ton chiffre d'affaires » — un anneau par statut, pour voir d'un
+  // coup d'œil ce qui reste et ce qui part, sans lire un tableau.
+  var PARTS_CA = [
+    { k:'net',        l:'Dans ta poche', c:'#10b981' },
+    { k:'cotisations',l:'Cotisations',   c:'#f97316' },
+    { k:'fiscalite',  l:'Impôts',        c:'#8b5cf6' },
+    { k:'charges',    l:'Charges',       c:'#94a3b8' },
+  ];
+
+  function anneauCa(res, ca, taille){
+    var R = taille / 2 - 9, C = 2 * Math.PI * R, offset = 0;
+    var arcs = PARTS_CA.map(function(p){
+      var v = Math.max(0, res[p.k] || 0);
+      var part = ca > 0 ? v / ca : 0;
+      var arc = '<circle cx="'+(taille/2)+'" cy="'+(taille/2)+'" r="'+R+'" fill="none" '
+        + 'stroke="'+p.c+'" stroke-width="15" stroke-linecap="butt" '
+        + 'stroke-dasharray="'+(part * C)+' '+C+'" stroke-dashoffset="'+(-offset * C)+'" '
+        + 'transform="rotate(-90 '+(taille/2)+' '+(taille/2)+')"><title>'
+        + esc(p.l)+' — '+fmtEur(v)+'</title></circle>';
+      offset += part;
+      return arc;
+    }).join('');
+    var pctNet = ca > 0 ? Math.round((res.net || 0) / ca * 100) : 0;
+    return '<svg viewBox="0 0 '+taille+' '+taille+'" width="'+taille+'" height="'+taille+'">'
+      + '<circle cx="'+(taille/2)+'" cy="'+(taille/2)+'" r="'+R+'" fill="none" stroke="#eef1f6" stroke-width="15"/>'
+      + arcs
+      + '<text x="'+(taille/2)+'" y="'+(taille/2 - 2)+'" text-anchor="middle" '
+        + 'font-size="26" font-weight="800" fill="#0f1b33">'+pctNet+'%</text>'
+      + '<text x="'+(taille/2)+'" y="'+(taille/2 + 17)+'" text-anchor="middle" '
+        + 'font-size="11" font-weight="700" fill="#8a97ad">pour toi</text>'
+      + '</svg>';
+  }
+
+  function camembertsHtml(r, cles, ca){
+    if(!(ca > 0)) return '';
+    var anneaux = cles.map(function(k){
+      var res = r[k];
+      var lignes = PARTS_CA.map(function(p){
+        var v = Math.max(0, res[p.k] || 0);
+        if(v <= 0) return '';
+        return '<div class="cam-l"><span class="cam-p" style="background:'+p.c+'"></span>'
+          + '<span class="cam-n">'+esc(p.l)+'</span>'
+          + '<span class="cam-v">'+fmtEur(v)+'</span></div>';
+      }).join('');
+      return '<div class="cam"><div class="cam-t">'+esc(STATUT_LABELS[k])+'</div>'
+        + anneauCa(res, ca, 128)
+        + '<div class="cam-legende">'+lignes+'</div></div>';
+    }).join('');
+    return '<div class="card"><div class="card-title">Où part ton chiffre d’affaires ?</div>'
+      + '<div class="field-eg" style="margin-bottom:14px">Sur '+fmtEur(ca)+' encaissés — '
+      + 'survole un anneau pour le détail.</div>'
+      + '<div class="cams">'+anneaux+'</div></div>';
+  }
+
+  function statutResultsHtml(){
+    var f = statutInputs();
+    var ca = caAffiche();
+    var cles = statutsVisibles();
+    var r = calculerStatuts(f, ca);
+    var P = state.statut.params;
+
+    // Meilleur statut
+    var meilleur = cles.slice().sort(function(a,b){ return r[b].net - r[a].net; })[0];
+    var ecartMicro = r[meilleur].net - r.micro.net;
+
+    // --- Synthèse ---
+    var cartes = cles.map(function(k){
+      var best = (k === meilleur && cles.length > 1);
+      return '<div class="stat-card'+(best?' best':'')+'">'
+        + '<div class="stat-card-t">'+esc(STATUT_LABELS[k])+(best?' · le plus avantageux':'')+'</div>'
+        + '<div class="stat-card-n">'+fmtEur(r[k].net)+'</div>'
+        + '<div class="stat-card-s">'+fmtEur(r[k].net/12)+' par mois</div>'
+        + (r[k].plafonnee ? '<div class="stat-card-w">Rémunération limitée par le CA disponible</div>' : '')
+        + '</div>';
+    }).join('');
+
+    // --- Recommandation ---
+    var reco, recoCouleur, recoTitre;
+    if(cles.length === 1 || meilleur === 'micro'){
+      recoCouleur = STATUT.rouge.color;
+      recoTitre = 'Ton auto-entreprise reste le statut le plus avantageux';
+      var prochaine = null, prochainCA = null;
+      ['eurl','sasu'].forEach(function(k){
+        if(cles.indexOf(k) === -1) return;
+        var b = pointDeBascule(f, k, ca);
+        if(b !== null && !b.deja && (prochainCA === null || b.ca < prochainCA)){
+          prochainCA = b.ca; prochaine = k;
+        }
+      });
+      if(prochainCA !== null && prochainCA <= ca * 1.35){
+        recoCouleur = STATUT.orange.color;
+        recoTitre = 'Tu approches du seuil où une société devient plus intéressante';
+        reco = 'À partir d’environ ' + fmtEur(prochainCA) + ' de chiffre d’affaires, une '
+             + STATUT_LABELS[prochaine] + ' deviendrait plus avantageuse — soit '
+             + fmtEur(prochainCA - ca) + ' de plus qu’aujourd’hui.';
+      } else if(prochainCA !== null){
+        reco = 'Le passage en société augmenterait tes coûts sans améliorer ton revenu disponible. '
+             + 'Une ' + STATUT_LABELS[prochaine] + ' deviendrait intéressante vers '
+             + fmtEur(prochainCA) + ' de chiffre d’affaires.';
+      } else {
+        reco = 'Avec les paramètres actuels, aucune société ne dépasse ton auto-entreprise sur la plage testée.';
+      }
+    } else {
+      recoCouleur = STATUT.vert.color;
+      recoTitre = 'Le passage en société semble pertinent';
+      reco = 'Avec cette configuration, une ' + STATUT_LABELS[meilleur] + ' te laisserait environ '
+           + fmtEur(ecartMicro) + ' de plus par an que ton auto-entreprise, soit '
+           + fmtEur(ecartMicro/12) + ' par mois.';
+    }
+
+    // --- Points de bascule ---
+    var basculesHtml = ['eurl','sasu'].filter(function(k){ return cles.indexOf(k) !== -1; }).map(function(k){
+      var b = pointDeBascule(f, k, ca);
+      return '<div class="bascule">'
+        + '<div class="bascule-k">'+esc(STATUT_LABELS[k])+'</div>'
+        + (b === null
+            ? '<div class="bascule-v muted">Ne dépasse pas l’auto-entreprise sur la plage testée</div>'
+            : (b.deja
+                ? '<div class="bascule-v" style="color:'+STATUT.vert.color+'">Déjà plus avantageuse à ton '
+                  + 'niveau de chiffre d’affaires actuel</div>'
+                : '<div class="bascule-v">Devient plus avantageuse à partir de <strong>'+fmtEur(b.ca)+'</strong>'
+                  + '<div class="field-eg">' + fmtEur(b.ca - ca) + ' de plus qu’aujourd’hui</div></div>'))
+        + '</div>';
+    }).join('');
+
+    // --- Tableau comparatif coloré ---
+    var val = function(k, champ){ return r[k][champ]; };
+    var ligneTableau = function(label, champ, plusHautEstMieux, aide){
+      var valeurs = {}; cles.forEach(function(k){ valeurs[k] = val(k, champ); });
+      var couleurs = couleursLigne(valeurs, plusHautEstMieux);
+      return '<tr><td><strong>'+esc(label)+'</strong>'
+        + (aide ? '<div class="field-eg">'+esc(aide)+'</div>' : '') + '</td>'
+        + cles.map(function(k){
+            var c = couleurs[k];
+            return '<td'+(c?' style="color:'+c+';font-weight:800"':'')+'>'+fmtEur(valeurs[k])+'</td>';
+          }).join('') + '</tr>';
+    };
+    var tableau = '<div class="card"><div class="card-title">Comparaison détaillée</div>'
+      + '<div class="recap-scroll"><table class="recap-t" style="min-width:0"><thead><tr><th>Élément</th>'
+      + cles.map(function(k){ return '<th>'+esc(STATUT_LABELS[k])+'</th>'; }).join('')
+      + '</tr></thead><tbody>'
+        + '<tr><td><strong>Chiffre d’affaires</strong></td>'
+          + cles.map(function(){ return '<td>'+fmtEur(ca)+'</td>'; }).join('') + '</tr>'
+        + ligneTableau('Charges', 'charges', false,
+            'En auto-entreprise elles ne sont pas déductibles : elles sortent de ta poche.')
+        + ligneTableau('Cotisations sociales', 'cotisations', false)
+        + ligneTableau('Fiscalité', 'fiscalite', false, 'Impôt sur le revenu, IS, PFU et CFE cumulés.')
+        + ligneTableau('Rémunération versée', 'remuneration', true)
+        + ligneTableau('Dividendes', 'dividendes', true)
+        + '<tr style="border-top:2px solid var(--border)"><td><strong>Argent réellement disponible</strong></td>'
+          + (function(){
+              var valeurs = {}; cles.forEach(function(k){ valeurs[k] = r[k].net; });
+              var couleurs = couleursLigne(valeurs, true);
+              return cles.map(function(k){
+                var c = couleurs[k];
+                return '<td style="font-size:15px;font-weight:800'+(c?';color:'+c:'')+'">'+fmtEur(r[k].net)+'</td>';
+              }).join('');
+            })()
+        + '</tr>'
+      + '</tbody></table></div></div>';
+
+    // --- Analyse automatique ---
+    var analyses = {
+      micro: 'Tes cotisations sont calculées directement sur ton chiffre d’affaires et restent simples, '
+           + 'mais tes charges ne sont pas déductibles : ' + fmtEur(f.chargesAnnuelles + (parseFloat(f.investissement)||0))
+           + ' sortent de ta poche sans réduire ton imposition.',
+      eurl: 'L’EURL déduit tes charges du résultat, impose les bénéfices à l’IS (souvent plus bas que ton '
+          + 'taux marginal) et permet d’arbitrer entre rémunération et dividendes. Les cotisations TNS du '
+          + 'gérant sont plus faibles qu’en SASU, avec une protection sociale moindre.',
+      sasu: 'La SASU offre une meilleure protection sociale (statut assimilé salarié), mais ses cotisations '
+          + 'sont nettement plus lourdes : ' + fmtEur(r.sasu.cotisations) + ' ici. Les dividendes y échappent '
+          + 'aux cotisations sociales, ce qui rend la stratégie de rémunération déterminante.',
+    };
+    var analyse = '<div class="vl-cards">' + cles.map(function(k){
+      return '<div class="card"><div class="card-title">'+esc(STATUT_LABELS[k])+'</div>'
+        + '<div class="res-line">'+esc(analyses[k])+'</div></div>';
+    }).join('') + '</div>';
+
+    return '<div class="statut-verdict" style="border-left-color:'+recoCouleur+'">'
+        + '<div class="vl-verdict-t" style="color:'+recoCouleur+'">'+esc(recoTitre)+'</div>'
+        + '<div class="vl-verdict-s">'+esc(reco)+'</div>'
+      + '</div>'
+      + '<div class="stat-cards">'+cartes+'</div>'
+      + camembertsHtml(r, cles, ca)
+      + bandeauMillesimeHtml('statut')
+      + (basculesHtml ? '<div class="card"><div class="card-title">Points de bascule</div>'
+          + '<div class="bascules">'+basculesHtml+'</div></div>' : '')
+      + grapheEvolution()
+      + tableau
+      + analyse
+      + (meilleur !== 'micro'
+          ? simPartenaireHtml(0, 'Une '+STATUT_LABELS[meilleur]+' semble t’avantager ? '
+              + 'LegalPlace crée ta société sans paperasse — statuts et immatriculation compris.')
+          : simPartenaireHtml(3, 'Avant de trancher, un avis d’expert peut valoir le coup. '
+              + 'Icon Invest fait le point avec toi, sans jargon.'));
+  }
+
+  function statutFormHtml(){
+    var f = state.statut.form;
+    var P = state.statut.params;
+    var ca = caReel();
+    var maxCurseur = Math.max(150000, Math.round(ca * 2 / 10000) * 10000);
+
+    var champ = function(nom, label, valeur, o){
+      o = o || {};
+      var inner;
+      if(o.options){
+        inner = '<select data-statut-field="'+nom+'">' + o.options.map(function(op){
+          return '<option value="'+esc(op.v)+'"'+(String(valeur)===String(op.v)?' selected':'')+'>'
+            + esc(op.l)+'</option>'; }).join('') + '</select>';
+      } else {
+        inner = '<input data-statut-field="'+nom+'" type="'+(o.type||'text')+'" value="'+esc(valeur||'')
+          + '" placeholder="'+esc(o.ph||'')+'"'+(o.type==='number'?' min="0" step="any"':'')+'>';
+      }
+      return '<div class="field"><label>'+esc(label)+'</label>'+inner
+        + (o.aide ? '<div class="field-eg">'+esc(o.aide)+'</div>' : '') + '</div>';
+    };
+
+    var chargesHtml = state.statut.charges.map(function(c, i){
+      return '<div class="charge-row">'
+        + '<input data-charge-field="nom" data-i="'+i+'" value="'+esc(c.nom||'')+'" placeholder="Nom de la charge">'
+        + '<input data-charge-field="montant" data-i="'+i+'" type="number" min="0" step="any" '
+          + 'value="'+esc(c.montant||'')+'" placeholder="0 €">'
+        + '<select data-charge-field="frequence" data-i="'+i+'">'
+          + '<option value="mensuelle"'+(c.frequence==='mensuelle'?' selected':'')+'>/ mois</option>'
+          + '<option value="annuelle"'+(c.frequence==='annuelle'?' selected':'')+'>/ an</option>'
+        + '</select>'
+        + '<button class="icon-btn danger" data-action="charge-remove" data-i="'+i+'" title="Supprimer">✕</button>'
+        + '</div>';
+    }).join('');
+
+    return '<div class="card statut-form">'
+      + profilBandeHtml(['categorieFiscale','ca','versementLiberatoire','parts','remuneration','cfe','charges'])
+      + '<div class="card-title">Propre à cette simulation</div>'
+      + champ('investissement', 'Investissement prévu cette année', f.investissement,
+              { type:'number', ph:'0 €', aide:'Matériel, véhicule… Déductible en société, pas en micro.' })
+
+      + '<div class="card-title" style="margin-top:24px">Tes charges professionnelles</div>'
+      + '<div class="field-eg" style="margin-bottom:10px">Reprises de ton profil — ajustables ici pour tester.</div>'
+      + '<div class="charges">'+chargesHtml+'</div>'
+      + '<button class="btn-link" data-action="charge-add">+ Ajouter une charge</button>'
+      + '<div class="charge-total">Total : <strong>'+fmtEur(totalCharges())+'</strong> par an</div>'
+
+      + '<button class="btn-link" data-action="statut-toggle-avance" style="margin-top:20px">'
+        + (state.statut.avance ? '− Masquer les paramètres fiscaux' : '⚙ Ajuster les paramètres fiscaux') + '</button>'
+      + (state.statut.avance ? statutParamsHtml() : '')
+      + '</div>';
+  }
+
+  function statutParamsHtml(){
+    var P = state.statut.params;
+    // Chaque champ porte sa provenance : confirmé par la feuille de calcul de
+    // l'utilisateur, ou simple ordre de grandeur.
+    var badge = function(cle){
+      var b = PARAM_BADGE[PARAM_SOURCE[cle] || 'estime'];
+      return '<span class="pbadge" style="background:'+b.bg+';color:'+b.c+'" title="'+esc(b.t)+'">'
+        + esc(b.l)+'</span>';
+    };
+    var pc = function(nom, label, valeur, cleSource, lexId){
+      return '<div class="field"><label>'+esc(label)+(lexId?lexQ(lexId):'')+badge(cleSource || nom)+'</label>'
+        + '<input data-param-field="'+nom+'" type="number" min="0" step="0.1" value="'+(valeur*100)+'"></div>';
+    };
+    var confirmes = Object.keys(PARAM_SOURCE).filter(function(k){ return PARAM_SOURCE[k] === 'confirme'; }).length;
+    var total = Object.keys(PARAM_SOURCE).length;
+
+    return '<div class="params-box">'
+      + '<div class="vl-note" style="background:#fffbeb;margin-top:0">'
+        + '<strong>' + confirmes + ' paramètres sur ' + total + '</strong> viennent de ta feuille de '
+        + 'calcul. Les autres restent des <strong>ordres de grandeur</strong> : ajuste-les avec ton '
+        + 'expert-comptable, ils déterminent tout le résultat.</div>'
+      + '<div class="field-row">'
+        + pc('micro.cotisations.'+state.statut.form.categorie, 'Cotisations micro (%)',
+             P.micro.cotisations[state.statut.form.categorie], 'micro.cotisations', 'cotisations')
+        + pc('eurl.cotisationsTNS', 'Cotisations TNS — EURL (%)', P.eurl.cotisationsTNS, null, 'tns')
+      + '</div>'
+      + '<div class="field-row">'
+        + pc('sasu.patronales', 'Charges patronales — SASU (%)', P.sasu.patronales, null, 'assimile')
+        + pc('sasu.salariales', 'Charges salariales — SASU (%)', P.sasu.salariales, null, 'assimile')
+      + '</div>'
+      + '<div class="field-eg" style="margin:-4px 0 12px">Ensemble, elles représentent environ '
+        + Math.round((1 + P.sasu.patronales) / (1 - P.sasu.salariales) * 100 - 100)
+        + ' % du salaire net — le « 88 % » de ta feuille de calcul.</div>'
+      + '<div class="field-row">'
+        + pc('is.tauxReduit', 'IS — taux réduit (%)', P.is.tauxReduit, null, 'is')
+        + pc('is.tauxNormal', 'IS — taux normal (%)', P.is.tauxNormal, null, 'is')
+      + '</div>'
+      + '<div class="field-row">'
+        + pc('pfu', 'PFU sur dividendes (%)', P.pfu, null, 'pfu')
+        + '<div class="field"><label>CFE annuelle (€)'+lexQ('cfe')+badge('cfe')+'</label>'
+          + '<input data-param-field="cfe" type="number" min="0" step="1" value="'+P.cfe+'"></div>'
+      + '</div>'
+      + '<div class="field"><label>Plafond du taux réduit d’IS (€)'+badge('is.plafondReduit')+'</label>'
+        + '<input data-param-field="is.plafondReduit" type="number" min="0" step="1" value="'+P.is.plafondReduit+'"></div>'
+      + '<button class="btn-link" data-action="params-save" style="margin-top:6px">'
+        + '💾 Garder ces taux pour la prochaine fois</button>'
+      + (state.statut.paramsSaved ? '<span class="profil-saved" style="margin-left:10px">✓ Enregistrés</span>' : '')
+      + '</div>';
+  }
+
+  function statutHtml(){
+    var ca = caReel();
+    var maxCurseur = Math.max(150000, Math.round(ca * 2 / 10000) * 10000);
+    var proj = state.statut.projection;
+    var mode = state.statut.mode;
+    var bouton = function(v, l){
+      return '<button class="seg'+(mode===v?' on':'')+'" data-action="statut-mode" data-mode="'+v+'">'
+        + esc(l)+'</button>';
+    };
+
+    return '<div class="sim-wrap">'
+      + '<div class="statut-bar">'
+        + '<div class="seg-group">'
+          + bouton('eurl','Auto-entreprise vs EURL')
+          + bouton('sasu','Auto-entreprise vs SASU')
+          + bouton('tous','Les trois')
+        + '</div>'
+        + '<div class="proj">'
+          + '<div class="proj-l">Projection du chiffre d’affaires'
+            + (proj !== null ? ' <button class="btn-link" data-action="statut-reset-proj">— revenir à '
+                + fmtEur(ca) + '</button>' : '') + '</div>'
+          + '<input type="range" data-statut-range min="10000" max="'+maxCurseur+'" step="1000" '
+            + 'value="'+(proj !== null ? proj : ca)+'">'
+          + '<div class="proj-v" id="proj-value">'+fmtEur(proj !== null ? proj : ca)+'</div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="statut-layout">'
+        + statutFormHtml()
+        + '<div id="statut-results">' + statutResultsHtml() + '</div>'
+      + '</div>'
+      + '<div class="card tinted" style="margin-top:16px">'
+        + '<div class="card-title">Pour comprendre</div>'
+        + '<ul class="res-list">'
+          + '<li><strong>Les charges déductibles changent tout</strong> : en auto-entreprise, ton abattement est forfaitaire — tes vraies dépenses ne réduisent jamais ton impôt.</li>'
+          + '<li><strong>L’IS devient intéressant</strong> quand ton taux marginal d’impôt sur le revenu dépasse le taux d’IS sur les bénéfices laissés dans la société.</li>'
+          + '<li><strong>La SASU coûte plus cher en cotisations</strong> mais ouvre une meilleure protection sociale ; l’EURL est souvent choisie pour l’inverse.</li>'
+          + '<li><strong>Les dividendes</strong> échappent aux cotisations sociales en SASU, mais subissent le PFU. L’arbitrage salaire / dividendes est déterminant.</li>'
+          + '<li><strong>Un investissement important</strong> est déductible en société et ne l’est pas en micro : il peut à lui seul faire basculer le résultat.</li>'
+        + '</ul>'
+      + '</div>'
+      + '<div class="final-note">Estimation fondée sur les informations renseignées et sur des paramètres '
+        + 'fiscaux <strong>à valider</strong>. Elle ne constitue ni un conseil juridique, ni fiscal, ni '
+        + 'comptable. Le résultat réel dépend de ton foyer fiscal, de tes choix de rémunération, de ton '
+        + 'régime de TVA et des évolutions législatives. Avant toute création de société ou changement de '
+        + 'statut, fais valider ton projet par un expert-comptable.</div>'
+      + '</div>';
+  }
+
+  // Recalcule uniquement la zone de résultats (temps réel, sans perdre le focus).
+  function renderStatutResults(){
+    var zone = document.getElementById('statut-results');
+    if(zone) zone.innerHTML = statutResultsHtml();
+  }
+
+  // ===========================================================================
+  // Simulateur : est-ce intéressant de passer à la TVA ?
+  // ===========================================================================
+  var TVA_CATEGORIES = [
+    {v:'',           l:'— non précisée —'},
+    {v:'informatique', l:'Matériel informatique'}, {v:'logiciel', l:'Logiciel / abonnement'},
+    {v:'soustraitance',l:'Sous-traitance'},        {v:'local',    l:'Local professionnel'},
+    {v:'publicite',   l:'Publicité'},              {v:'deplacement', l:'Déplacement'},
+    {v:'vehicule',    l:'Véhicule'},               {v:'carburant',l:'Carburant'},
+    {v:'restaurant',  l:'Restaurant'},             {v:'hebergement', l:'Hébergement'},
+    {v:'cadeau',      l:'Cadeau'},                 {v:'mixte',    l:'Frais mixtes (pro + perso)'},
+    {v:'autre',       l:'Autre'},
+  ];
+
+  function tvaField(name, label, value, o){
+    o = o || {};
+    var req = o.req ? ' <span class="req">*</span>' : '';
+    var inner;
+    if(o.options){
+      inner = '<select data-tva-field="'+name+'">'
+        + (o.placeholder ? '<option value=""'+(value?'':' selected')+'>— choisir —</option>' : '')
+        + o.options.map(function(op){
+            var v = op.v !== undefined ? op.v : op, l = op.l !== undefined ? op.l : op;
+            return '<option value="'+esc(v)+'"'+(String(value)===String(v)?' selected':'')+'>'+esc(l)+'</option>';
+          }).join('') + '</select>';
+    } else {
+      inner = '<input data-tva-field="'+name+'" type="'+(o.type||'text')+'" value="'+esc(value||'')
+        + '" placeholder="'+esc(o.ph||'')+'"'+(o.type==='number'?' min="0" step="any"':'')+'>';
+    }
+    return '<div class="field"><label>'+esc(label)+req+'</label>'+inner
+      + (o.aide ? '<div class="field-eg">'+esc(o.aide)+'</div>' : '') + '</div>';
+  }
+
+  function tvaDepCardHtml(d, i){
+    var rempli = !!(d.nom && d.nom.trim());
+    var multi = state.tva.depenses.length > 1;
+    var f = function(n, label, val, o){
+      o = o || {}; o.dep = i;
+      var attrs = 'data-tvadep-field="'+n+'" data-i="'+i+'"';
+      var inner;
+      if(o.options){
+        inner = '<select '+attrs+'>' + o.options.map(function(op){
+          var v = op.v !== undefined ? op.v : op, l = op.l !== undefined ? op.l : op;
+          return '<option value="'+esc(v)+'"'+(String(val)===String(v)?' selected':'')+'>'+esc(l)+'</option>';
+        }).join('') + '</select>';
+      } else {
+        inner = '<input '+attrs+' type="'+(o.type||'text')+'" value="'+esc(val||'')
+          + '" placeholder="'+esc(o.ph||'')+'"'+(o.type==='number'?' min="0" step="any"':'')+'>';
+      }
+      return '<div class="field"><label>'+esc(label)+'</label>'+inner+'</div>';
+    };
+    return '<div class="dep-card">'
+      + '<div class="dep-head">'
+        + '<div class="dep-num">'+(i+1)+'</div>'
+        + '<div class="dep-title'+(rempli?'':' empty')+'">'+esc(rempli ? d.nom : 'Nouvelle dépense')+'</div>'
+        + '<div class="dep-actions">'
+          + (multi ? '<button class="icon-btn danger" data-action="tvadep-remove" data-i="'+i+'" title="Supprimer">✕</button>' : '')
+        + '</div>'
+      + '</div>'
+      + f('nom','Nom de la dépense', d.nom, {ph:'Ex : logiciel, loyer…'})
+      + '<div class="field-row">'
+        + f('montant','Montant TTC', d.montant, {type:'number', ph:'120 €'})
+        + f('frequence','Fréquence', d.frequence, {options:[
+            {v:'mensuelle',l:'Par mois'},{v:'annuelle',l:'Par an'},{v:'unique',l:'Achat unique'}]})
+      + '</div>'
+      + '<div class="field-row">'
+        + f('taux','TVA sur la facture', d.taux, {options:TVA_PARAMS.tauxDepense})
+        + f('recup','TVA récupérable', d.recup, {options:[
+            {v:'100',l:'100 % — oui'},{v:'50',l:'50 % — partiellement'},
+            {v:'0',l:'0 % — non'},{v:'80',l:'80 %'},{v:'20',l:'20 %'}]})
+      + '</div>'
+      + f('categorie','Catégorie (facultatif)', d.categorie, {options:TVA_CATEGORIES})
+      + (TVA_PARAMS.categoriesSensibles.indexOf(d.categorie) !== -1
+          ? '<div class="vl-note" style="background:#fffbeb">⚠️ La TVA de cette catégorie est souvent '
+            + 'limitée ou exclue. Vérifie ton droit à déduction avant de compter ce gain.</div>' : '')
+      + '</div>';
+  }
+
+  function tvaFormHtml(){
+    var f = state.tva.form;
+    var err = state.tva.formError ? '<div class="form-error">'+esc(state.tva.formError)+'</div>' : '';
+    var somme = (parseFloat(f.partRecup)||0) + (parseFloat(f.partProNon)||0) + (parseFloat(f.partParticuliers)||0);
+    var sommeOk = Math.round(somme) === 100;
+
+    var h = state.tva.historique;
+    var hist = h.length
+      ? '<div class="hist-h" style="margin-top:34px"><div class="hist-title">Mes simulations précédentes</div></div>'
+        + '<div class="hist-list">' + h.map(tvaHistItemHtml).join('') + '</div>'
+      : '';
+
+    return '<div class="sim-wrap">'
+      + profilBandeHtml(['tva','ca','tauxVente','clientele','charges'])
+      + (f.franchise === 'non'
+          ? '<div class="vl-note" style="margin-top:0">D’après ton profil tu factures déjà la TVA. '
+            + 'Ce simulateur s’adresse aux entreprises encore en franchise qui envisagent d’y opter.</div>' : '')
+      + (!sommeOk
+          ? '<div class="vl-note" style="margin-top:0;background:#fef2f2">La répartition de ta clientèle '
+            + 'fait <strong>'+Math.round(somme)+' %</strong> au lieu de 100 % — corrige-la dans ton profil.</div>' : '')
+      + (f.exoneree === 'oui' || f.exoneree === 'partiel'
+          ? '<div class="vl-note" style="margin-top:0;background:#fffbeb">Ton profil indique une activité '
+            + '<strong>exonérée</strong>. Ce n’est pas la même chose qu’une franchise : l’option pour la TVA '
+            + 'n’est pas forcément possible ni avantageuse. Une analyse professionnelle est recommandée.</div>' : '')
+      + '<div class="vl-grid">'
+
+        // --- Stratégie tarifaire ---
+        + '<div class="card tinted">'
+          + '<div class="card-title">Ta stratégie de prix</div>'
+          + '<div class="vl-note" style="margin-top:0">Si tu factures 1 000 € aujourd’hui, tu peux soit '
+            + 'facturer 1 200 € TTC (ton revenu HT est préservé), soit rester à 1 000 € TTC (tu absorbes '
+            + 'la TVA et ton revenu HT tombe à 833 €).</div>'
+          + tvaField('strategie','Que ferais-tu de tes prix ?', f.strategie, {req:true, placeholder:true, options:[
+              {v:'ajouter',  l:'Ajouter la TVA à tous mes prix'},
+              {v:'conserver',l:'Garder les mêmes prix TTC pour tous'},
+              {v:'adapter',  l:'Adapter selon le type de client'},
+              {v:'inconnu',  l:'Je ne sais pas encore'}]})
+          + (f.strategie === 'adapter'
+              ? tvaField('repercussionSensible','Part de TVA répercutée aux clients qui ne la récupèrent pas (%)',
+                         f.repercussionSensible, {type:'number', ph:'50',
+                         aide:'100 % = tu ajoutes toute la TVA · 0 % = tu gardes ton prix TTC actuel.'})
+              : '')
+          + tvaField('baisseVentes','Baisse de ventes redoutée chez ces clients', f.baisseVentes, {options:[
+              {v:'aucune',l:'Aucune baisse prévue'},{v:'faible',l:'Faible (≈ 5 %)'},
+              {v:'moderee',l:'Modérée (≈ 10 %)'},{v:'importante',l:'Importante (≈ 20 %)'}],
+              aide:'Hypothèse commerciale, pas une donnée fiscale. Affichée à part du gain.'})
+          + tvaField('coutsAdmin','Coûts administratifs annuels (facultatif)', f.coutsAdmin,
+                     {type:'number', ph:'300 €', aide:'Logiciel, honoraires comptables, temps de gestion.'})
+        + '</div>'
+      + '</div>'
+
+      // --- Dépenses : reprises du profil, ajustables ici pour la simulation ---
+      + '<div class="card-title" style="margin:26px 0 6px">Tes dépenses professionnelles</div>'
+      + '<div class="field-eg" style="margin-bottom:12px">Reprises de ton profil. Tu peux les ajuster '
+        + 'pour cette simulation — pour un changement durable, passe par ton profil.</div>'
+      + '<div class="dep-grid">'
+        + state.tva.depenses.map(tvaDepCardHtml).join('')
+        + '<button class="dep-add" data-action="tvadep-add">'
+          + '<div class="dep-add-plus">+</div>Ajouter une dépense</button>'
+      + '</div>'
+      + err
+      + '<div class="sim-actions">'
+        + '<button class="btn-primary" data-action="tva-compute">Simuler le passage à la TVA</button>'
+      + '</div>'
+      + bandeauMillesimeHtml('tva')
+      + hist
+      + '</div>';
+  }
+
+  function tvaResultHtml(){
+    var r = state.tva.result;
+    if(!r) return '';
+    var st = { vert:STATUT.vert, orange:STATUT.orange, rouge:STATUT.rouge, gris:STATUT.gris }[r.avis];
+    var g = r.principal.gain;
+
+    var titre, sousTitre;
+    if(r.avis === 'gris'){
+      titre = 'Impossible de conclure de façon fiable';
+      sousTitre = r.sommeParts !== 100
+        ? 'La répartition de ta clientèle doit faire exactement 100 % (actuellement ' + r.sommeParts + ' %).'
+        : (r.exoneree === 'oui' || r.exoneree === 'partiel'
+            ? 'Ton activité est exonérée ou partiellement exonérée : une analyse professionnelle est nécessaire.'
+            : 'Complète ta stratégie de prix, ton chiffre d’affaires et ton taux de TVA.');
+    } else if(g > 0){
+      titre = 'Le passage à la TVA pourrait te faire gagner environ ' + fmtEur(g) + ' par an';
+      sousTitre = 'Avec la stratégie de prix que tu as choisie.';
+    } else {
+      titre = 'Le passage à la TVA réduirait ton revenu d’environ ' + fmtEur(-g) + ' par an';
+      sousTitre = 'Avec la stratégie de prix que tu as choisie.';
+    }
+    var libelle = { vert:'Le passage à la TVA semble financièrement intéressant',
+                    orange:'Le passage à la TVA mérite d’être étudié',
+                    rouge:'Le passage volontaire semble peu avantageux en l’état',
+                    gris:'Informations insuffisantes' }[r.avis];
+
+    // --- Clientèle ---
+    var segLigne = function(label, part, montant, note){
+      return '<div class="vl-line"><span>'+esc(label)+' — '+Math.round(part*100)+' %</span>'
+        + '<span>'+fmtEur(montant)+'</span></div>'
+        + (note ? '<div class="field-eg" style="margin:-4px 0 8px">'+esc(note)+'</div>' : '');
+    };
+    var carteClients = '<div class="card"><div class="card-title">Ta clientèle</div>'
+      + segLigne('Récupèrent la TVA', r.parts.recup, r.segments.recup,
+                 'Pour eux, la TVA ajoutée ne devrait pas être un coût définitif.')
+      + segLigne('Pros sans récupération', r.parts.proNon, r.segments.proNon)
+      + segLigne('Particuliers', r.parts.particuliers, r.segments.particuliers,
+                 'Pour eux, la TVA est une hausse de prix réelle.')
+      + '</div>';
+
+    // --- TVA récupérable ---
+    var lignesDep = r.lignes.filter(function(l){ return l.ttcAnnuel > 0; }).map(function(l){
+      return '<tr><td><strong>'+esc(l.nom)+'</strong>'
+        + (l.sensible ? '<div class="field-eg">⚠️ déduction souvent limitée</div>' : '') + '</td>'
+        + '<td>'+fmtEur(l.ttcAnnuel)+'</td>'
+        + '<td>'+fmtPct(l.taux)+'</td>'
+        + '<td>'+fmtEur(l.theorique)+'</td>'
+        + '<td><strong>'+fmtEur(l.recuperable)+'</strong></td></tr>';
+    }).join('');
+    var carteDepenses = '<div class="card"><div class="card-title">TVA récupérable sur tes dépenses</div>'
+      + (lignesDep
+          ? '<div class="recap-scroll"><table class="recap-t" style="min-width:0">'
+            + '<thead><tr><th>Dépense</th><th>TTC / an</th><th>Taux</th><th>TVA</th><th>Récupérable</th></tr></thead>'
+            + '<tbody>'+lignesDep+'</tbody></table></div>'
+          : '<div class="res-line">Aucune dépense renseignée.</div>')
+      + '<div class="vl-line fort" style="border-top:1px solid var(--border);margin-top:10px;padding-top:12px">'
+        + '<span>Total récupérable par an</span><span>'+fmtEur(r.tvaRecuperable)+'</span></div>'
+      + '<div class="field-eg">Suppose que ces dépenses ouvrent effectivement droit à déduction et que tu '
+        + 'disposes de factures conformes à ton nom.</div>'
+      + '</div>';
+
+    // --- Bilan ---
+    var bilanLigne = function(label, val, signe){
+      var couleur = val === 0 ? 'var(--ink)' : (signe > 0 ? STATUT.vert.color : STATUT.rouge.color);
+      return '<div class="vl-line"><span>'+esc(label)+'</span>'
+        + '<span style="color:'+couleur+'">'+(signe > 0 ? '+' : (val ? '−' : ''))+fmtEur(Math.abs(val))+'</span></div>';
+    };
+    var carteBilan = '<div class="card"><div class="card-title">Bilan annuel estimé</div>'
+      + bilanLigne('TVA récupérable sur les dépenses', r.tvaRecuperable, 1)
+      + bilanLigne('TVA absorbée dans tes prix', r.principal.absorbee, -1)
+      + bilanLigne('Coûts administratifs', r.coutsAdmin, -1)
+      + '<div class="vl-line fort" style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px">'
+        + '<span>Gain net estimé</span>'
+        + '<span style="color:'+(g >= 0 ? STATUT.vert.color : STATUT.rouge.color)+'">'
+        + (g >= 0 ? '+' : '−') + fmtEur(Math.abs(g)) + '</span></div>'
+      + '<div class="field-eg">La TVA que tu collecterais ('+fmtEur(r.principal.collectee)+') n’apparaît pas '
+        + 'ici : elle est encaissée pour être reversée, ce n’est pas un revenu.</div>'
+      + (r.perteCommerciale !== null && r.perteCommerciale > 0
+          ? '<div class="vl-note" style="background:#fffbeb">Si tes ventes baissaient de '
+            + Math.round(r.baisse*100) + ' % chez les clients qui ne récupèrent pas la TVA, cela '
+            + 'représenterait ' + fmtEur(r.perteCommerciale) + ' de chiffre d’affaires en moins. '
+            + 'Non déduit du gain ci-dessus : l’impact réel dépend de ta marge.</div>'
+          : '')
+      + '</div>';
+
+    // --- Les trois scénarios ---
+    var s = r.scenarios;
+    var ligneScenario = function(label, sc, actif){
+      var v = sc.gain;
+      return '<tr'+(actif?' style="background:var(--soft)"':'')+'>'
+        + '<td><strong>'+esc(label)+'</strong>'+(actif?' <span class="field-eg">— ton choix</span>':'')+'</td>'
+        + '<td>'+fmtEur(sc.caHT)+'</td>'
+        + '<td>'+fmtEur(sc.absorbee)+'</td>'
+        + '<td style="color:'+(v>=0?STATUT.vert.color:STATUT.rouge.color)+';font-weight:800">'
+          + (v>=0?'+':'−')+fmtEur(Math.abs(v))+'</td></tr>';
+    };
+    // Si la stratégie choisie ne correspond à aucun des trois scénarios types
+    // (répercussion partielle), on l'ajoute comme ligne à part pour éviter
+    // d'afficher un « ton choix » qui contredirait le résultat principal.
+    var strategieSurMesure = (r.strategie === 'adapter' && r.rSensible > 0 && r.rSensible < 1);
+    var carteScenarios = '<div class="card"><div class="card-title">Et si tu changeais de stratégie ?</div>'
+      + '<div class="recap-scroll"><table class="recap-t" style="min-width:0"><thead><tr>'
+        + '<th>Scénario</th><th>CA HT</th><th>TVA absorbée</th><th>Gain / perte</th></tr></thead><tbody>'
+        + ligneScenario('TVA ajoutée à tous les prix', s.ajoutee, r.strategie === 'ajouter')
+        + ligneScenario('Prix TTC conservés partout', s.conservee, r.strategie === 'conserver')
+        + ligneScenario('TVA ajoutée aux pros seulement', s.mixte,
+                        r.strategie === 'adapter' && r.rSensible === 0)
+        + (strategieSurMesure
+            ? ligneScenario('Ta stratégie — ' + Math.round(r.rSensible*100) + ' % répercuté aux autres clients',
+                            r.principal, true)
+            : '')
+      + '</tbody></table></div></div>';
+
+    // --- Graphique gains / coûts ---
+    var maxi = Math.max(r.tvaRecuperable, r.principal.absorbee, r.coutsAdmin, Math.abs(g), 1);
+    var barre = function(label, val, color){
+      return '<div class="cmp-row"><div class="cmp-label">'+esc(label)+'</div>'
+        + '<div class="cmp-track"><div class="cmp-bar" style="width:'+(Math.abs(val)/maxi*100)+'%;background:'+color+'"></div></div>'
+        + '<div class="cmp-val">'+fmtEur(Math.abs(val))+'</div></div>';
+    };
+    var carteGraph = '<div class="card"><div class="card-title">Ce qui compose le résultat</div>'
+      + barre('TVA récupérable', r.tvaRecuperable, STATUT.vert.bg)
+      + barre('TVA absorbée', r.principal.absorbee, STATUT.rouge.bg)
+      + barre('Coûts administratifs', r.coutsAdmin, '#94a3b8')
+      + '</div>';
+
+    // --- Points de vigilance ---
+    var vigilance = [];
+    if(r.lignes.some(function(l){ return l.sensible; }))
+      vigilance.push('Certaines dépenses relèvent de catégories dont la TVA est souvent limitée ou exclue : vérifie ton droit à déduction.');
+    if(r.parts.sensible > 0.5)
+      vigilance.push('Plus de la moitié de ta clientèle supporterait la TVA comme un coût : ta capacité à ajuster tes prix est déterminante.');
+    if(r.strategie === 'conserver')
+      vigilance.push('En conservant tes prix TTC, tu absorbes la TVA : ton chiffre d’affaires hors taxes diminue mécaniquement.');
+    vigilance.push('Le passage à la TVA ajoute des obligations déclaratives et un suivi de trésorerie (la TVA encaissée ne t’appartient pas).');
+    vigilance.push('Les seuils de franchise en base ne sont pas vérifiés ici : au-delà, la TVA devient obligatoire et non plus optionnelle.');
+    vigilance.push('Opérations internationales, autoliquidation, TVA sur marge et régularisations ne sont pas prises en compte.');
+
+    return '<div class="sim-wrap">'
+      + '<div class="res-topbar">'
+        + '<h2>Résultat de la simulation</h2>'
+        + '<div class="export-bar">'
+          + '<button class="btn-ghost" data-action="tva-print">Imprimer / PDF</button>'
+          + '<button class="btn-ghost" data-action="tva-back">Modifier mes informations</button>'
+          + '<button class="btn-primary" data-action="tva-new">Nouvelle simulation</button>'
+        + '</div>'
+      + '</div>'
+      + '<div class="vl-verdict" style="border-left-color:'+st.color+'">'
+        + '<div class="field-eg" style="margin-bottom:4px">'+esc(libelle)+'</div>'
+        + '<div class="vl-verdict-t" style="color:'+st.color+'">'+esc(titre)+'</div>'
+        + '<div class="vl-verdict-s">'+esc(sousTitre)+'</div>'
+      + '</div>'
+      + '<div class="vl-cards">' + carteClients + carteDepenses + '</div>'
+      + '<div class="vl-cards">' + carteBilan + carteGraph + '</div>'
+      + carteScenarios
+      + '<div class="card tinted" style="margin-top:16px">'
+        + '<div class="card-title">Points de vigilance</div>'
+        + '<ul class="res-list">' + vigilance.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('') + '</ul>'
+      + '</div>'
+      + simPartenaireHtml(1, 'Passer à la TVA, c’est des déclarations en plus. Abby les génère '
+          + 'depuis tes factures et t’évite les oublis.')
+      + '<div class="final-note">Estimation indicative. Le droit de récupérer la TVA dépend de la nature de '
+        + 'ton activité, de l’usage professionnel réel, de la conformité de tes factures et des exclusions '
+        + 'applicables. Les conséquences commerciales d’une hausse de prix ne peuvent pas être prédites : '
+        + 'elles reposent uniquement sur tes hypothèses. Avant d’opter pour la TVA, vérifie ta situation '
+        + 'auprès de ton service des impôts des entreprises ou d’un expert-comptable.</div>'
+      + '</div>';
+  }
+
+  function tvaHistItemHtml(sim, i){
+    var d = new Date(sim.date);
+    var jour = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+    var heure = d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    var col = { vert:STATUT.vert.bg, orange:STATUT.orange.bg, rouge:STATUT.rouge.bg, gris:STATUT.gris.bg }[sim.avis];
+    return '<div class="hist-item" data-action="tva-hist-view" data-i="'+i+'">'
+      + '<div style="flex:1;min-width:0">'
+        + '<div class="hist-date">'+esc(jour)+' · '+esc(heure)+'</div>'
+        + '<div class="hist-meta">CA '+fmtEur(sim.ca)+' · '
+          + (sim.gain >= 0 ? '+' : '−') + fmtEur(Math.abs(sim.gain)) + ' / an</div>'
+      + '</div>'
+      + '<span class="hist-dot" style="background:'+col+'"></span>'
+      + '<button class="icon-btn danger" data-action="tva-hist-delete" data-i="'+i+'" title="Supprimer">✕</button>'
+      + '</div>';
+  }
+
+  function tvaHtml(){
+    return state.tva.step === 'result' ? tvaResultHtml() : tvaFormHtml();
+  }
+
+  // ===========================================================================
+  // Comparateur : versement libératoire ou impôt classique
+  // ===========================================================================
+  function vlField(name, label, value, o){
+    o = o || {};
+    var req = o.req ? ' <span class="req">*</span>' : '';
+    var inner;
+    if(o.options){
+      inner = '<select data-vl-field="'+name+'">'
+        + (o.placeholder !== false ? '<option value=""'+(value?'':' selected')+'>— choisir —</option>' : '')
+        + o.options.map(function(op){
+            var v = op.v !== undefined ? op.v : op;
+            var l = op.l !== undefined ? op.l : op;
+            return '<option value="'+esc(v)+'"'+(String(value)===String(v)?' selected':'')+'>'+esc(l)+'</option>';
+          }).join('')
+        + '</select>';
+    } else {
+      inner = '<input data-vl-field="'+name+'" type="'+(o.type||'text')+'" value="'+esc(value||'')
+        + '" placeholder="'+esc(o.ph||'')+'"'+(o.type==='number'?' min="0" step="any"':'')+'>';
+    }
+    return '<div class="field"><label>'+esc(label)+req+'</label>'+inner
+      + (o.aide ? '<div class="field-eg">'+esc(o.aide)+'</div>' : '') + '</div>';
+  }
+
+  function vlFormHtml(){
+    var f = state.vl.form;
+    var p = FISCAL[f.annee] || FISCAL['2025'];
+    var err = state.vl.formError ? '<div class="form-error">'+esc(state.vl.formError)+'</div>' : '';
+    var metier = (state.profil.activite || '').trim();
+
+    var h = state.vl.historique;
+    var hist = h.length
+      ? '<div class="hist-h" style="margin-top:34px"><div class="hist-title">Mes simulations précédentes</div></div>'
+        + '<div class="hist-list">' + h.map(vlHistItemHtml).join('') + '</div>'
+      : '';
+
+    // Tout vient du profil : il ne reste ici que l'année de simulation.
+    return '<div class="sim-wrap">'
+      + profilBandeHtml(['categorieFiscale','ca','parts','autresRevenus','rfr'])
+      + (f.categorie === 'inconnu' || !f.categorie
+          ? '<div class="vl-note" style="margin-top:0">Ta <strong>catégorie fiscale</strong> n’est pas '
+            + 'renseignée dans ton profil, et elle change tout le calcul. Vérifie-la sur ton attestation '
+            + 'Urssaf, puis indique-la dans ton profil.'
+            + (metier ? ' Ton activité déclarée : « '+esc(metier)+' ».' : '') + '</div>'
+          : '')
+      + '<div class="vl-note" style="margin-top:0">Éligibilité jugée sur ton revenu fiscal de '
+        + 'référence ' + p.anneeRfr + ' — plafond ' + fmtEur(p.plafondRfrParPart) + ' par part.</div>'
+      + err
+      + '<div class="sim-actions" style="margin-top:18px">'
+        + '<button class="btn-primary" data-action="vl-compare">Comparer les deux options</button>'
+      + '</div>'
+      + bandeauMillesimeHtml('fiscal')
+      + hist
+      + '</div>';
+  }
+
+  // --- Visualisation du barème progressif ---
+  var TRANCHE_COULEURS = ['#e8edf5', '#c7dcff', '#8fb4ff', '#f7c9a0', '#f2a3a3'];
+
+  function baremeHtml(r){
+    var p = r.params;
+    // Échelle d'affichage : on va jusqu'au haut de la tranche atteinte après la micro.
+    var haute = r.trancheApres.a;
+    var echelle = haute === null ? r.parPartApres * 1.25 : haute;
+    echelle = Math.max(echelle, r.parPartApres * 1.05, 15000);
+
+    var segments = '', labels = '';
+    p.bareme.forEach(function(tr, i){
+      if(tr.de >= echelle) return;
+      var haut = (tr.a === null) ? echelle : Math.min(tr.a, echelle);
+      var largeur = (haut - tr.de) / echelle * 100;
+      if(largeur <= 0) return;
+      segments += '<div class="bareme-seg" style="width:'+largeur+'%;background:'+TRANCHE_COULEURS[i]+'">'
+        + '<span>'+Math.round(tr.taux*100)+'%</span></div>';
+      if(tr.de > 0){
+        labels += '<span class="bareme-tick" style="left:'+(tr.de / echelle * 100)+'%">'
+          + fmtEur(tr.de) + '</span>';
+      }
+    });
+
+    var pos = function(v){ return Math.max(0, Math.min(100, v / echelle * 100)); };
+    var marqueurs =
+        '<div class="bareme-mark avant" style="left:'+pos(r.parPartAvant)+'%">'
+          + '<span class="bareme-mark-l">Avant<br>'+fmtEur(r.parPartAvant)+'</span></div>'
+      + '<div class="bareme-mark apres" style="left:'+pos(r.parPartApres)+'%">'
+          + '<span class="bareme-mark-l">Après<br>'+fmtEur(r.parPartApres)+'</span></div>';
+
+    var msg = (r.trancheApres.taux > r.trancheAvant.taux)
+      ? 'Avant ton activité, ton revenu par part se situe dans la tranche à '
+        + Math.round(r.trancheAvant.taux*100) + ' %. Après ajout de ton bénéfice micro, une partie de tes '
+        + 'revenus entre dans la tranche à ' + Math.round(r.trancheApres.taux*100) + ' %.'
+      : 'Ton bénéfice micro reste dans la tranche à ' + Math.round(r.trancheApres.taux*100) + ' %.';
+
+    return '<div class="card">'
+      + '<div class="card-title">Ta position dans le barème (par part fiscale)</div>'
+      + '<div class="bareme"><div class="bareme-bar">'+segments+'</div>'
+        + '<div class="bareme-ticks">'+labels+'</div>'
+        + '<div class="bareme-marks">'+marqueurs+'</div>'
+      + '</div>'
+      + '<div class="res-line" style="margin-top:52px">'+esc(msg)+'</div>'
+      + '<div class="vl-note">Être dans la tranche à '+Math.round(r.trancheApres.taux*100)+' % ne veut pas '
+        + 'dire que tous tes revenus sont imposés à ce taux : seule la part qui dépasse le seuil de cette '
+        + 'tranche l’est.</div>'
+      + '</div>';
+  }
+
+  function vlResultHtml(){
+    var r = state.vl.result;
+    if(!r) return '';
+    var f = state.vl.form;
+    var vlGagne = r.ecart > 0;
+    var proche = Math.abs(r.ecart) < 50 || (Math.max(r.vl, r.coutClassique) > 0 &&
+                 Math.abs(r.ecart) < 0.05 * Math.max(r.vl, r.coutClassique));
+
+    // --- En-tête : la conclusion ---
+    var titre, sousTitre, couleur;
+    if(proche){
+      couleur = STATUT.gris.color;
+      titre = 'Les deux options se valent presque';
+      sousTitre = 'L’écart est de ' + fmtEur(Math.abs(r.ecart)) + ' par an. Ton choix peut dépendre de la '
+        + 'simplicité de paiement et de l’évolution prévisible de tes revenus.';
+    } else if(vlGagne){
+      couleur = STATUT.vert.color;
+      titre = 'Le versement libératoire te ferait économiser ' + fmtEur(r.ecart) + ' par an';
+      sousTitre = 'Soit environ ' + fmtEur(r.ecartMensuel) + ' par mois.';
+    } else {
+      couleur = STATUT.orange.color;
+      titre = 'L’impôt classique serait plus avantageux de ' + fmtEur(-r.ecart) + ' par an';
+      sousTitre = 'Soit environ ' + fmtEur(-r.ecartMensuel) + ' par mois.';
+    }
+
+    // --- Bandeau d'éligibilité ---
+    var elig;
+    if(r.eligible === true){
+      elig = '<div class="vl-elig ok">🟢 <div><strong>Tu sembles éligible au versement libératoire</strong>'
+        + '<div>Ton revenu fiscal de référence (' + fmtEur(r.rfr) + ') est inférieur au plafond applicable '
+        + 'à ton foyer (' + fmtEur(r.plafondRfr) + ').</div></div></div>';
+    } else if(r.eligible === false){
+      elig = '<div class="vl-elig ko">🔴 <div><strong>Tu ne sembles pas éligible au versement libératoire</strong>'
+        + '<div>Ton revenu fiscal de référence (' + fmtEur(r.rfr) + ') dépasse le plafond applicable ('
+        + fmtEur(r.plafondRfr) + '). La comparaison ci-dessous reste affichée à titre indicatif, mais '
+        + 'l’option n’est probablement pas accessible.</div></div></div>';
+    } else {
+      elig = '<div class="vl-elig na">⚪ <div><strong>Éligibilité à vérifier</strong>'
+        + '<div>Sans ton revenu fiscal de référence ' + r.params.anneeRfr + ', nous comparons les deux '
+        + 'méthodes mais ne pouvons pas confirmer que tu peux choisir le versement libératoire.</div></div></div>';
+    }
+
+    // --- Les deux cartes de calcul ---
+    var ligne = function(k, v, fort){
+      return '<div class="vl-line'+(fort?' fort':'')+'"><span>'+esc(k)+'</span><span>'+v+'</span></div>';
+    };
+
+    var carteVL = '<div class="card">'
+      + '<div class="card-title">Option A · Versement libératoire</div>'
+      + ligne('Chiffre d’affaires', fmtEur(r.ca))
+      + ligne('Taux applicable', fmtPct(r.cat.vl))
+      + ligne('Impôt annuel', fmtEur(r.vl), true)
+      + ligne('Moyenne mensuelle', fmtEur(r.vlMensuel))
+      + '<div class="vl-formule">' + fmtEur(r.ca) + ' × ' + fmtPct(r.cat.vl)
+        + ' = ' + fmtEur(r.vl) + '</div>'
+      + '</div>';
+
+    var carteIR = '<div class="card">'
+      + '<div class="card-title">Option B · Impôt classique au barème</div>'
+      + ligne('Chiffre d’affaires', fmtEur(r.ca))
+      + ligne('Abattement forfaitaire', fmtPct(r.cat.abattement))
+      + ligne('Bénéfice imposable', fmtEur(r.benefice))
+      + ligne('Autres revenus du foyer', fmtEur(r.autres))
+      + ligne('Impôt du foyer sans la micro', fmtEur(r.impotSans))
+      + ligne('Impôt du foyer avec la micro', fmtEur(r.impotAvec))
+      + ligne('Coût de la micro', fmtEur(r.coutClassique), true)
+      + '<div class="vl-formule">' + fmtEur(r.impotAvec) + ' − ' + fmtEur(r.impotSans)
+        + ' = ' + fmtEur(r.coutClassique) + '</div>'
+      + '</div>';
+
+    // --- Graphique de comparaison ---
+    var maxi = Math.max(r.vl, r.coutClassique, 1);
+    var barre = function(label, val, color){
+      return '<div class="cmp-row"><div class="cmp-label">'+esc(label)+'</div>'
+        + '<div class="cmp-track"><div class="cmp-bar" style="width:'+(val/maxi*100)+'%;background:'+color+'">'
+        + '</div></div><div class="cmp-val">'+fmtEur(val)+'</div></div>';
+    };
+    var graphique = '<div class="card">'
+      + '<div class="card-title">Comparaison annuelle</div>'
+      + barre('Versement libératoire', r.vl, '#2f6bff')
+      + barre('Impôt classique', r.coutClassique, '#f59e0b')
+      + '<div class="vl-line fort" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">'
+        + '<span>Écart annuel</span><span>' + fmtEur(Math.abs(r.ecart)) + '</span></div>'
+      + '<div class="vl-line"><span>Écart mensuel moyen</span><span>'
+        + fmtEur(Math.abs(r.ecartMensuel)) + '</span></div>'
+      + '</div>';
+
+    // --- Interprétation ---
+    var interpretation;
+    if(proche){
+      interpretation = 'L’écart entre les deux options est faible. Ton choix peut davantage dépendre de la '
+        + 'simplicité de paiement (le versement libératoire est prélevé au fil des déclarations) et de '
+        + 'l’évolution prévisible de tes revenus.';
+    } else if(vlGagne){
+      interpretation = 'Ton foyer est déjà imposé : le bénéfice de ta micro-entreprise vient s’ajouter à tes '
+        + 'autres revenus et se retrouve imposé à ' + Math.round(r.trancheApres.taux*100) + ' % sur sa partie '
+        + 'haute. Le taux forfaitaire de ' + fmtPct(r.cat.vl) + ' appliqué à ton '
+        + 'chiffre d’affaires est alors plus favorable.';
+    } else {
+      interpretation = 'Ton foyer est peu ou pas imposé sur cette tranche de revenus. Le versement libératoire '
+        + 'te ferait payer ' + fmtPct(r.cat.vl) + ' de ton chiffre d’affaires dès '
+        + 'le premier euro encaissé, alors que ton bénéfice micro est faiblement imposé au barème. '
+        + 'Attention : une personne non imposable peut payer inutilement un versement libératoire.';
+    }
+
+    // --- Hypothèses et limites (transparence sur ce qui n'est pas calculé) ---
+    var limites = ['Calcul fondé sur le barème applicable aux ' + MILLESIME.label
+      + ', source : ' + r.params.source + '.'];
+    if(!r.params.decote) limites.push('La décote pour les revenus modestes n’est pas appliquée : '
+      + 'ton impôt réel peut être inférieur à l’estimation si tes revenus sont proches du seuil d’imposition.');
+    if(!r.params.plafondQuotientFamilial) limites.push('Le plafonnement du quotient familial n’est pas appliqué.');
+    limites.push('Le mécanisme du taux effectif (impact du revenu micro sur l’imposition de tes autres '
+      + 'revenus en cas de versement libératoire) n’est pas pris en compte.');
+    limites.push('Cotisations sociales, CFE, TVA et contribution à la formation professionnelle sont exclues : '
+      + 'seule la part fiscale est comparée.');
+    limites.push('Une seule catégorie d’activité à la fois : les activités mixtes ne sont pas encore gérées.');
+
+    return '<div class="sim-wrap">'
+      + '<div class="res-topbar">'
+        + '<h2>Résultat de la comparaison</h2>'
+        + '<div class="export-bar">'
+          + '<button class="btn-ghost" data-action="vl-print">Imprimer / PDF</button>'
+          + '<button class="btn-ghost" data-action="vl-back">Modifier mes informations</button>'
+          + '<button class="btn-primary" data-action="vl-new">Nouvelle simulation</button>'
+        + '</div>'
+      + '</div>'
+      + '<div class="vl-verdict" style="border-left-color:'+couleur+'">'
+        + '<div class="vl-verdict-t" style="color:'+couleur+'">'+esc(titre)+'</div>'
+        + '<div class="vl-verdict-s">'+esc(sousTitre)+'</div>'
+      + '</div>'
+      + elig
+      + '<div class="vl-cards">' + carteVL + carteIR + '</div>'
+      + '<div class="vl-cards">' + graphique + baremeHtml(r) + '</div>'
+      + '<div class="card" style="margin-top:16px">'
+        + '<div class="card-title">Comment lire ce résultat</div>'
+        + '<div class="res-line">'+esc(interpretation)+'</div>'
+      + '</div>'
+      + '<div class="card tinted" style="margin-top:16px">'
+        + '<div class="card-title">Hypothèses et limites du calcul</div>'
+        + '<ul class="res-list">' + limites.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('') + '</ul>'
+      + '</div>'
+      + simPartenaireHtml(3, 'Un doute sur ton imposition ? Icon Invest fait le point sur ta '
+          + 'situation, en français, sans jargon fiscal.')
+      + '<div class="final-note">Estimation indicative, fondée sur les informations renseignées. Elle ne '
+        + 'constitue ni une consultation fiscale, ni un conseil juridique, ni une validation par '
+        + 'l’administration. Vérifie ton éligibilité et ta situation auprès de l’Urssaf ou de ton service '
+        + 'des impôts avant de modifier ton option fiscale. Pour opter à compter de l’année suivante, la '
+        + 'demande se fait en principe auprès de l’Urssaf au plus tard le 30 septembre.</div>'
+      + '</div>';
+  }
+
+  function vlHistItemHtml(sim, i){
+    var d = new Date(sim.date);
+    var jour = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+    var heure = d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    var gagnant = sim.ecart > 0 ? 'Versement libératoire' : (sim.ecart < 0 ? 'Impôt classique' : 'Équivalent');
+    var col = sim.ecart > 0 ? STATUT.vert.bg : STATUT.orange.bg;
+    return '<div class="hist-item" data-action="vl-hist-view" data-i="'+i+'">'
+      + '<div style="flex:1;min-width:0">'
+        + '<div class="hist-date">'+esc(jour)+' · '+esc(heure)+'</div>'
+        + '<div class="hist-meta">CA '+fmtEur(sim.ca)+' · '+esc(gagnant)+'</div>'
+      + '</div>'
+      + '<span class="hist-dot" style="background:'+col+'"></span>'
+      + '<button class="icon-btn danger" data-action="vl-hist-delete" data-i="'+i+'" title="Supprimer">✕</button>'
+      + '</div>';
+  }
+
+  function vlHtml(){
+    return state.vl.step === 'result' ? vlResultHtml() : vlFormHtml();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Vue Simulateur
+  // ---------------------------------------------------------------------------
+  function field(name, label, value, o){
+    o = o || {};
+    var req = o.req ? ' <span class="req">*</span>' : '';
+    var attr = o.prof ? 'data-profil-field="'+name+'"'
+             : (o.dep !== undefined ? 'data-dep-field="'+name+'" data-i="'+o.dep+'"'
+                                    : 'data-sim-field="'+name+'"');
+    var inner;
+    if(o.options){
+      inner = '<select '+attr+'>'
+        + '<option value=""'+(value?'':' selected')+'>— choisir —</option>'
+        + o.options.map(function(op){
+            return '<option value="'+esc(op)+'"'+(value===op?' selected':'')+'>'+esc(op)+'</option>';
+          }).join('')
+        + '</select>';
+    } else if(o.textarea){
+      inner = '<textarea '+attr+' placeholder="'+esc(o.ph||'')+'">'+esc(value||'')+'</textarea>';
+    } else {
+      inner = '<input '+attr+' type="'+(o.type||'text')+'" value="'+esc(value||'')+'" placeholder="'+esc(o.ph||'')+'">';
+    }
+    return '<div class="field"><label>'+esc(label)+req+'</label>'+inner
+      + (o.eg ? '<div class="field-eg">'+esc(o.eg)+'</div>' : '') + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Écran Profil — la saisie unique dont vivent tous les simulateurs
+  // ---------------------------------------------------------------------------
+  function pfield(c, p){
+    var v = p[c.k];
+    var inner;
+    if(c.options){
+      inner = '<select data-profil-field="'+c.k+'">' + c.options.map(function(o){
+        return '<option value="'+esc(o.v)+'"'+(String(v)===String(o.v)?' selected':'')+'>'
+          + esc(o.l)+'</option>'; }).join('') + '</select>';
+    } else if(c.textarea){
+      inner = '<textarea data-profil-field="'+c.k+'" placeholder="'+esc(c.ph||'')+'">'+esc(v||'')+'</textarea>';
+    } else {
+      inner = '<input data-profil-field="'+c.k+'" type="'+(c.type||'text')+'" value="'+esc(v||'')
+        + '" placeholder="'+esc(c.ph||'')+'"'+(c.type==='number'?' min="0" step="any"':'')+'>';
+      if(c.suffixe) inner = '<div class="pf-suffixe">'+inner+'<span>'+esc(c.suffixe)+'</span></div>';
+    }
+    return '<div class="pf'+(c.large?' large':'')+'"><label>'+esc(c.l)+(c.lex?lexQ(c.lex):'')+'</label>'+inner
+      + (c.aide ? '<div class="pf-aide">'+esc(c.aide)+'</div>' : '') + '</div>';
+  }
+
+  function profilChargeHtml(c, i){
+    return '<div class="pcharge">'
+      + '<input data-pcharge-field="nom" data-i="'+i+'" value="'+esc(c.nom||'')+'" placeholder="Nom de la charge">'
+      + '<div class="pf-suffixe compact"><input data-pcharge-field="montant" data-i="'+i+'" type="number" '
+        + 'min="0" step="any" value="'+esc(c.montant||'')+'" placeholder="0"><span>€</span></div>'
+      + '<select data-pcharge-field="frequence" data-i="'+i+'">'
+        + '<option value="mensuelle"'+(c.frequence==='mensuelle'?' selected':'')+'>/ mois</option>'
+        + '<option value="annuelle"'+(c.frequence==='annuelle'?' selected':'')+'>/ an</option>'
+      + '</select>'
+      + '<select data-pcharge-field="categorie" data-i="'+i+'">'
+        + OPTIM_CATEGORIES.map(function(o){
+            return '<option value="'+o.v+'"'+(c.categorie===o.v?' selected':'')+'>'+esc(o.l)+'</option>';
+          }).join('')
+      + '</select>'
+      + '<select data-pcharge-field="tauxTVA" data-i="'+i+'">'
+        + TVA_PARAMS.tauxDepense.map(function(t){
+            return '<option value="'+t.v+'"'+(String(c.tauxTVA)===String(t.v)?' selected':'')+'>TVA '+t.l+'</option>';
+          }).join('')
+      + '</select>'
+      + '<select data-pcharge-field="deductible" data-i="'+i+'">'
+        + [['100','Déductible'],['50','50 %'],['0','Non déductible']].map(function(d){
+            return '<option value="'+d[0]+'"'+(String(c.deductible)===d[0]?' selected':'')+'>'+d[1]+'</option>';
+          }).join('')
+      + '</select>'
+      + '<button class="icon-btn danger" data-action="pcharge-remove" data-i="'+i+'" title="Supprimer">✕</button>'
+      + (c.source ? '<div class="pcharge-src">Importé — '+esc(c.source)+'</div>' : '')
+      + '</div>';
+  }
+
+  // Mises à jour ciblées : on retouche le DOM sans re-rendre, pour ne pas
+  // arracher le focus pendant que l'utilisateur tape.
+  function majTotalClientele(){
+    var el = document.querySelector('.pf-total');
+    if(!el) return;
+    var sec = PROFIL_SECTIONS.filter(function(s){ return s.total; })[0];
+    if(!sec) return;
+    var somme = sec.total.cles.reduce(function(a, k){
+      return a + (parseFloat(state.profil[k]) || 0); }, 0);
+    var ok = Math.round(somme) === sec.total.attendu;
+    el.classList.toggle('ok', ok);
+    el.innerHTML = esc(sec.total.l) + ' : <strong>' + Math.round(somme) + ' %</strong>'
+      + (ok ? ' ✓' : ' — doit faire 100 %');
+  }
+  function majTotalCharges(){
+    var lignes = state.profil.charges || [];
+    var el = document.querySelector('[data-action="profil-section"][data-id="charges"] .prow-r');
+    if(!el) return;
+    var total = lignes.reduce(function(a, c){
+      return a + annualiser(parseFloat(c.montant) || 0, c.frequence); }, 0);
+    el.textContent = lignes.length + ' ligne' + (lignes.length > 1 ? 's' : '')
+      + ' · ' + fmtEur(total) + ' / an';
+  }
+
+  // Photo + mot de passe : rendus à la main, ils ne rentrent pas dans pfield().
+  function profilIdentiteExtra(p){
+    var ini = ((p.prenom || '').charAt(0) + (p.nom || '').charAt(0)).toUpperCase() || '🙂';
+    var vignette = p.photo
+      ? '<img src="'+esc(p.photo)+'" alt="Photo de profil">'
+      : '<span>'+esc(ini)+'</span>';
+    return '<div class="pf large pf-photo">'
+        + '<label>Photo de profil</label>'
+        + '<div class="pphoto">'
+          + '<div class="pphoto-v">'+vignette+'</div>'
+          + '<div class="pphoto-a">'
+            + '<label class="btn-ghost pphoto-btn">Choisir une image'
+              + '<input type="file" accept="image/*" data-profil-photo hidden></label>'
+            + (p.photo ? '<button class="btn-link" data-action="photo-remove">Retirer</button>' : '')
+          + '</div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="pf large">'+compteHtml()+'</div>';
+  }
+
+  // Panneau « Mon compte » : synchro des données côté serveur (optionnel).
+  function compteHtml(){
+    if(state.compte){
+      var sync = { 'en cours':'⟳ Synchronisation…', ok:'✓ Synchronisé', erreur:'⚠ Synchro impossible' };
+      return '<div class="compte connecte">'
+        + '<div class="compte-h"><span class="compte-ico">🔒</span>'
+          + '<div><div class="compte-t">Compte connecté</div>'
+            + '<div class="compte-mail">'+esc(state.compte.email)+'</div></div>'
+          + '<button class="btn-ghost" data-action="auth-logout">Se déconnecter</button></div>'
+        + '<div class="compte-sync">'+(sync[state.syncEtat] || '✓ Tes données sont sauvegardées sur ton compte')+'</div>'
+      + '</div>';
+    }
+    return '<div class="compte">'
+      + '<div class="compte-h"><span class="compte-ico">☁️</span>'
+        + '<div><div class="compte-t">Retrouve tes données partout</div>'
+          + '<div class="compte-sub">Crée un compte pour sauvegarder ton profil et tes objectifs, '
+            + 'et les retrouver sur un autre appareil.</div></div></div>'
+      + '<div class="compte-a">'
+        + '<button class="btn-primary" data-action="auth-open" data-mode="signup">Créer un compte</button>'
+        + '<button class="btn-ghost" data-action="auth-open" data-mode="login">J’ai déjà un compte</button>'
+      + '</div>'
+    + '</div>';
+  }
+
+  function authModalHtml(){
+    if(!state.authOpen) return '';
+    var signup = state.authMode === 'signup';
+    return '<div class="overlay" data-action="auth-close">'
+      + '<div class="modal" style="width:440px" data-action="stop">'
+        + '<div class="modal-head">'
+          + '<div class="modal-title">'+(signup ? 'Créer un compte' : 'Se connecter')+'</div>'
+          + '<div class="modal-sub">'+(signup
+              ? 'Pour sauvegarder tes données et les retrouver partout.'
+              : 'Retrouve ton profil et tes objectifs.')+'</div>'
+        + '</div>'
+        + '<div class="modal-body">'
+          + '<div class="pf"><label>Adresse e-mail</label>'
+            + '<input data-auth="email" type="email" placeholder="louis@exemple.fr" autocomplete="email"></div>'
+          + '<div class="pf" style="margin-top:12px"><label>Mot de passe</label>'
+            + '<input data-auth="password" type="password" placeholder="'
+              + (signup?'8 caractères minimum':'Ton mot de passe')+'" '
+              + 'autocomplete="'+(signup?'new-password':'current-password')+'"></div>'
+          + (state.authErr ? '<div class="form-error" style="margin-top:12px">'+esc(state.authErr)+'</div>' : '')
+          + '<div class="auth-note">🔒 Ton mot de passe est chiffré côté serveur. '
+            + 'Tes données restent aussi dans ce navigateur.</div>'
+        + '</div>'
+        + '<div class="modal-foot">'
+          + '<button class="btn-cancel" data-action="auth-switch">'
+            + (signup ? 'J’ai déjà un compte' : 'Créer un compte')+'</button>'
+          + '<button class="btn-confirm active"'+(state.authBusy?' disabled':'')
+            + ' data-action="auth-submit">'+(state.authBusy?'…':(signup?'Créer mon compte':'Se connecter'))+'</button>'
+        + '</div>'
+      + '</div></div>';
+  }
+
+  function profilBlocHtml(s, p){
+    var ouvert = state.profilSection === s.id;
+    var etat = etatSection(s.id);
+    var champs = s.champs.filter(function(c){ return !c.si || c.si(p); })
+                         .map(function(c){ return pfield(c, p); }).join('');
+    if(s.extra === 'identite') champs += profilIdentiteExtra(p);
+
+    var total = '';
+    if(s.total){
+      var somme = s.total.cles.reduce(function(a, k){ return a + (parseFloat(p[k]) || 0); }, 0);
+      var ok = Math.round(somme) === s.total.attendu;
+      total = '<div class="pf-total'+(ok?' ok':'')+'">'+esc(s.total.l)+' : <strong>'
+        + Math.round(somme)+' %</strong>'+(ok ? ' ✓' : ' — doit faire 100 %')+'</div>';
+    }
+
+    return '<section class="prow'+(ouvert?' open':'')+'" style="--c:'+s.color+';--s:'+s.soft+'">'
+      + '<button class="prow-head" data-action="profil-section" data-id="'+s.id+'">'
+        + '<span class="prow-ico">'+s.ico+'</span>'
+        + '<span class="prow-t">'+esc(s.titre)+'</span>'
+        + '<span class="prow-r">'+esc(s.resume(p))+'</span>'
+        + '<span class="prow-etat" title="'+esc(etat.manquants.length
+            ? 'À compléter : ' + etat.manquants.join(', ') : 'Section complète')+'">'
+          + anneauSection(etat.pct, s.color, 26)
+          + '<span class="prow-frac">'+etat.faits+'/'+etat.total+'</span></span>'
+        + '<span class="prow-chev">▶</span>'
+      + '</button>'
+      + '<div class="prow-wrap"><div class="prow-inner"><div class="prow-body">'
+        + (s.note ? '<div class="prow-note">'+esc(s.note)+'</div>' : '')
+        + '<div class="pf-grid">'+champs+'</div>'
+        + total
+      + '</div></div></div>'
+    + '</section>';
+  }
+
+  // Chaque section a la liste de SES champs indispensables : on en tire un
+  // pourcentage réel, affiché en anneau sur la ligne. Plus lisible qu'un
+  // simple « rempli / pas rempli ».
+  var rempli = function(v){ return v !== undefined && v !== null && String(v).trim() !== ''; };
+  var REQUIS = {
+    identite: [
+      { k:'prenom', l:'Prénom' }, { k:'nom', l:'Nom' }, { k:'email', l:'E-mail' },
+    ],
+    activite: [
+      { k:'activite', l:'Activité' },
+      { k:'description', l:'Description' },
+      { k:'categorieFiscale', l:'Catégorie fiscale',
+        ok:function(p){ return p.categorieFiscale && p.categorieFiscale !== 'inconnu'; } },
+    ],
+    structure: [
+      { k:'forme', l:'Forme juridique', ok:function(p){ return p.forme && !/je ne sais pas/i.test(p.forme); } },
+      { k:'regime', l:'Régime', ok:function(p){ return p.regime && !/je ne sais pas/i.test(p.regime); } },
+    ],
+    ca: [
+      { k:'ca', l:'Montant', ok:function(p){ return caProfilAnnuel(p) > 0; } },
+      { k:'periodeCa', l:'Période' },
+    ],
+    tva: [
+      { k:'tva', l:'Situation TVA', ok:function(p){ return p.tva && !/je ne sais pas/i.test(p.tva); } },
+      { k:'tauxVente', l:'Taux de TVA' },
+      { k:'clientele', l:'Répartition clientèle', ok:function(p){
+          var t = (parseFloat(p.clientRecup)||0) + (parseFloat(p.clientProNon)||0)
+                + (parseFloat(p.clientParticuliers)||0);
+          return Math.round(t) === 100; } },
+    ],
+    foyer: [
+      { k:'parts', l:'Parts fiscales' },
+      { k:'autresRevenus', l:'Autres revenus' },
+      { k:'rfr', l:'Revenu fiscal de référence' },
+    ],
+    remuneration: [
+      { k:'remMensuelle', l:'Rémunération', ok:function(p){ return parseFloat(p.remMensuelle) > 0; } },
+      { k:'dividendes', l:'Dividendes' },
+      { k:'tresorerie', l:'Trésorerie gardée' },
+      { k:'cfe', l:'Montant de ta CFE' },
+    ],
+    charges: [
+      { k:'charges', l:'Au moins une charge', ok:function(p){
+          return (p.charges||[]).some(function(c){ return c.nom && c.montant; }); } },
+    ],
+  };
+
+  // { faits, total, pct, manquants[] } pour une section.
+  function etatSection(id){
+    var p = state.profil;
+    var champs = REQUIS[id] || [];
+    var manquants = champs.filter(function(c){
+      return !(c.ok ? c.ok(p) : rempli(p[c.k]));
+    });
+    var faits = champs.length - manquants.length;
+    return { faits:faits, total:champs.length,
+             pct: champs.length ? Math.round(faits / champs.length * 100) : 100,
+             manquants: manquants.map(function(c){ return c.l; }) };
+  }
+
+  function sectionsProfil(){
+    var p = state.profil;
+    var liste = PROFIL_SECTIONS.filter(function(s){ return !s.si || s.si(p); })
+      .map(function(s){ return { id:s.id, titre:s.titre, color:s.color }; });
+    liste.push({ id:'charges', titre:'Charges professionnelles', color:'#ea580c' });
+    return liste.map(function(s){
+      var e = etatSection(s.id);
+      s.pct = e.pct; s.faits = e.faits; s.total = e.total;
+      s.manquants = e.manquants; s.ok = e.pct === 100;
+      return s;
+    });
+  }
+
+  // Petit anneau de remplissage, posé sur chaque ligne du profil.
+  function anneauSection(pct, color, taille){
+    var R = taille / 2 - 3, C = 2 * Math.PI * R;
+    return '<svg class="ring" viewBox="0 0 '+taille+' '+taille+'" width="'+taille+'" height="'+taille+'">'
+      + '<circle cx="'+(taille/2)+'" cy="'+(taille/2)+'" r="'+R+'" fill="none" stroke="#e6eaf2" stroke-width="4"/>'
+      + '<circle cx="'+(taille/2)+'" cy="'+(taille/2)+'" r="'+R+'" fill="none" stroke="'+color+'" '
+        + 'stroke-width="4" stroke-linecap="round" stroke-dasharray="'+(pct/100*C)+' '+C+'" '
+        + 'transform="rotate(-90 '+(taille/2)+' '+(taille/2)+')"/>'
+      + (pct === 100
+          ? '<path d="M'+(taille*0.32)+' '+(taille*0.5)+' l'+(taille*0.12)+' '+(taille*0.13)
+            + ' l'+(taille*0.24)+' -'+(taille*0.26)+'" fill="none" stroke="'+color
+            + '" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'
+          : '<text x="'+(taille/2)+'" y="'+(taille/2 + 3.5)+'" text-anchor="middle" font-size="9" '
+            + 'font-weight="800" fill="'+color+'">'+pct+'</text>')
+      + '</svg>';
+  }
+
+  function jaugeProfilHtml(){
+    var secs = sectionsProfil();
+    // Pourcentage global = champs remplis / champs attendus, toutes sections
+    // confondues. Une section à moitié faite compte donc pour moitié.
+    var faits = secs.reduce(function(a, s){ return a + s.faits; }, 0);
+    var total = secs.reduce(function(a, s){ return a + s.total; }, 0);
+    var pct = total ? Math.round(faits / total * 100) : 100;
+    var restantes = secs.filter(function(s){ return !s.ok; });
+
+    var R = 34, C = 2 * Math.PI * R;
+    var anneau = '<svg viewBox="0 0 80 80" width="80" height="80">'
+      + '<circle cx="40" cy="40" r="'+R+'" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="7"/>'
+      + '<circle cx="40" cy="40" r="'+R+'" fill="none" stroke="#fff" stroke-width="7" '
+        + 'stroke-linecap="round" stroke-dasharray="'+(pct/100*C)+' '+C+'" '
+        + 'transform="rotate(-90 40 40)"/>'
+      + '<text x="40" y="46" text-anchor="middle" font-size="20" font-weight="800" fill="#fff">'
+        + pct + '%</text></svg>';
+
+    var reste = restantes.length
+      ? '<div class="jauge-reste"><span class="jauge-rl">Il te reste</span>' + restantes.map(function(s){
+          return '<button class="jchip" style="--c:'+s.color+'" data-action="profil-section" data-id="'
+            + s.id+'">'+esc(s.titre)+' <b>'+s.faits+'/'+s.total+'</b></button>'; }).join('') + '</div>'
+      : '<div class="jauge-reste"><span class="jauge-ok">🎉 Profil complet — tes cinq simulateurs '
+        + 'tournent sur des données à jour.</span></div>';
+
+    return '<div class="jauge">'
+      + '<div class="jauge-anneau">'+anneau+'</div>'
+      + '<div class="jauge-txt">'
+        + '<div class="jauge-t">Ton profil est rempli à '+pct+' %</div>'
+        + '<div class="jauge-s">'+faits+' information'+(faits>1?'s':'')+' sur '+total
+          + ' — plus il est complet, plus tes simulateurs sont justes.</div>'
+        + reste
+      + '</div>'
+      + '</div>';
+  }
+
+  function profilHtml(){
+    var p = state.profil;
+    var blocs = PROFIL_SECTIONS.filter(function(s){ return !s.si || s.si(p); })
+                               .map(function(s){ return profilBlocHtml(s, p); }).join('');
+
+    // Charges : même ligne dépliable, mais son contenu est une liste.
+    var charges = p.charges || [];
+    var totalAn = charges.reduce(function(a, c){
+      return a + annualiser(parseFloat(c.montant) || 0, c.frequence); }, 0);
+    var ouvertCh = state.profilSection === 'charges';
+    var blocCharges = '<section class="prow'+(ouvertCh?' open':'')+'" style="--c:#ea580c;--s:#fff4ed">'
+      + '<button class="prow-head" data-action="profil-section" data-id="charges">'
+        + '<span class="prow-ico">🧰</span>'
+        + '<span class="prow-t">Charges professionnelles</span>'
+        + '<span class="prow-r">'+charges.length+' ligne'+(charges.length>1?'s':'')
+          + ' · '+fmtEur(totalAn)+' / an</span>'
+        + '<span class="prow-etat">'+anneauSection(etatSection('charges').pct, '#ea580c', 26)
+          + '<span class="prow-frac">'+etatSection('charges').faits+'/'
+          + etatSection('charges').total+'</span></span>'
+        + '<span class="prow-chev">▶</span>'
+      + '</button>'
+      + '<div class="prow-wrap"><div class="prow-inner"><div class="prow-body">'
+        + '<div class="prow-note">Saisies une seule fois ici : les simulateurs TVA, '
+          + '« Passer en société » et « Optimiser » s’en servent directement.</div>'
+        + '<div class="pcharges">' + charges.map(profilChargeHtml).join('') + '</div>'
+        + '<button class="btn-link" data-action="pcharge-add">+ Ajouter une charge</button>'
+      + '</div></div></div>'
+    + '</section>';
+
+    var saved = state.profilSaved ? '<span class="profil-saved">✓ Enregistré</span>' : '';
+    return '<div class="view">'
+      + jaugeProfilHtml()
+      + '<div class="prows">'+blocs+blocCharges+'</div>'
+      + '<div class="sauvegarde">'
+        + '<div class="sauvegarde-t">💾 Sauvegarde</div>'
+        + '<div class="sauvegarde-s">Tes données vivent uniquement dans ce navigateur. '
+          + 'Exporte-les pour les mettre à l’abri, ou les reprendre sur un autre ordinateur.</div>'
+        + '<div class="sauvegarde-a">'
+          + '<button class="btn-ghost" data-action="export-donnees">Exporter mes données</button>'
+          + '<label class="btn-ghost" style="cursor:pointer">Importer un fichier'
+            + '<input type="file" accept="application/json,.json" data-import-donnees hidden></label>'
+          + (state.importInfo ? '<span class="profil-saved">'+esc(state.importInfo)+'</span>' : '')
+        + '</div>'
+      + '</div>'
+      + '<div class="pbar">'
+        + '<button class="btn-primary" data-action="profil-save">Enregistrer</button>'
+        + '<button class="btn-ghost" data-action="profil-back">Retour</button>'
+        + saved
+      + '</div>'
+      + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sauvegarde : export / import de tout ce que l'app garde dans le navigateur
+  // ---------------------------------------------------------------------------
+  // 'freehub_onboarded' fait partie du lot : sans lui, se connecter depuis un
+  // autre navigateur rejouerait le questionnaire d'arrivée déjà rempli.
+  var CLES_SAUVEGARDE = ['freehub_profil','freehub_historique','freehub_hist_vl',
+                         'freehub_hist_tva','freehub_scenarios','freehub_params',
+                         'freehub_objectifs','freehub_lexique','freehub_badges','freehub_faits',
+                         'freehub_onboarded'];
+
+  function exporterDonnees(){
+    var paquet = { app:'FreeHub', version:1, date:new Date().toISOString(), donnees:{} };
+    CLES_SAUVEGARDE.forEach(function(k){
+      var v = null;
+      try { v = localStorage.getItem(k); } catch(e){}
+      if(v !== null) paquet.donnees[k] = v;
+    });
+    var blob = new Blob([JSON.stringify(paquet, null, 2)], { type:'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'freehub-sauvegarde-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function importerDonnees(fichier){
+    var lecteur = new FileReader();
+    lecteur.onload = function(ev){
+      var paquet;
+      try { paquet = JSON.parse(ev.target.result); } catch(e){ paquet = null; }
+      if(!paquet || paquet.app !== 'FreeHub' || !paquet.donnees){
+        state.importInfo = '✕ Fichier non reconnu';
+        render();
+        return;
+      }
+      var n = 0;
+      Object.keys(paquet.donnees).forEach(function(k){
+        if(CLES_SAUVEGARDE.indexOf(k) < 0) return;   // on n'écrit que nos propres clés
+        try { localStorage.setItem(k, paquet.donnees[k]); n++; } catch(e){}
+      });
+      // On relit tout depuis le stockage pour repartir sur des données propres.
+      state.profil = loadProfil();
+      state.historique = loadHistorique();
+      state.vl.historique = loadHistVL();
+      state.tva.historique = loadHistTVA();
+      state.optim.scenarios = loadScenarios();
+      var ob = loadObjectifs();
+      state.added = ob.added; state.checks = ob.checks;
+      appliquerProfil();
+      state.importInfo = '✓ ' + n + ' élément' + (n>1?'s':'') + ' restauré' + (n>1?'s':'');
+      render();
+    };
+    lecteur.readAsText(fichier);
+  }
+
+  function fmtEur(n){
+    n = Math.round(Number(n) || 0);
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' €';
+  }
+  // Evite les 2,1999999999999997 % dus a l'arithmetique flottante.
+  function fmtPct(taux){
+    return String(Math.round(taux * 10000) / 100).replace('.', ',') + ' %';
+  }
+
+  // ---------- Étape 1 : accueil ----------
+  function histItemHtml(sim, i){
+    var d = new Date(sim.date);
+    var jour = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+    var heure = d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    var items = (sim.result && sim.result.depenses) || [];
+    var dots = items.map(function(it){
+      var st = STATUT[it && it.statut] ? STATUT[it.statut] : STATUT.gris;
+      return '<span class="hist-dot" style="background:'+st.bg+'"></span>';
+    }).join('');
+    var n = items.length;
+    return '<div class="hist-item" data-action="hist-view" data-i="'+i+'">'
+      + '<div style="flex:1;min-width:0">'
+        + '<div class="hist-date">'+esc(jour)+' · '+esc(heure)+'</div>'
+        + '<div class="hist-meta">'+n+' dépense'+(n>1?'s':'')+' · '+fmtEur(sim.total || 0)+'</div>'
+      + '</div>'
+      + '<div class="hist-dots">'+dots+'</div>'
+      + '<button class="icon-btn danger" data-action="hist-delete" data-i="'+i+'" title="Supprimer">✕</button>'
+      + '</div>';
+  }
+
+  // Liste des simulateurs disponibles sur la plateforme.
+  function simListHtml(){
+    var chip = function(color, label){
+      return '<span class="chip"><span class="dot" style="background:'+color+'"></span>'+esc(label)+'</span>';
+    };
+    return '<div class="sim-wrap"><div class="sim-list">'
+      + '<div class="sim-hero" data-action="sim-open" data-sim="depenses"><div class="sim-hero-inner">'
+        + '<div class="sim-hero-emoji">🧾</div>'
+        + '<div class="sim-hero-title">Cette dépense passe-t-elle sur&nbsp;ma&nbsp;société&nbsp;?</div>'
+        + '<div class="sim-hero-sub">Décris tes dépenses : on te dit si elles semblent justifiables, '
+          + 'à quelles conditions, et ce qu’il faut garder comme justificatif.</div>'
+        + '<div class="sim-hero-chips">'
+          + chip('#22c55e', 'A priori justifiable')
+          + chip('#f59e0b', 'Sous conditions')
+          + chip('#ef4444', 'Difficilement justifiable')
+        + '</div>'
+        + '<div class="sim-hero-cta">Lancer une analyse →</div>'
+      + '</div></div>'
+      + '<div class="sim-hero alt" data-action="sim-open" data-sim="vl"><div class="sim-hero-inner">'
+        + '<div class="sim-hero-emoji">⚖️</div>'
+        + '<div class="sim-hero-title">Versement libératoire ou impôt&nbsp;classique&nbsp;?</div>'
+        + '<div class="sim-hero-sub">Compare les deux modes d’imposition de ta micro-entreprise et vois '
+          + 'lequel te coûte le moins cher, chiffres à l’appui.</div>'
+        + '<div class="sim-hero-chips">'
+          + chip('#a7f3d0', 'Calcul exact')
+          + chip('#6ee7b7', 'Barème progressif')
+          + chip('#34d399', 'Éligibilité')
+        + '</div>'
+        + '<div class="sim-hero-cta">Comparer les options →</div>'
+      + '</div></div>'
+      + '<div class="sim-hero tva" data-action="sim-open" data-sim="tva"><div class="sim-hero-inner">'
+        + '<div class="sim-hero-emoji">🧮</div>'
+        + '<div class="sim-hero-title">Est-ce intéressant de passer à&nbsp;la&nbsp;TVA&nbsp;?</div>'
+        + '<div class="sim-hero-sub">Estime ce que tu récupérerais sur tes achats, ce que tu absorberais '
+          + 'sur tes prix, et si l’option volontaire vaut le coup.</div>'
+        + '<div class="sim-hero-chips">'
+          + chip('#ddd6fe', 'TVA récupérable')
+          + chip('#c4b5fd', 'Impact sur tes prix')
+          + chip('#a78bfa', '3 scénarios')
+        + '</div>'
+        + '<div class="sim-hero-cta">Simuler le passage →</div>'
+      + '</div></div>'
+      + '<div class="sim-hero societe" data-action="sim-open" data-sim="statut"><div class="sim-hero-inner">'
+        + '<div class="sim-hero-emoji">🏛️</div>'
+        + '<div class="sim-hero-title">Quand passer en&nbsp;société&nbsp;?</div>'
+        + '<div class="sim-hero-sub">Compare ton auto-entreprise à une EURL et une SASU, et vois à partir '
+          + 'de quel chiffre d’affaires créer une société te rapporte vraiment plus.</div>'
+        + '<div class="sim-hero-chips">'
+          + chip('#fed7aa', 'Temps réel')
+          + chip('#fdba74', 'Point de bascule')
+          + chip('#fb923c', 'Projection')
+        + '</div>'
+        + '<div class="sim-hero-cta">Projeter mon activité →</div>'
+      + '</div></div>'
+      + '<div class="sim-hero optim" data-action="sim-open" data-sim="optim"><div class="sim-hero-inner">'
+        + '<div class="sim-hero-emoji">🎛️</div>'
+        + '<div class="sim-hero-title">Optimiser ma&nbsp;société</div>'
+        + '<div class="sim-hero-sub">Ton cockpit de pilotage : teste ta rémunération, tes dividendes, ta '
+          + 'trésorerie et tes leviers, et vois l’effet en direct sur ce qu’il te reste.</div>'
+        + '<div class="sim-hero-chips">'
+          + chip('#a5f3fc', 'Temps réel')
+          + chip('#67e8f9', 'Import automatique')
+          + chip('#22d3ee', 'Scénarios')
+        + '</div>'
+        + '<div class="sim-hero-cta">Piloter ma société →</div>'
+      + '</div></div>'
+      + '</div></div>';
+  }
+
+  // ---------- Étape 2 : les dépenses ----------
+  function depCardHtml(d, i){
+    var rempli = !!(d.nom && d.nom.trim());
+    var multi = state.sim.depenses.length > 1;
+    return '<div class="dep-card">'
+      + '<div class="dep-head">'
+        + '<div class="dep-num">'+(i+1)+'</div>'
+        + '<div class="dep-title'+(rempli?'':' empty')+'">'+esc(rempli ? d.nom : 'Nouvelle dépense')+'</div>'
+        + '<div class="dep-actions">'
+          + (multi ? '<button class="icon-btn danger" data-action="dep-remove" data-i="'+i+'" title="Supprimer">✕</button>' : '')
+        + '</div>'
+      + '</div>'
+      + '<div class="field-row">'
+        + field('nom','Nom de la dépense', d.nom, {req:true, dep:i, ph:'Ex : téléphone, restaurant…'})
+        + field('montant','Montant TTC', d.montant, {req:true, dep:i, type:'number', ph:'1100 €'})
+      + '</div>'
+      + field('motif','Pourquoi cette dépense serait-elle utile à ton activité ?', d.motif,
+              {textarea:true, dep:i, ph:'Ex : échanger avec mes clients et tester les applis utilisées dans mes projets…'})
+      + '</div>';
+  }
+
+  function simFormHtml(){
+    var err = state.sim.formError ? '<div class="form-error">'+esc(state.sim.formError)+'</div>' : '';
+    var n = state.sim.depenses.length;
+    var h = state.historique;
+    var hist = h.length
+      ? '<div class="hist-h" style="margin-top:34px"><div class="hist-title">Mes simulations précédentes</div></div>'
+        + '<div class="hist-list">' + h.map(histItemHtml).join('') + '</div>'
+      : '';
+
+    return '<div class="sim-wrap">'
+      // Bandeau haut : rappel du profil + action principale à droite
+      + '<div class="sim-bar">'
+        + profilBandeHtml(['activite','forme','regime','tva'])
+        + '<div class="sim-bar-actions">'
+          + '<button class="btn-primary" data-action="sim-analyze">Analyser les dépenses</button>'
+          + '<div style="font-size:12.5px;color:var(--muted);font-weight:600;text-align:center">'
+            + n + ' dépense' + (n>1?'s':'') + '</div>'
+        + '</div>'
+      + '</div>'
+      + err
+      + '<div class="dep-grid">'
+        + state.sim.depenses.map(depCardHtml).join('')
+        // Le bouton « ajouter » est la cellule suivante de la grille.
+        + '<button class="dep-add" data-action="dep-add">'
+          + '<div class="dep-add-plus">+</div>Ajouter une dépense</button>'
+      + '</div>'
+      + '<div class="final-note" style="border:none;padding-top:0">'
+        + 'Ne renseigne pas de donnée personnelle ou confidentielle qui n’est pas nécessaire à l’analyse.</div>'
+      + hist
+      + '</div>';
+  }
+
+  // Pop-up légère : la page des dépenses reste visible derrière.
+  function loadingModalHtml(){
+    if(!state.sim.analyzing) return '';
+    return '<div class="overlay">'
+      + '<div class="load-modal"><div class="spinner"></div>'
+      + '<div class="load-text">Analyse en cours…</div></div>'
+      + '</div>';
+  }
+
+  function listBlock(title, items){
+    if(!items || !items.length) return '';
+    return '<div class="res-block"><div class="res-block-title">'+esc(title)+'</div>'
+      + '<ul class="res-list">'
+      + items.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')
+      + '</ul></div>';
+  }
+
+  // ---------- Étape 3 : compte-rendu ----------
+  function statutOf(item){ return STATUT[item && item.statut] ? item.statut : 'gris'; }
+
+  function synthesisHtml(items, syn){
+    var deps = state.sim.depenses;
+    var counts = { vert:0, orange:0, rouge:0, gris:0 };
+    var total = 0, montantVert = 0, montantReserve = 0;
+    items.forEach(function(it, i){
+      var s = statutOf(it);
+      counts[s]++;
+      var m = parseFloat((deps[i] && deps[i].montant) || 0) || 0;
+      total += m;
+      if(s === 'vert') montantVert += m;
+      else if(s === 'orange' || s === 'rouge') montantReserve += m;
+    });
+
+    var stat = function(n, label, cls){
+      return '<div class="stat '+cls+'"><div class="stat-n">'+n+'</div>'
+        + '<div class="stat-k">'+esc(label)+'</div></div>';
+    };
+    var amount = function(label, value, color){
+      return '<div><span class="amount-k">'+esc(label)+'</span>'
+        + '<span class="amount-v" style="color:'+color+'">'+value+'</span></div>';
+    };
+
+    var statsCard = '<div class="card">'
+      + '<div class="card-title">Résultats</div>'
+      + '<div class="syn-stats">'
+        + stat(counts.vert,   'A priori justifiables',      'v')
+        + stat(counts.orange, 'Sous conditions',            'o')
+        + stat(counts.rouge,  'Difficilement justifiables', 'r')
+        + stat(counts.gris,   'À préciser',                 'g')
+      + '</div>'
+      + '<div class="amount-row" style="border-top:1px solid var(--border);padding-top:16px">'
+        + amount('Montant total analysé', fmtEur(total), 'var(--ink)')
+        + amount('Dont « a priori justifiable »', fmtEur(montantVert), STATUT.vert.color)
+        + amount('Dont avec réserves', fmtEur(montantReserve), STATUT.orange.color)
+      + '</div></div>';
+
+    var piecesCard = '<div class="card tinted">'
+      + '<div class="card-title">Pièces à réunir en priorité</div>'
+      + (syn.pieces_manquantes && syn.pieces_manquantes.length
+          ? '<ul class="res-list">'
+            + syn.pieces_manquantes.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')
+            + '</ul>'
+          : '<div class="res-line">Rien de particulier à réunir d’après les informations fournies.</div>')
+      + '</div>';
+
+    return '<div class="syn-grid">' + statsCard + piecesCard + '</div>';
+  }
+
+  // Pop-up d'avertissement, affichée juste avant de lancer l'analyse.
+  function consentModalHtml(){
+    if(!state.sim.consentOpen) return '';
+    var on = state.sim.consent;
+    return '<div class="overlay" data-action="consent-close">'
+      + '<div class="modal" style="width:580px" data-action="stop">'
+        + '<div class="modal-head">'
+          + '<div class="modal-title">Avant de lancer l’analyse</div>'
+          + '<div class="modal-sub">Un point important à garder en tête.</div>'
+        + '</div>'
+        + '<div class="modal-body">'
+          + '<div style="font-size:14.5px;line-height:1.6;color:#3f4b60">'
+            + 'Ce simulateur fournit une analyse <strong>automatisée et indicative</strong>, à partir des '
+            + 'informations que tu déclares. Il ne constitue ni une consultation juridique, ni un conseil '
+            + 'fiscal, ni une validation comptable, ni une prise de position de l’administration fiscale.'
+            + '<br><br>'
+            + 'Un résultat favorable ne garantit pas que la dépense sera acceptée en cas de contrôle. '
+            + 'Pour une dépense importante, inhabituelle ou à usage mixte, consulte ton expert-comptable.'
+          + '</div>'
+          + '<div class="sim-consent'+(on?' on':'')+'" style="margin:20px 0 6px" data-action="sim-consent">'
+            + '<div class="sim-check">'+(on?'✓':'')+'</div>'
+            + '<div class="sim-consent-text">J’ai compris que le résultat ne constitue pas un conseil '
+              + 'juridique, fiscal ou comptable personnalisé.</div>'
+          + '</div>'
+        + '</div>'
+        + '<div class="modal-foot">'
+          + '<button class="btn-cancel" data-action="consent-close">Annuler</button>'
+          + '<button class="btn-confirm'+(on?' active':'')+'" data-action="consent-confirm">Lancer l’analyse</button>'
+        + '</div>'
+      + '</div></div>';
+  }
+
+  function recapHtml(items){
+    var deps = state.sim.depenses;
+    var rows = items.map(function(it, i){
+      var st = STATUT[statutOf(it)];
+      var d = deps[i] || {};
+      var risque = (it.vigilance && it.vigilance[0]) || '—';
+      return '<tr>'
+        + '<td><strong>'+esc(d.nom || '—')+'</strong></td>'
+        + '<td style="white-space:nowrap">'+(d.montant ? fmtEur(d.montant) : '—')+'</td>'
+        + '<td><span class="pill" style="background:'+st.soft+';color:'+st.color+'">'+st.icon+' '
+          + esc(it.libelle || st.label)+'</span></td>'
+        + '<td>'+esc(risque)+'</td>'
+        + '<td>'+esc(it.action || '—')+'</td>'
+        + '</tr>';
+    }).join('');
+    return '<div class="recap"><div class="recap-h">Récapitulatif</div><div class="recap-scroll">'
+      + '<table class="recap-t"><thead><tr>'
+        + '<th>Dépense</th><th>Montant</th><th>Résultat</th><th>Risque principal</th><th>Action recommandée</th>'
+      + '</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  }
+
+  function resultItemHtml(it, i){
+    var st = STATUT[statutOf(it)];
+    var d = state.sim.depenses[i] || {};
+    var open = state.sim.openResult === i;
+
+    var body = '';
+    if(it.reponse) body += '<div class="res-answer" style="margin-bottom:20px">'+esc(it.reponse)+'</div>';
+    body += listBlock('Conditions à respecter', it.conditions);
+    body += listBlock('Points de vigilance', it.vigilance);
+    body += listBlock('Justificatifs à conserver', it.justificatifs);
+    if(it.comptable) body += '<div class="res-block"><div class="res-block-title">Traitement comptable indicatif</div>'
+      + '<div class="res-line">'+esc(it.comptable)+'</div></div>';
+    if(it.tva) body += '<div class="res-tva"><div class="res-block-title">Récupération de TVA</div>'
+      + '<div class="res-line">'+esc(it.tva)+'</div></div>';
+    if(it.action) body += '<div class="res-action"><span class="res-action-ico">→</span>'
+      + '<span class="res-action-text">'+esc(it.action)+'</span></div>';
+    body += listBlock('Pour affiner l’analyse', it.questions);
+
+    return '<div class="res-item'+(open?' open':'')+'">'
+      + '<div class="res-item-head" data-action="res-toggle" data-i="'+i+'">'
+        + '<div class="res-mini" style="background:'+st.bg+'">'+st.icon+'</div>'
+        + '<div class="res-item-main">'
+          + '<div class="res-item-name">'+esc(d.nom || 'Dépense')+'</div>'
+          + '<div class="res-item-meta">'+(d.montant ? fmtEur(d.montant)+' · ' : '')
+            + 'Confiance : '+esc(it.confiance || '—')+'</div>'
+        + '</div>'
+        + '<div class="res-item-status" style="color:'+st.color+'">'+esc(it.libelle || st.label)+'</div>'
+        + '<span class="res-item-chev">▶</span>'
+      + '</div>'
+      + '<div class="res-item-wrap"><div class="res-item-inner">'
+        + '<div class="res-item-body">'+body+'</div>'
+      + '</div></div>'
+      + '</div>';
+  }
+
+  // Synchronisation inverse : les verdicts de l'IA redescendent dans les charges
+  // du profil, donc dans les simulateurs TVA / société / optimisation.
+  var DEDUCT_PAR_STATUT = { vert:'100', orange:'50', rouge:'0', gris:'50' };
+
+  function syncProfilHtml(items){
+    if(!items.length) return '';
+    if(state.sim.syncFait){
+      return '<div class="sync-bar done">✓ '+esc(state.sim.syncFait)+'</div>';
+    }
+    return '<div class="sync-bar">'
+      + '<span class="sync-ico">🔄</span>'
+      + '<div class="sync-t"><strong>Reprendre ces verdicts dans ton profil ?</strong>'
+        + '<span>La déductibilité analysée ici sera appliquée à tes charges — '
+        + 'les simulateurs TVA, société et optimisation en tiendront compte.</span></div>'
+      + '<button class="btn-primary" data-action="sim-sync">Mettre à jour mon profil</button>'
+      + '</div>';
+  }
+
+  function appliquerVerdictsAuProfil(){
+    var items = (state.sim.result && state.sim.result.depenses) || [];
+    var saisies = state.sim.depenses || [];
+    var charges = state.profil.charges || (state.profil.charges = []);
+    var maj = 0, ajouts = 0;
+
+    items.forEach(function(it, i){
+      var d = saisies[i];
+      if(!d || !d.nom) return;
+      var ded = DEDUCT_PAR_STATUT[statutOf(it)] || '50';
+      var nom = d.nom.trim().toLowerCase();
+      var existante = charges.filter(function(c){
+        return (c.nom || '').trim().toLowerCase() === nom; })[0];
+      if(existante){
+        existante.deductible = ded;
+        existante.source = 'Analyse de dépenses — ' + STATUT[statutOf(it)].label;
+        maj++;
+      } else {
+        charges.push({ nom:d.nom, montant:d.montant, frequence:'annuelle',
+          tauxTVA:'0.2', deductible:ded, categorie:'fonctionnement',
+          source:'Analyse de dépenses — ' + STATUT[statutOf(it)].label });
+        ajouts++;
+      }
+    });
+
+    saveProfil(state.profil);
+    appliquerProfil();
+    var bouts = [];
+    if(maj) bouts.push(maj + ' charge' + (maj>1?'s':'') + ' mise' + (maj>1?'s':'') + ' à jour');
+    if(ajouts) bouts.push(ajouts + ' ajoutée' + (ajouts>1?'s':''));
+    state.sim.syncFait = bouts.length ? ('Profil à jour — ' + bouts.join(', ') + '.')
+                                      : 'Rien à reprendre.';
+  }
+
+  function simResultHtml(){
+    var r = state.sim.result || {};
+    var items = r.depenses || [];
+    var syn = r.synthese || {};
+    return '<div class="sim-wrap">'
+      + '<div class="res-topbar">'
+        + '<h2>Compte-rendu de l’analyse</h2>'
+        + '<div class="export-bar">'
+          + '<button class="btn-ghost" data-action="sim-print">Imprimer / PDF</button>'
+          + '<button class="btn-ghost" data-action="sim-copy">Copier le compte-rendu</button>'
+          + '<button class="btn-ghost" data-action="sim-back">Modifier mes dépenses</button>'
+          + '<button class="btn-primary" data-action="sim-new">Nouvelle analyse</button>'
+        + '</div>'
+      + '</div>'
+      + syncProfilHtml(items)
+      + synthesisHtml(items, syn)
+      + (items.length > 1 ? recapHtml(items) : '')
+      + '<div class="card-title" style="margin:24px 0 12px">Détail par dépense</div>'
+      + items.map(resultItemHtml).join('')
+      + simPartenaireHtml(3, 'Une dépense sensible, un doute sur un justificatif ? Icon Invest '
+          + 'te répond clairement, sans te facturer le moindre rendez-vous à l’aveugle.')
+      + '<div class="final-note">Analyse indicative, sans valeur de validation fiscale ou comptable. '
+        + '« A priori justifiable » ne signifie pas « garanti déductible ». La décision finale dépend de ta '
+        + 'situation réelle et des justificatifs disponibles — fais confirmer les dépenses sensibles par ton '
+        + 'expert-comptable.</div>'
+      + '</div>';
+  }
+
+  function simErrorHtml(){
+    return '<div class="sim-wrap">'
+      + '<div class="sim-error">'+esc(state.sim.error || 'Une erreur est survenue.')+'</div>'
+      + '<div class="sim-actions">'
+        + '<button class="btn-primary" data-action="sim-back">Revenir à mes dépenses</button>'
+      + '</div></div>';
+  }
+
+  function simulateurHtml(){
+    if(!state.sim.open) return simListHtml();      // liste des simulateurs
+    if(state.sim.open === 'vl') return vlHtml();   // comparateur (calcul, sans IA)
+    if(state.sim.open === 'tva') return tvaHtml(); // passage à la TVA (calcul, sans IA)
+    if(state.sim.open === 'statut') return statutHtml();  // quand passer en société (temps réel)
+    if(state.sim.open === 'optim') return optimHtml();    // optimiser ma société (cockpit)
+    var step = state.sim.step;
+    if(step === 'result') return simResultHtml();
+    if(step === 'error')  return simErrorHtml();
+    return simFormHtml();
+  }
+
+  // Compte-rendu en texte brut (bouton « Copier »).
+  function recapText(){
+    var r = state.sim.result || {};
+    var items = r.depenses || [];
+    var p = state.profil;
+    var L = ['COMPTE-RENDU — Simulateur de charges professionnelles (FreeHub)',
+             'Date : ' + new Date().toLocaleDateString('fr-FR'),
+             '',
+             'ENTREPRISE',
+             '- Activité : ' + (p.activite || 'non renseignée'),
+             '- Forme juridique : ' + (p.forme || 'non renseignée'),
+             '- Régime : ' + (p.regime || 'non renseigné'),
+             '- TVA : ' + (p.tva || 'non renseignée'),
+             ''];
+    if(r.synthese && r.synthese.resume){ L.push('SYNTHÈSE', r.synthese.resume, ''); }
+    items.forEach(function(it, i){
+      var d = state.sim.depenses[i] || {};
+      var st = STATUT[statutOf(it)];
+      L.push('──────────────────────────────');
+      L.push((i+1) + '. ' + (d.nom || 'Dépense') + ' — ' + (d.montant ? fmtEur(d.montant) : '—'));
+      L.push('Résultat : ' + (it.libelle || st.label) + '  |  Confiance : ' + (it.confiance || '—'));
+      if(it.reponse) L.push('', it.reponse);
+      var bloc = function(titre, arr){
+        if(arr && arr.length){ L.push('', titre + ' :'); arr.forEach(function(x){ L.push('  • ' + x); }); }
+      };
+      bloc('Conditions à respecter', it.conditions);
+      bloc('Points de vigilance', it.vigilance);
+      bloc('Justificatifs à conserver', it.justificatifs);
+      if(it.comptable) L.push('', 'Traitement comptable : ' + it.comptable);
+      if(it.tva) L.push('TVA : ' + it.tva);
+      if(it.action) L.push('Action : ' + it.action);
+      bloc('Pour affiner l’analyse', it.questions);
+      L.push('');
+    });
+    L.push('──────────────────────────────');
+    L.push('Analyse indicative, sans valeur de validation fiscale ou comptable.');
+    L.push('Fais confirmer les dépenses sensibles par ton expert-comptable.');
+    return L.join('\n');
+  }
+
+  function runAnalysis(){
+    fetch('api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({}, state.profil, { depenses: state.sim.depenses })),
+    }).then(function(resp){
+      return resp.json().then(function(data){ return { ok: resp.ok, data: data }; });
+    }).then(function(res){
+      state.sim.analyzing = false;
+      if(res.ok){
+        state.sim.result = res.data;
+        state.sim.openResult = 0;
+        state.sim.syncFait = null;
+        state.sim.step = 'result';
+        marquerFait('sim:depenses');
+        // Sauvegarde de la simulation dans l'historique.
+        state.historique.unshift({
+          date: Date.now(),
+          profil: Object.assign({}, state.profil),
+          depenses: state.sim.depenses.map(function(d){
+            return { nom:d.nom, montant:d.montant, motif:d.motif };
+          }),
+          result: res.data,
+          total: state.sim.depenses.reduce(function(s, d){
+            return s + (parseFloat(d.montant) || 0);
+          }, 0),
+        });
+        saveHistorique(state.historique);
+      } else {
+        state.sim.error = (res.data && res.data.error) || 'Erreur inconnue.';
+        state.sim.step = 'error';
+      }
+      render();
+    }).catch(function(){
+      state.sim.analyzing = false;
+      state.sim.error = 'Impossible de contacter le serveur d’analyse. '
+        + 'Assure-toi qu’il tourne (double-clic sur « Lancer FreeHub.command ») — '
+        + 'l’IA ne fonctionne pas en ouvrant index.html directement.';
+      state.sim.step = 'error';
+      render();
+    });
+  }
+
+  // Les 3 teintes du partenaire, passées en variables CSS à la carte / la fiche.
+  function partVars(p){
+    return '--c:'+p.color+';--g:'+p.grad+';--s:'+p.soft;
+  }
+
+  // Bandeau partenaire contextuel, affiché en bas d'un résultat de simulateur.
+  // Un clic ouvre la fiche du partenaire (lien d'affiliation + code promo).
+  function simPartenaireHtml(index, texte){
+    var p = PARTENAIRES[index];
+    if(!p) return '';
+    return '<div class="sim-part" style="--c:'+p.color+';--s:'+p.soft+'" '
+      + 'data-action="part-open" data-i="'+index+'">'
+      + '<div class="sim-part-logo"><img src="'+esc(p.img)+'" alt="Logo '+esc(p.nom)+'"></div>'
+      + '<div class="sim-part-txt">'
+        + '<div class="sim-part-h">Recommandé pour aller plus loin'
+          + (p.promo ? '<span class="sim-part-promo">🎁 code promo</span>' : '') + '</div>'
+        + '<div class="sim-part-b">'+esc(texte)+'</div>'
+      + '</div>'
+      + '<span class="sim-part-cta">'+esc(p.nom)+' →</span>'
+      + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Onboarding conversationnel — au tout premier lancement
+  // ---------------------------------------------------------------------------
+  // Une question par écran. On lit la valeur au clic sur « Continuer » plutôt
+  // que de re-rendre à chaque frappe (le focus reste dans le champ).
+  // Valeur stockée (comprise par le profil et estMicro) / libellé affiché.
+  var ONB_FORMES = [
+    { v:'Micro-entreprise',    l:'Auto-entreprise' },
+    { v:'EURL',                l:'EURL' },
+    { v:'SARL',                l:'SARL' },
+    { v:'SASU',                l:'SASU' },
+    { v:'SAS',                 l:'SAS' },
+    { v:'Je ne sais pas encore', l:'Je ne sais pas encore' },
+  ];
+
+  // Le corps seul (sans l'overlay) : c'est lui qu'on met à jour à chaque étape,
+  // sans recréer l'overlay — sinon son animation d'apparition se rejoue et laisse
+  // voir le dashboard derrière.
+  function onbCorpsHtml(){
+    var o = state.onboarding;
+    var r = o.rep;
+    var e = o.etape;
+    // 3 questions : activité, statut, CA. Le prénom/nom est déjà saisi à la
+    // création du compte — on ne le redemande pas ici.
+    var total = 3;
+
+    var dots = '';
+    if(e >= 1 && e <= total){
+      dots = '<div class="onb-dots">' + Array.apply(null, {length:total}).map(function(_, i){
+        return '<span class="'+(i+1 <= e ? 'on' : '')+'"></span>'; }).join('') + '</div>';
+    }
+
+    // Le prénom vient du compte (saisi à l'inscription sur la landing).
+    var prenom = (state.profil.prenom || '').trim();
+
+    var corps;
+    if(e === 0){
+      corps = '<div class="onb-emoji">👋</div>'
+        + '<div class="onb-q">'+(prenom ? 'Bienvenue '+esc(prenom)+' !' : 'Bienvenue sur FreeHub')+'</div>'
+        + '<div class="onb-sub">Trois questions rapides pour personnaliser ton espace. '
+          + 'Tu pourras tout modifier ensuite dans ton profil.</div>'
+        + '<div class="onb-actions"><button class="onb-primary" data-action="onb-next">C’est parti →</button></div>'
+        + '<button class="onb-skip" data-action="onb-skip">Passer pour l’instant</button>';
+    } else if(e === 1){
+      corps = dots + '<div class="onb-q">Tu fais quoi ?</div>'
+        + '<div class="onb-sub">Ton activité principale, en quelques mots.</div>'
+        + '<input class="onb-input" data-onb="activite" value="'+esc(r.activite||'')+'" placeholder="Ex : monteur vidéo, consultant marketing…">'
+        + onbNav(true);
+    } else if(e === 2){
+      corps = dots + '<div class="onb-q">Sous quel statut ?</div>'
+        + '<div class="onb-sub">Si tu ne sais pas encore, ce n’est pas grave.</div>'
+        + '<div class="onb-choix">' + ONB_FORMES.map(function(f){
+            return '<button class="onb-opt'+(r.forme===f.v?' on':'')+'" data-action="onb-forme" data-v="'+esc(f.v)+'">'
+              + esc(f.l)+'</button>'; }).join('') + '</div>'
+        + onbNav(false);
+    } else if(e === 3){
+      corps = dots + '<div class="onb-q">Ton chiffre d’affaires, à peu près ?</div>'
+        + '<div class="onb-sub">Une estimation suffit — pour situer tes simulateurs.</div>'
+        + '<div class="onb-ca">'
+          + '<input class="onb-input" data-onb="ca" type="number" min="0" value="'+esc(r.ca||'')+'" placeholder="60 000">'
+          + '<div class="onb-seg">'
+            + '<button class="onb-seg-b'+(r.periodeCa!=='mensuel'?' on':'')+'" data-action="onb-periode" data-v="annuel">par an</button>'
+            + '<button class="onb-seg-b'+(r.periodeCa==='mensuel'?' on':'')+'" data-action="onb-periode" data-v="mensuel">par mois</button>'
+          + '</div>'
+        + '</div>'
+        + onbNav(true, 'Terminer');
+    } else {
+      corps = '<div class="onb-emoji">🎉</div>'
+        + '<div class="onb-q">'+(prenom ? 'Parfait, '+esc(prenom)+' !' : 'Parfait !')+'</div>'
+        + '<div class="onb-sub">Ton espace est prêt. Complète ton profil quand tu veux pour '
+          + 'des résultats encore plus justes.</div>'
+        + '<div class="onb-actions"><button class="onb-primary" data-action="onb-finish">Découvrir FreeHub →</button></div>';
+    }
+
+    return corps;
+  }
+
+  // Met à jour l'onboarding sans recréer l'overlay : on ne remplace que le contenu
+  // intérieur de la carte. L'overlay (et son animation d'apparition) n'est créé
+  // qu'une seule fois, à la première apparition — plus aucun « flash » du dashboard
+  // à chaque action du formulaire.
+  function majOnboarding(){
+    var root = document.getElementById('onb-root');
+    if(!root) return;
+    if(!state.onboarding.actif){ root.innerHTML = ''; return; }
+    var card = root.querySelector('.onb-card');
+    if(!card){
+      root.innerHTML = '<div class="onb-overlay"><div class="onb-card"></div></div>';
+      card = root.querySelector('.onb-card');
+    }
+    card.innerHTML = onbCorpsHtml();
+    // On redonne le focus au champ de saisie de l'étape (pour taper / valider au clavier).
+    var inp = card.querySelector('.onb-input');
+    if(inp){ try { inp.focus(); if(inp.type !== 'number'){ var v = inp.value; inp.value=''; inp.value=v; } } catch(e){} }
+  }
+
+  function onbNav(avecContinuer, labelContinuer){
+    return '<div class="onb-nav">'
+      + '<button class="onb-back" data-action="onb-prev">← Retour</button>'
+      + (avecContinuer
+          ? '<button class="onb-primary" data-action="onb-next">'+(labelContinuer||'Continuer')+' →</button>'
+          : '')
+      + '</div>';
+  }
+
+  // Lit les champs texte de l'écran courant avant de changer d'étape.
+  function onbLire(){
+    [].forEach.call(document.querySelectorAll('[data-onb]'), function(inp){
+      state.onboarding.rep[inp.getAttribute('data-onb')] = inp.value;
+    });
+  }
+
+  function onbTerminer(){
+    var r = state.onboarding.rep;
+    var p = state.profil;
+    // Le prénom/nom vient du compte : on ne le redemande pas dans l'onboarding.
+    if((r.activite||'').trim()) p.activite = r.activite.trim();
+    if(r.forme && r.forme !== 'Je ne sais pas encore') p.forme = r.forme;
+    if((r.ca||'').toString().trim()){ p.ca = r.ca; p.periodeCa = r.periodeCa || 'annuel'; }
+    saveProfil(p);
+    appliquerProfil();
+    try { localStorage.setItem('freehub_onboarded', '1'); } catch(e){}
+    state.onboarding.actif = false;
+    setState({ tab: 'accueil' });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Calendrier — les échéances de l'année, tirées des objectifs et du statut
+  // ---------------------------------------------------------------------------
+  var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août',
+              'septembre','octobre','novembre','décembre'];
+
+  // On rassemble les échéances des objectifs que l'utilisateur a pris ET de ceux
+  // que son profil rend pertinents (même non pris) : c'est le « selon ton statut ».
+  // Aucune date inventée : on ne prend que ce qui est déjà encodé dans le catalog.
+  function evenementsCalendrier(){
+    var p = state.profil;
+    var now = new Date();
+    var evts = catalog.filter(function(o){
+      if(!o.echeance) return false;
+      return state.added.indexOf(o.id) >= 0 || (o.pertinent && o.pertinent(p)) || !o.pertinent;
+    }).map(function(o){
+      var e = o.echeance, dd = dom(o);
+      if(e.periode){
+        return { objId:o.id, titre:o.title, quoi:e.quoi, dom:dd, periode:e.periode,
+                 moisTri:(e.moisDebut || 1) - 1, date:null, jours:null,
+                 pris:state.added.indexOf(o.id) >= 0 };
+      }
+      var d = new Date(now.getFullYear(), e.mois - 1, e.jour);
+      if(d < now) d = new Date(now.getFullYear() + 1, e.mois - 1, e.jour);
+      return { objId:o.id, titre:o.title, quoi:e.quoi, dom:dd, periode:null,
+               moisTri:e.mois - 1, date:d, jours:Math.ceil((d - now) / 86400000),
+               pris:state.added.indexOf(o.id) >= 0 };
+    });
+    // Tri : d'abord par proximité réelle (dates fixes), périodes intercalées par mois.
+    evts.sort(function(a, b){
+      if(a.date && b.date) return a.date - b.date;
+      return a.moisTri - b.moisTri;
+    });
+    return evts;
+  }
+
+  function calendrierHtml(){
+    var evts = evenementsCalendrier();
+
+    if(!evts.length){
+      return '<div class="view"><div class="obj-vide">Aucune échéance à afficher pour l’instant. '
+        + 'Elles apparaîtront selon ton statut et les objectifs que tu ajoutes '
+        + '(la CFE, le versement libératoire, la déclaration de revenus…).</div></div>';
+    }
+
+    // Bandeau : la prochaine échéance datée.
+    var prochaine = evts.filter(function(e){ return e.date; })[0];
+    var hero = '';
+    if(prochaine){
+      hero = '<div class="cal-hero" style="--c:'+prochaine.dom.c+'">'
+        + '<div class="cal-hero-l">Prochaine échéance</div>'
+        + '<div class="cal-hero-t">'+esc(prochaine.quoi)+'</div>'
+        + '<div class="cal-hero-d">'+prochaine.date.toLocaleDateString('fr-FR',
+            { day:'numeric', month:'long' })+' · dans '+prochaine.jours+' jour'
+            +(prochaine.jours>1?'s':'')+'</div>'
+        + '<button class="cal-hero-cta" data-action="view" data-id="'+prochaine.objId+'">'
+          + 'Voir l’objectif →</button>'
+      + '</div>';
+    }
+
+    // Frise : un bloc par mois qui a au moins une échéance.
+    var parMois = {};
+    evts.forEach(function(e){ (parMois[e.moisTri] = parMois[e.moisTri] || []).push(e); });
+    var moisAffiches = Object.keys(parMois).map(Number).sort(function(a, b){ return a - b; });
+
+    var frise = moisAffiches.map(function(m){
+      var cartes = parMois[m].map(function(e){
+        var quand = e.periode ? 'période ' + e.periode
+          : (e.date.toLocaleDateString('fr-FR', { day:'numeric', month:'long' })
+             + ' · dans ' + e.jours + ' j');
+        return '<button class="cal-evt" style="--c:'+e.dom.c+';--s:'+e.dom.soft+'"'
+          + ' data-action="view" data-id="'+e.objId+'">'
+          + '<span class="cal-evt-dom">'+e.dom.ico+' '+esc(e.dom.l)+'</span>'
+          + '<span class="cal-evt-t">'+esc(e.quoi)+'</span>'
+          + '<span class="cal-evt-d">'+esc(quand)+'</span>'
+          + (e.pris ? '' : '<span class="cal-evt-tag">selon ton statut</span>')
+          + '</button>';
+      }).join('');
+      return '<div class="cal-mois">'
+        + '<div class="cal-mois-h"><span class="cal-mois-p"></span>'
+          + '<span class="cal-mois-n">'+esc(MOIS[m])+'</span></div>'
+        + '<div class="cal-mois-evts">'+cartes+'</div>'
+      + '</div>';
+    }).join('');
+
+    return '<div class="view">'
+      + hero
+      + '<div class="cal-note">Ces dates viennent de ton statut et des objectifs que tu suis. '
+        + 'Les dates limites exactes (déclarations, département) sont sur les sites officiels.</div>'
+      + '<div class="cal-frise">'+frise+'</div>'
+      + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lexique
+  // ---------------------------------------------------------------------------
+  function estEpingle(id){ return state.lexEpingles.indexOf(id) >= 0; }
+
+  function lexCarteHtml(x){
+    var d = DOMAINES[x.cat] || DOMAINES.administratif;
+    var on = estEpingle(x.id);
+    return '<div class="lx" style="--c:'+d.c+';--s:'+d.soft+'" data-action="lex-open" data-id="'+x.id+'">'
+      + '<button class="lx-pin'+(on?' on':'')+'" data-action="lex-pin" data-id="'+x.id+'"'
+        + ' title="'+(on?'Retirer de mon lexique':'Ajouter à mon lexique')+'">'+(on?'★':'☆')+'</button>'
+      + '<div class="lx-cat" style="color:'+d.c+'">'+esc(d.l)+'</div>'
+      + '<div class="lx-t">'+esc(x.t)+'</div>'
+      + '<div class="lx-c">'+esc(x.court)+'</div>'
+      + '</div>';
+  }
+
+  function lexiqueHtml(){
+    var q = (state.lexRecherche || '').trim().toLowerCase();
+    var liste = LEXIQUE.filter(function(x){
+      if(state.lexMonLexique && !estEpingle(x.id)) return false;
+      if(!q) return true;
+      return (x.t + ' ' + x.court + ' ' + x.def).toLowerCase().indexOf(q) >= 0;
+    });
+    var nbEp = state.lexEpingles.length;
+
+    var cartes = liste.length
+      ? '<div class="lx-grid">' + liste.map(lexCarteHtml).join('') + '</div>'
+      : '<div class="obj-vide">'
+          + (state.lexMonLexique
+              ? 'Ton lexique est vide. Ouvre un terme et clique sur l’étoile pour l’épingler ici.'
+              : 'Aucun terme ne correspond à ta recherche.') + '</div>';
+
+    return '<div class="view">'
+      + '<div class="lx-bar">'
+        + '<div class="lx-search"><span class="lx-search-i">🔎</span>'
+          + '<input type="text" data-lex-search placeholder="Chercher un mot… (abattement, PFU, Kbis…)" '
+            + 'value="'+esc(state.lexRecherche)+'"></div>'
+        + '<div class="lx-toggle">'
+          + '<button class="lx-tg'+(state.lexMonLexique?'':' on')+'" data-action="lex-tous">Tous les mots</button>'
+          + '<button class="lx-tg'+(state.lexMonLexique?' on':'')+'" data-action="lex-mien">'
+            + '★ Mon lexique'+(nbEp?' ('+nbEp+')':'')+'</button>'
+        + '</div>'
+      + '</div>'
+      + cartes
+      + '</div>';
+  }
+
+  // Recherche : on remplace seulement la grille, pour ne pas perdre le focus.
+  function majLexique(){
+    var q = (state.lexRecherche || '').trim().toLowerCase();
+    var liste = LEXIQUE.filter(function(x){
+      if(state.lexMonLexique && !estEpingle(x.id)) return false;
+      if(!q) return true;
+      return (x.t + ' ' + x.court + ' ' + x.def).toLowerCase().indexOf(q) >= 0;
+    });
+    var grille = document.querySelector('.lx-grid') || document.querySelector('.view .obj-vide');
+    if(!grille) return;
+    var neuf = document.createElement('div');
+    neuf.innerHTML = liste.length
+      ? '<div class="lx-grid">' + liste.map(lexCarteHtml).join('') + '</div>'
+      : '<div class="obj-vide">Aucun terme ne correspond à ta recherche.</div>';
+    grille.replaceWith(neuf.firstChild);
+  }
+
+  function lexModalHtml(){
+    if(!state.lexOuvert) return '';
+    var x = terme(state.lexOuvert);
+    if(!x) return '';
+    var d = DOMAINES[x.cat] || DOMAINES.administratif;
+    var on = estEpingle(x.id);
+    return '<div class="overlay" data-action="lex-close">'
+      + '<div class="modal" style="width:520px;--c:'+d.c+';--s:'+d.soft+'" data-action="stop">'
+        + '<div class="lx-modal-head">'
+          + '<div><div class="lx-modal-cat">'+esc(d.l)+'</div>'
+            + '<div class="lx-modal-t">'+esc(x.t)+'</div></div>'
+          + '<button class="lx-modal-pin'+(on?' on':'')+'" data-action="lex-pin" data-id="'+x.id+'">'
+            + (on?'★ Épinglé':'☆ Épingler')+'</button>'
+        + '</div>'
+        + '<div class="modal-body" style="background:'+d.soft+'">'
+          + '<p class="lx-modal-def">'+esc(x.def)+'</p>'
+        + '</div>'
+        + '<div class="modal-foot" style="justify-content:flex-end">'
+          + '<button class="btn-ghost" data-action="lex-close">Fermer</button>'
+        + '</div>'
+      + '</div></div>';
+  }
+
+  function partenairesHtml(){
+    var cards = PARTENAIRES.map(function(p, i){
+      // La carte reste volontairement courte : 3 points, le reste est dans la fiche.
+      var pts = p.points.slice(0, 3).map(function(pt){
+        return '<li><span class="part-check" style="background:'+p.color+'">✓</span>'
+          + '<span>'+esc(pt)+'</span></li>';
+      }).join('');
+
+      return '<article class="part-card'+(p.promo?' a-promo':'')+'" style="'+partVars(p)+'"'
+        + ' data-action="part-open" data-i="'+i+'">'
+        + '<div class="part-head">'
+          + '<div class="part-coin">'
+            + '<button class="part-more" data-action="part-open" data-i="'+i+'"'
+              + ' aria-label="En savoir plus sur '+esc(p.nom)+'">+</button>'
+            + (p.promo ? '<span class="part-flag">🎁 Promo</span>' : '')
+          + '</div>'
+          + '<div class="part-logo"><img src="'+esc(p.img)+'" alt="Logo '+esc(p.nom)+'"></div>'
+          + '<div><div class="part-name">'+esc(p.nom)+'</div>'
+            + '<div class="part-kind">'+esc(p.kind)+'</div></div>'
+        + '</div>'
+        + '<p class="part-desc">'+esc(p.pitch)+'</p>'
+        + '<ul class="part-pts">'+pts+'</ul>'
+        + '<div class="part-foot"><span class="part-cta">En savoir plus →</span></div>'
+        + '</article>';
+    }).join('');
+
+    return '<div class="view">'
+      + '<div class="part-intro">'
+        + '<div class="part-intro-emoji">🤝</div>'
+        + '<div class="part-intro-s">FreeHub te dit quoi faire ; ces partenaires le font avec toi. '
+        + 'Création de société, comptabilité, compte pro, accompagnement financier '
+        + 'et d’autres restent encore à venir…</div>'
+      + '</div>'
+      + '<div class="part-grid">'+cards+'</div>'
+      + '<div class="part-join">'
+        + '<div class="part-join-txt">'
+          + '<div class="part-join-h">Un outil, un service, un accompagnement pour les indépendants ?</div>'
+          + '<div class="part-join-s">Propose ta structure : on regarde si ça a du sens pour la communauté FreeHub.</div>'
+        + '</div>'
+        + '<button class="part-join-btn" data-action="part-form-open">Devenir partenaire →</button>'
+      + '</div>'
+      + '<p class="part-legal">Partenaires indépendants de FreeHub. Les liens de leurs fiches sont '
+      + 'des <strong>liens d’affiliation</strong> : FreeHub peut percevoir une commission si tu '
+      + 'souscris, sans surcoût pour toi — les codes promo te font au contraire baisser le prix.</p>'
+      + '</div>';
+  }
+
+  // Modal « devenir partenaire » : ouvert à tous, relié plus tard à un e-mail.
+  function partFormModalHtml(){
+    if(!state.partForm) return '';
+    if(state.partFormDone){
+      return '<div class="overlay" data-action="part-form-close">'
+        + '<div class="modal" style="width:460px" data-action="stop">'
+          + '<div class="modal-body" style="text-align:center;padding:38px 30px">'
+            + '<div style="font-size:44px;line-height:1">🤝</div>'
+            + '<div class="modal-title" style="margin-top:10px">Demande envoyée !</div>'
+            + '<div class="modal-sub" style="margin-top:8px">Merci — on revient vers toi par e-mail '
+              + 'si ça matche. À bientôt sur FreeHub.</div>'
+          + '</div>'
+          + '<div class="modal-foot" style="justify-content:center">'
+            + '<button class="btn-confirm active" data-action="part-form-close">Fermer</button>'
+          + '</div>'
+        + '</div></div>';
+    }
+    return '<div class="overlay" data-action="part-form-close">'
+      + '<div class="modal" style="width:500px" data-action="stop">'
+        + '<div class="modal-head">'
+          + '<div class="modal-title">Devenir partenaire</div>'
+          + '<div class="modal-sub">Dis-nous qui tu es. Aucune obligation — on étudie chaque demande.</div>'
+        + '</div>'
+        + '<div class="modal-body">'
+          + '<div class="pf"><label>Nom de la structure *</label>'
+            + '<input data-pj="structure" type="text" placeholder="Ex : Ton Cabinet, Ta Startup…"></div>'
+          + '<div class="pf" style="margin-top:12px"><label>E-mail de contact *</label>'
+            + '<input data-pj="email" type="email" placeholder="contact@exemple.fr" autocomplete="email"></div>'
+          + '<div class="pf" style="margin-top:12px"><label>Site web</label>'
+            + '<input data-pj="site" type="text" placeholder="https://…"></div>'
+          + '<div class="pf" style="margin-top:12px"><label>Type de service</label>'
+            + '<input data-pj="categorie" type="text" placeholder="Ex : compta, banque pro, assurance, formation…"></div>'
+          + '<div class="pf" style="margin-top:12px"><label>Message</label>'
+            + '<textarea data-pj="message" rows="3" placeholder="Ce que tu proposes aux indépendants, en quelques mots."></textarea></div>'
+          + (state.partFormErr ? '<div class="form-error" style="margin-top:12px">'+esc(state.partFormErr)+'</div>' : '')
+        + '</div>'
+        + '<div class="modal-foot">'
+          + '<button class="btn-cancel" data-action="part-form-close">Annuler</button>'
+          + '<button class="btn-confirm active"'+(state.partFormBusy?' disabled':'')
+            + ' data-action="part-form-submit">'+(state.partFormBusy?'…':'Envoyer ma demande')+'</button>'
+        + '</div>'
+      + '</div></div>';
+  }
+
+  function partModalHtml(){
+    if(state.partOpen === null) return '';
+    var p = PARTENAIRES[state.partOpen];
+    if(!p) return '';
+
+    var pts = p.points.map(function(pt){
+      return '<li><span class="part-check" style="background:'+p.color+'">✓</span>'
+        + '<span>'+esc(pt)+'</span></li>';
+    }).join('');
+
+    // Le bouton vit dans l'en-tête, face au logo. Lien d'affiliation pas encore
+    // connu → bouton inactif en attendant.
+    var lien = p.url
+      ? '<a class="part-link" href="'+esc(p.url)+'" target="_blank" rel="noopener sponsored">'
+        + 'Découvrir '+esc(p.nom)+' →</a>'
+      : '<span class="part-link soon">Lien bientôt disponible</span>';
+
+    // L'avantage occupe tout le pied : code, ce qu'il donne, clic pour copier.
+    var avantage = p.promo
+      ? '<div class="modal-foot part-offre" data-action="part-copy" data-code="'+esc(p.promo)+'"'
+        + ' title="Cliquer pour copier le code">'
+        + '<span class="part-offre-h">🎁 Avantage FreeHub</span>'
+        + '<span class="part-promo-code">'+esc(p.promo)+'</span>'
+        + '<span class="part-offre-d">'+esc(p.promoDetail || '')+'</span>'
+        + '</div>'
+      : '';
+
+    return '<div class="overlay" data-action="part-close">'
+      + '<div class="modal" style="width:560px;'+partVars(p)+'" data-action="stop">'
+        + '<div class="part-modal-head">'
+          + '<div class="part-modal-logo"><img src="'+esc(p.img)+'" alt="Logo '+esc(p.nom)+'"></div>'
+          + '<div class="part-modal-id"><div class="part-modal-name">'+esc(p.nom)+'</div>'
+            + '<div class="part-modal-kind">'+esc(p.kind)+'</div></div>'
+          + lien
+        + '</div>'
+        + '<div class="modal-body" style="background:'+p.soft+'">'
+          + '<p class="part-modal-desc">'+p.desc+'</p>'
+          + '<div class="part-modal-label">Là où ils te débloquent</div>'
+          + '<ul class="part-modal-pts">'+pts+'</ul>'
+        + '</div>'
+        + avantage
+      + '</div></div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rendu
+  // ---------------------------------------------------------------------------
+  // La coquille (sidebar + en-tête) est construite une seule fois : seuls les
+  // textes, les classes actives et le contenu sont mis à jour ensuite. C'est ce
+  // qui évite l'effet de « clignotement » à chaque clic.
+  function shellHtml(){
+    return '<div class="app">'
+      + '<aside class="sidebar">'
+        // Le vrai logo dès qu'il est déposé dans assets/ ; sinon le wordmark CSS.
+        + '<div class="brand">'
+          + '<img class="brand-logo" src="assets/freehub-logo-blanc.png" alt="Freehub">'
+          + '<span class="brand-word">Freehub<span class="brand-dot">.</span></span>'
+        + '</div>'
+        + '<nav>'+navHtml()+'</nav>'
+        + '<div class="side-foot"><div class="side-divider"></div>'
+          + '<div class="user clickable" data-action="open-profil">'
+            + '<div class="avatar"></div>'
+            + '<div style="min-width:0"><div class="user-name"></div>'
+            + '<div class="user-sub"></div></div>'
+            + '<span class="user-cog">⚙</span></div>'
+        + '</div>'
+      + '</aside>'
+      + '<main>'
+        + '<header><div>'
+          + '<div class="kicker"></div><div class="title"></div><div class="subtitle"></div>'
+        + '</div></header>'
+        + '<div class="content"></div>'
+      + '</main>'
+      + '</div>'
+      + '<div id="modal-root"></div>'
+      + '<div id="onb-root"></div>';
+  }
+
+  // Si assets/freehub-logo.png est absent, on bascule sur le wordmark CSS.
+  function initBrand(){
+    var img = document.querySelector('.brand-logo');
+    if(!img) return;
+    var replier = function(){
+      img.remove();
+      var mot = document.querySelector('.brand-word');
+      if(mot) mot.classList.add('on');
+    };
+    img.addEventListener('error', replier);
+    if(img.complete && img.naturalWidth === 0) replier();
+  }
+
+  var lastView = null;   // écran affiché, pour ne ré-animer qu'au vrai changement
+
+  function render(){
+    var app = document.getElementById('app');
+    if(!app.querySelector('.app')){ app.innerHTML = shellHtml(); initBrand(); }
+
+    // Navigation : on bascule les classes, sans reconstruire les boutons.
+    [].forEach.call(app.querySelectorAll('.nav-row'), function(row){
+      row.classList.toggle('on', row.getAttribute('data-tab') === state.tab);
+    });
+    // Badge « New » : gardé affiché en permanence pendant la construction du
+    // dashboard (pas de masquage après ouverture, pour l'instant).
+    app.querySelector('.user').classList.toggle('active', state.tab === 'profil');
+    app.querySelector('.user-sub').textContent = state.profil.activite || 'Micro-entreprise';
+
+    // Bloc utilisateur : nom, prénom et photo viennent du profil.
+    var nomComplet = ((state.profil.prenom || '') + ' ' + (state.profil.nom || '')).trim();
+    app.querySelector('.user-name').textContent = nomComplet || 'Mon profil';
+    var av = app.querySelector('.avatar');
+    if(state.profil.photo){
+      av.innerHTML = '<img src="'+esc(state.profil.photo)+'" alt="">';
+    } else {
+      av.textContent = nomComplet
+        ? ((state.profil.prenom || '').charAt(0) + (state.profil.nom || '').charAt(0)).toUpperCase()
+        : '🙂';
+    }
+
+    // En-tête.
+    var t = titles[state.tab];
+    app.querySelector('.kicker').textContent = t[0];
+    app.querySelector('.title').textContent = t[1];
+    app.querySelector('.subtitle').textContent = t[2];
+
+    // Contenu.
+    var content = app.querySelector('.content');
+    content.innerHTML = state.tab === 'accueil' ? accueilHtml()
+                      : state.tab === 'objectifs' ? objectifsHtml()
+                      : state.tab === 'calendrier' ? calendrierHtml()
+                      : state.tab === 'lexique' ? lexiqueHtml()
+                      : state.tab === 'partenaires' ? partenairesHtml()
+                      : state.tab === 'profil' ? profilHtml()
+                      : simulateurHtml();
+
+    // Animation d'entrée uniquement quand on change réellement d'écran.
+    var key = state.tab + ':' + (state.tab === 'simulateur'
+      ? (state.sim.open || 'liste') + ':' + state.sim.step
+      : (state.tab === 'objectifs' ? (state.objectifOuvert || 'liste') : ''));
+    if(key !== lastView){
+      var first = content.firstElementChild;
+      if(first){ first.classList.add('enter'); }
+      lastView = key;
+    }
+
+    // Débloque les badges nouvellement mérités (ne relance pas render()).
+    evaluerBadges();
+
+    document.getElementById('modal-root').innerHTML =
+      consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
+      + lexModalHtml() + authModalHtml() + badgeCelebreHtml();
+
+    // L'onboarding vit dans son propre root persistant : on ne remplace que le
+    // contenu de sa carte, sans recréer l'overlay ni rejouer son animation.
+    majOnboarding();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Actions (délégation d'événements)
+  // ---------------------------------------------------------------------------
+  // Échap referme la fiche ouverte (partenaire ou terme du lexique).
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Escape') return;
+    if(state.partOpen !== null) setState({ partOpen: null });
+    else if(state.lexOuvert !== null) setState({ lexOuvert: null });
+  });
+
+  // Entrée valide l'étape courante de l'onboarding (déclenche le bouton principal).
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter' || !state.onboarding.actif) return;
+    var root = document.getElementById('onb-root');
+    if(!root) return;
+    var btn = root.querySelector('.onb-primary');
+    if(btn){ e.preventDefault(); btn.click(); }
+  });
+
+  document.getElementById('app').addEventListener('click', function(e){
+    var el = e.target.closest('[data-action]');
+    if(!el) return;
+    var action = el.getAttribute('data-action');
+
+    switch(action){
+      case 'tab': {
+        var target = el.getAttribute('data-tab');
+        // Revenir sur l'onglet Simulateur ramène à la liste des simulateurs.
+        if(target === 'simulateur') state.sim.open = null;
+        if(target === 'objectifs') state.objectifOuvert = null;
+        setState({ tab: target, partOpen: null, lexOuvert: null });
+        break;
+      }
+      case 'view': {
+        // Depuis l'accueil on peut viser un objectif pas encore choisi : on
+        // l'ajoute au passage plutôt que d'ouvrir un écran vide.
+        var vid = el.getAttribute('data-id');
+        if(obj(vid) && state.added.indexOf(vid) < 0){
+          state.added = state.added.concat([vid]);
+          saveObjectifs();
+        }
+        setState({ tab:'objectifs', objectifOuvert: vid, stepOuvert: null });
+        break;
+      }
+      case 'obj-close':
+        setState({ objectifOuvert: null, stepOuvert: null });
+        break;
+      // Raccourcis depuis une étape d'objectif : c'est ce qui relie les trois
+      // onglets entre eux plutôt que d'en faire des îlots.
+      case 'goto-sim':
+        e.stopPropagation();          // ne pas cocher l'étape au passage
+        state.sim.open = el.getAttribute('data-sim');
+        state.sim.step = 'form';
+        appliquerProfil();
+        setState({ tab:'simulateur' });
+        break;
+      case 'goto-part':
+        e.stopPropagation();
+        setState({ tab:'partenaires', partOpen: parseInt(el.getAttribute('data-i'), 10) });
+        break;
+      case 'obj-add': {
+        e.stopPropagation();
+        var aid = el.getAttribute('data-id');
+        if(state.added.indexOf(aid) < 0) state.added = state.added.concat([aid]);
+        saveObjectifs();
+        // On reste sur la liste : l'objectif remonte simplement dans « mes
+        // objectifs ». Pour l'ouvrir, on clique une fois qu'il y est.
+        render();
+        break;
+      }
+      case 'obj-remove': {
+        e.stopPropagation();
+        var rid = el.getAttribute('data-id');
+        state.added = state.added.filter(function(x){ return x !== rid; });
+        saveObjectifs();
+        render();
+        break;
+      }
+      case 'obj-filtre':
+        setState({ objFiltre: el.getAttribute('data-dom') || null });
+        break;
+      case 'obj-voir-finis':
+        setState({ objVoirFinis: !state.objVoirFinis });
+        break;
+      case 'stop':
+        e.stopPropagation();
+        break;
+      case 'part-open':
+        setState({ partOpen: parseInt(el.getAttribute('data-i'), 10) });
+        break;
+      case 'part-close':
+        setState({ partOpen: null });
+        break;
+      case 'part-form-open':
+        setState({ partForm:true, partFormDone:false, partFormErr:'' });
+        break;
+      case 'part-form-close':
+        setState({ partForm:false });
+        break;
+      case 'part-form-submit': {
+        var champs = {};
+        [].forEach.call(document.querySelectorAll('[data-pj]'), function(inp){
+          champs[inp.getAttribute('data-pj')] = inp.value.trim();
+        });
+        if(!champs.structure){ setState({ partFormErr:'Indique le nom de ta structure.' }); break; }
+        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(champs.email||'')){
+          setState({ partFormErr:'Adresse e-mail invalide.' }); break;
+        }
+        setState({ partFormBusy:true, partFormErr:'' });
+        apiJson('POST', 'api/partenaire', champs).then(function(res){
+          if(res.ok){ setState({ partFormBusy:false, partFormDone:true }); }
+          else { setState({ partFormBusy:false, partFormErr:(res.data && res.data.error) || 'Envoi impossible. Réessaie.' }); }
+        }, function(){
+          setState({ partFormBusy:false, partFormErr:'Serveur injoignable. Réessaie.' });
+        });
+        break;
+      }
+      // ----- Badges -----
+      case 'badge-close':
+        state.badgeQueue.shift();
+        render();
+        break;
+      // ----- Compte -----
+      case 'auth-open':
+        setState({ authOpen:true, authMode: el.getAttribute('data-mode') || 'login', authErr:'' });
+        break;
+      case 'auth-close':
+        setState({ authOpen:false });
+        break;
+      case 'auth-switch':
+        setState({ authMode: state.authMode === 'signup' ? 'login' : 'signup', authErr:'' });
+        break;
+      case 'auth-submit': {
+        var email = (document.querySelector('[data-auth="email"]') || {}).value || '';
+        var pw = (document.querySelector('[data-auth="password"]') || {}).value || '';
+        var chemin = state.authMode === 'signup' ? 'api/auth/signup' : 'api/auth/login';
+        var mode = state.authMode;
+        setState({ authBusy:true, authErr:'' });
+        apiJson('POST', chemin, { email:email, password:pw }).then(function(res){
+          if(!res.ok){
+            setState({ authBusy:false, authErr: res.data.error || 'Une erreur est survenue.' });
+            return;
+          }
+          state.compte = { email: res.data.email, prenom: res.data.prenom, nom: res.data.nom };
+          identiteDepuisCompte(state.compte);
+          state.authBusy = false; state.authOpen = false;
+          // Signup : on ensemence le compte avec les données locales.
+          // Login : on récupère les données du compte (source de vérité).
+          if(mode === 'signup'){
+            pousserServeur(); state.syncEtat = 'ok'; render();
+          } else {
+            apiJson('GET', 'api/data').then(function(d){
+              if(d.ok && d.data.donnees && Object.keys(d.data.donnees).length){
+                appliquerPaquet(d.data.donnees);
+              } else { pousserServeur(); }
+              state.syncEtat = 'ok'; render();
+            });
+          }
+        }, function(){
+          setState({ authBusy:false, authErr:'Serveur injoignable. Réessaie.' });
+        });
+        break;
+      }
+      case 'auth-logout':
+        apiJson('POST', 'api/auth/logout').then(function(){
+          state.compte = null; state.syncEtat = '';
+          window.location.replace('./');   // retour à la landing publique
+        });
+        break;
+      // ----- Onboarding -----
+      // On met à jour l'onboarding tout seul (majOnboarding) : le dashboard
+      // derrière l'overlay n'est jamais reconstruit tant qu'on est dans le form.
+      case 'onb-next':
+        onbLire();
+        state.onboarding.etape += 1;
+        majOnboarding();
+        break;
+      case 'onb-prev':
+        onbLire();
+        state.onboarding.etape = Math.max(0, state.onboarding.etape - 1);
+        majOnboarding();
+        break;
+      case 'onb-forme':
+        state.onboarding.rep.forme = el.getAttribute('data-v');
+        state.onboarding.etape += 1;
+        majOnboarding();
+        break;
+      case 'onb-periode':
+        onbLire();
+        state.onboarding.rep.periodeCa = el.getAttribute('data-v');
+        majOnboarding();
+        break;
+      case 'onb-skip':
+        try { localStorage.setItem('freehub_onboarded', '1'); } catch(err){}
+        state.onboarding.actif = false;
+        render();
+        break;
+      case 'onb-finish':
+        onbTerminer();
+        break;
+      // ----- Lexique -----
+      case 'lex-open':
+        setState({ lexOuvert: el.getAttribute('data-id') });
+        break;
+      case 'lex-close':
+        setState({ lexOuvert: null });
+        break;
+      case 'lex-pin': {
+        e.stopPropagation();
+        var lid = el.getAttribute('data-id');
+        var i = state.lexEpingles.indexOf(lid);
+        if(i >= 0) state.lexEpingles.splice(i, 1);
+        else state.lexEpingles = state.lexEpingles.concat([lid]);
+        saveLexique();
+        render();
+        break;
+      }
+      case 'lex-tous':
+        setState({ lexMonLexique: false });
+        break;
+      case 'lex-mien':
+        setState({ lexMonLexique: true });
+        break;
+      case 'part-copy': {
+        var box = el, code = el.getAttribute('data-code');
+        var val = box.querySelector('.part-promo-code');
+        var flashPromo = function(msg){
+          val.textContent = msg;
+          setTimeout(function(){ val.textContent = code; }, 1600);
+        };
+        var fallbackPromo = function(){
+          var ta = document.createElement('textarea');
+          ta.value = code;
+          ta.style.position = 'fixed';
+          ta.style.top = '-1000px';
+          document.body.appendChild(ta);
+          ta.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch(err){}
+          document.body.removeChild(ta);
+          flashPromo(ok ? '✓ Copié' : code);
+        };
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(code).then(function(){ flashPromo('✓ Copié'); }, fallbackPromo);
+        } else {
+          fallbackPromo();
+        }
+        break;
+      }
+      case 'step-check': {
+        e.stopPropagation();
+        var curId = state.objectifOuvert || catalog[0].id;
+        var key = curId + ':' + el.getAttribute('data-i');
+        var checks = Object.assign({}, state.checks);
+        checks[key] = !checks[key];
+        state.checks = checks;
+        saveObjectifs();
+        // On rouvre l'étape en cours après avoir coché (stepOuvert repart en auto).
+        setState({ checks: checks, stepOuvert: null });
+        break;
+      }
+      case 'step-expand': {
+        var idx = parseInt(el.getAttribute('data-i'), 10);
+        setState({ stepOuvert: state.stepOuvert === idx ? -1 : idx });
+        break;
+      }
+
+      // ----- Simulateur -----
+      case 'sim-consent': {
+        // Mise à jour directe du DOM : un re-render ferait clignoter la pop-up.
+        state.sim.consent = !state.sim.consent;
+        var box = el.closest('.sim-consent');
+        if(box){
+          box.classList.toggle('on', state.sim.consent);
+          var check = box.querySelector('.sim-check');
+          if(check) check.textContent = state.sim.consent ? '✓' : '';
+          var confirm = document.querySelector('[data-action="consent-confirm"]');
+          if(confirm) confirm.classList.toggle('active', state.sim.consent);
+        } else render();
+        break;
+      }
+      case 'sim-open': {
+        var quel = el.getAttribute('data-sim') || 'depenses';
+        state.sim.open = quel;
+        state.sim.step = 'form';
+        appliquerProfil();   // le simulateur part toujours des données du profil
+        // Statut et cockpit produisent un résultat dès l'ouverture (temps réel).
+        if(quel === 'statut' || quel === 'optim') marquerFait('sim:'+quel);
+        render();
+        break;
+      }
+      case 'sim-back':
+        state.sim.step = 'form';
+        state.sim.formError = null;
+        render();
+        break;
+      case 'sim-new':
+        state.sim.depenses = [ { nom:'', montant:'', motif:'' } ];
+        state.sim.result = null; state.sim.formError = null;
+        state.sim.step = 'form';
+        render();
+        break;
+      // ----- Dépenses -----
+      case 'dep-add':
+        state.sim.depenses.push({ nom:'', montant:'', motif:'' });
+        state.sim.formError = null;
+        render();
+        break;
+      case 'dep-remove':
+        state.sim.depenses.splice(parseInt(el.getAttribute('data-i'), 10), 1);
+        if(!state.sim.depenses.length) state.sim.depenses = [ { nom:'', montant:'', motif:'' } ];
+        render();
+        break;
+      case 'dep-duplicate': {
+        var di = parseInt(el.getAttribute('data-i'), 10);
+        var src = state.sim.depenses[di];
+        state.sim.depenses.splice(di + 1, 0, { nom:src.nom, montant:src.montant, motif:src.motif });
+        render();
+        break;
+      }
+
+      // ----- Résultats -----
+      case 'res-toggle': {
+        var ri = parseInt(el.getAttribute('data-i'), 10);
+        state.sim.openResult = (state.sim.openResult === ri) ? -1 : ri;
+        [].forEach.call(document.querySelectorAll('.res-item'), function(node, idx){
+          node.classList.toggle('open', idx === state.sim.openResult);
+        });
+        break;
+      }
+      case 'sim-sync':
+        appliquerVerdictsAuProfil();
+        render();
+        break;
+      case 'sim-print':
+        window.print();
+        break;
+      case 'sim-copy': {
+        var btn = el, txt = recapText();
+        var flash = function(msg){
+          btn.textContent = msg;
+          setTimeout(function(){ btn.textContent = 'Copier le compte-rendu'; }, 1800);
+        };
+        // Repli si l'API presse-papier est indisponible ou refusée.
+        var fallback = function(){
+          var ta = document.createElement('textarea');
+          ta.value = txt;
+          ta.style.position = 'fixed';
+          ta.style.top = '-1000px';
+          document.body.appendChild(ta);
+          ta.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch(e){}
+          document.body.removeChild(ta);
+          flash(ok ? '✓ Copié' : 'Copie impossible');
+        };
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(txt).then(function(){ flash('✓ Copié'); }, fallback);
+        } else {
+          fallback();
+        }
+        break;
+      }
+
+      // ----- Profil -----
+      case 'open-profil':
+        if(state.tab !== 'profil') state.profilReturn = state.tab;
+        state.profilSaved = false;
+        state.tab = 'profil';
+        render();
+        break;
+      case 'profil-back':
+        state.tab = state.profilReturn || 'simulateur';
+        render();
+        break;
+      case 'profil-save':
+        saveProfil(state.profil);
+        state.profilSaved = true;
+        appliquerProfil();
+        render();
+        break;
+      case 'profil-section': {
+        // Une seule section ouverte à la fois : on bascule la classe sans
+        // re-rendre, pour que l'animation CSS joue et que rien ne clignote.
+        var idSec = el.getAttribute('data-id');
+        state.profilSection = (state.profilSection === idSec) ? null : idSec;
+        [].forEach.call(document.querySelectorAll('.prow'), function(row){
+          var b = row.querySelector('[data-action="profil-section"]');
+          var vise = !!b && b.getAttribute('data-id') === state.profilSection;
+          row.classList.toggle('open', vise);
+          // Clic depuis la jauge : on amène la section sous les yeux.
+          if(vise && !el.closest('.prow')) row.scrollIntoView({ behavior:'smooth', block:'center' });
+        });
+        break;
+      }
+      case 'params-save':
+        saveParams(state.statut.params);
+        state.statut.paramsSaved = true;
+        render();
+        break;
+      case 'acc-ca-reset': {
+        var reel = caProfilAnnuel(state.profil);
+        var sld = document.querySelector('[data-accueil-ca]');
+        if(sld){ sld.value = reel; majAccueilProjection(reel); }
+        break;
+      }
+      case 'export-donnees':
+        exporterDonnees();
+        break;
+      case 'photo-remove':
+        state.profil.photo = '';
+        state.profilSaved = false;
+        render();
+        break;
+      case 'pcharge-add':
+        state.profil.charges = (state.profil.charges || []).concat([
+          { nom:'', montant:'', frequence:'mensuelle', tauxTVA:'0.2',
+            deductible:'100', categorie:'fonctionnement' } ]);
+        state.profilSaved = false;
+        render();
+        break;
+      case 'pcharge-remove':
+        state.profil.charges.splice(parseInt(el.getAttribute('data-i'), 10), 1);
+        state.profilSaved = false;
+        render();
+        break;
+      case 'sim-analyze': {
+        var incomplet = state.sim.depenses.some(function(d){
+          return !(d.nom && d.nom.trim()) || !(d.montant && String(d.montant).trim());
+        });
+        if(incomplet){
+          state.sim.formError = state.sim.depenses.length > 1
+            ? 'Chaque dépense doit avoir au moins un nom et un montant.'
+            : 'Renseigne au moins le nom et le montant de la dépense.';
+          render();
+          break;
+        }
+        state.sim.formError = null;
+        state.sim.consentOpen = true;   // l'avertissement s'affiche ici
+        render();
+        break;
+      }
+      case 'consent-close':
+        state.sim.consentOpen = false;
+        render();
+        break;
+      case 'consent-confirm':
+        if(!state.sim.consent) break;   // case non cochée : on ne lance pas
+        state.sim.consentOpen = false;
+        state.sim.result = null; state.sim.error = null;
+        state.sim.analyzing = true;     // le formulaire reste affiché derrière
+        render();
+        runAnalysis();
+        break;
+
+      // ----- Simulateur « Optimiser ma société » -----
+      case 'optim-statut':
+        state.optim.statut = el.getAttribute('data-s');
+        render();
+        break;
+      case 'optim-toggle-ca':
+        state.optim.form.caMensuel = !state.optim.form.caMensuel;
+        state.optim.projection = null;
+        render();
+        break;
+      case 'optim-reset-proj':
+        state.optim.projection = null;
+        render();
+        break;
+      case 'ocharge-add':
+        state.optim.charges.push({ nom:'', montant:'', frequence:'mensuelle',
+                                   tauxTVA:'0.2', deductible:'100', categorie:'fonctionnement' });
+        render();
+        break;
+      case 'ocharge-remove':
+        state.optim.charges.splice(parseInt(el.getAttribute('data-i'), 10), 1);
+        render();
+        break;
+      case 'optim-import': {
+        var imp = depensesImportables();
+        // On évite les doublons sur le nom.
+        var existants = state.optim.charges.map(function(c){ return (c.nom||'').toLowerCase().trim(); });
+        var ajoutes = 0;
+        imp.forEach(function(d){
+          if(existants.indexOf((d.nom||'').toLowerCase().trim()) !== -1) return;
+          state.optim.charges.push(d); ajoutes++;
+        });
+        state.optim.importInfo = ajoutes
+          ? ajoutes + ' dépense' + (ajoutes>1?'s importées':' importée') + ' depuis tes autres simulateurs.'
+          : 'Ces dépenses sont déjà présentes ici.';
+        render();
+        break;
+      }
+      case 'levier-toggle': {
+        var k = el.getAttribute('data-k');
+        var L = OPTIM_LEVIERS.filter(function(x){ return x.v === k; })[0];
+        state.optim.leviers[k] = (parseFloat(state.optim.leviers[k]) || 0) > 0 ? 0 : L.def;
+        render();
+        break;
+      }
+      case 'scen-save': {
+        var rs = optimResultat();
+        var nom = 'Scénario ' + new Date().toLocaleDateString('fr-FR',
+                  { day:'2-digit', month:'short' }) + ' · ' + fmtEur(rs.argentPerso);
+        state.optim.scenarios.unshift({
+          nom: nom, date: Date.now(), statut: state.optim.statut, ca: rs.ca,
+          argentPerso: rs.argentPerso,
+          form: Object.assign({}, state.optim.form),
+          charges: state.optim.charges.map(function(c){ return Object.assign({}, c); }),
+          leviers: Object.assign({}, state.optim.leviers),
+        });
+        saveScenarios(state.optim.scenarios);
+        render();
+        break;
+      }
+      case 'scen-load': {
+        var sc = state.optim.scenarios[parseInt(el.getAttribute('data-i'), 10)];
+        if(sc){
+          state.optim.statut = sc.statut;
+          state.optim.form = Object.assign({}, sc.form);
+          state.optim.charges = (sc.charges || []).map(function(c){ return Object.assign({}, c); });
+          state.optim.leviers = Object.assign({}, sc.leviers);
+          state.optim.projection = null;
+          render();
+        }
+        break;
+      }
+      case 'scen-delete':
+        state.optim.scenarios.splice(parseInt(el.getAttribute('data-i'), 10), 1);
+        saveScenarios(state.optim.scenarios);
+        render();
+        break;
+
+      // ----- Simulateur « Quand passer en société ? » -----
+      case 'statut-mode':
+        state.statut.mode = el.getAttribute('data-mode');
+        render();
+        break;
+      case 'statut-toggle-ca':
+        state.statut.form.caMensuel = !state.statut.form.caMensuel;
+        state.statut.projection = null;
+        render();
+        break;
+      case 'statut-toggle-avance':
+        state.statut.avance = !state.statut.avance;
+        render();
+        break;
+      case 'statut-reset-proj':
+        state.statut.projection = null;
+        render();
+        break;
+      case 'charge-add':
+        state.statut.charges.push({ nom:'', montant:'', frequence:'mensuelle' });
+        render();
+        break;
+      case 'charge-remove':
+        state.statut.charges.splice(parseInt(el.getAttribute('data-i'), 10), 1);
+        render();
+        break;
+
+      // ----- Simulateur TVA -----
+      case 'tva-toggle-ca':
+        state.tva.form.caMensuel = !state.tva.form.caMensuel;
+        render();
+        break;
+      case 'tvadep-add':
+        state.tva.depenses.push({ nom:'', montant:'', frequence:'mensuelle', taux:'0.2', recup:'100', categorie:'' });
+        render();
+        break;
+      case 'tvadep-remove':
+        state.tva.depenses.splice(parseInt(el.getAttribute('data-i'), 10), 1);
+        if(!state.tva.depenses.length)
+          state.tva.depenses = [{ nom:'', montant:'', frequence:'mensuelle', taux:'0.2', recup:'100', categorie:'' }];
+        render();
+        break;
+      case 'tva-compute': {
+        var tf = state.tva.form;
+        var somme = (parseFloat(tf.partRecup)||0) + (parseFloat(tf.partProNon)||0)
+                  + (parseFloat(tf.partParticuliers)||0);
+        if(!(parseFloat(tf.ca) > 0)){
+          state.tva.formError = 'Indique ton chiffre d’affaires.'; render(); break;
+        }
+        if(Math.round(somme) !== 100){
+          state.tva.formError = 'La répartition de ta clientèle doit être égale à 100 % (actuellement '
+            + Math.round(somme) + ' %).';
+          render(); break;
+        }
+        if(!tf.strategie){
+          state.tva.formError = 'Choisis ce que tu ferais de tes prix.'; render(); break;
+        }
+        marquerFait('sim:tva');
+        state.tva.formError = null;
+        var res = calculerTVA(tf, state.tva.depenses);
+        state.tva.result = res;
+        state.tva.step = 'result';
+        state.tva.historique.unshift({
+          date: Date.now(), ca: res.ca, gain: res.principal.gain, avis: res.avis,
+          form: Object.assign({}, tf),
+          depenses: state.tva.depenses.map(function(d){ return Object.assign({}, d); }),
+        });
+        saveHistTVA(state.tva.historique);
+        render();
+        break;
+      }
+      case 'tva-back':
+        state.tva.step = 'form';
+        render();
+        break;
+      case 'tva-new':
+        state.tva.result = null; state.tva.formError = null;
+        state.tva.step = 'form';
+        render();
+        break;
+      case 'tva-print':
+        window.print();
+        break;
+      case 'tva-hist-view': {
+        var th = state.tva.historique[parseInt(el.getAttribute('data-i'), 10)];
+        if(th){
+          state.tva.form = Object.assign({}, th.form);
+          state.tva.depenses = (th.depenses || []).map(function(d){ return Object.assign({}, d); });
+          if(!state.tva.depenses.length)
+            state.tva.depenses = [{ nom:'', montant:'', frequence:'mensuelle', taux:'0.2', recup:'100', categorie:'' }];
+          state.tva.result = calculerTVA(state.tva.form, state.tva.depenses);
+          state.tva.step = 'result';
+          render();
+        }
+        break;
+      }
+      case 'tva-hist-delete':
+        state.tva.historique.splice(parseInt(el.getAttribute('data-i'), 10), 1);
+        saveHistTVA(state.tva.historique);
+        render();
+        break;
+
+      // ----- Comparateur versement libératoire -----
+      case 'vl-toggle-ca':
+        state.vl.form.caMensuel = !state.vl.form.caMensuel;
+        render();
+        break;
+      case 'vl-compare': {
+        var vf = state.vl.form;
+        if(!vf.categorie || vf.categorie === 'inconnu'){
+          state.vl.formError = 'Choisis la catégorie fiscale de ton activité pour lancer la comparaison.';
+          render(); break;
+        }
+        if(!(parseFloat(vf.ca) > 0)){
+          state.vl.formError = 'Indique ton chiffre d’affaires.';
+          render(); break;
+        }
+        if(vf.autresRevenus === '' || isNaN(parseFloat(vf.autresRevenus))){
+          state.vl.formError = 'Indique les autres revenus imposables de ton foyer (0 si tu n’en as pas).';
+          render(); break;
+        }
+        marquerFait('sim:vl');
+        state.vl.formError = null;
+        // Le CA saisi au mois est ramené à l'année.
+        var calc = Object.assign({}, vf);
+        if(vf.caMensuel) calc.ca = String((parseFloat(vf.ca) || 0) * 12);
+        var r = comparerVL(calc);
+        state.vl.result = r;
+        state.vl.step = 'result';
+        state.vl.historique.unshift({
+          date: Date.now(), ca: r.ca, ecart: r.ecart, vl: r.vl,
+          coutClassique: r.coutClassique, form: Object.assign({}, vf),
+        });
+        saveHistVL(state.vl.historique);
+        render();
+        break;
+      }
+      case 'vl-back':
+        state.vl.step = 'form';
+        render();
+        break;
+      case 'vl-new':
+        state.vl.result = null;
+        state.vl.formError = null;
+        state.vl.step = 'form';
+        render();
+        break;
+      case 'vl-print':
+        window.print();
+        break;
+      case 'vl-hist-view': {
+        var vh = state.vl.historique[parseInt(el.getAttribute('data-i'), 10)];
+        if(vh){
+          state.vl.form = Object.assign({}, vh.form);
+          var c2 = Object.assign({}, vh.form);
+          if(vh.form.caMensuel) c2.ca = String((parseFloat(vh.form.ca) || 0) * 12);
+          state.vl.result = comparerVL(c2);
+          state.vl.step = 'result';
+          render();
+        }
+        break;
+      }
+      case 'vl-hist-delete':
+        state.vl.historique.splice(parseInt(el.getAttribute('data-i'), 10), 1);
+        saveHistVL(state.vl.historique);
+        render();
+        break;
+
+      // ----- Historique -----
+      case 'hist-view': {
+        var hv = state.historique[parseInt(el.getAttribute('data-i'), 10)];
+        if(hv){
+          state.sim.depenses = hv.depenses.map(function(d){
+            return { nom:d.nom, montant:d.montant, motif:d.motif };
+          });
+          state.sim.result = hv.result;
+          state.sim.openResult = 0;
+          state.sim.syncFait = null;
+          state.sim.step = 'result';
+          render();
+        }
+        break;
+      }
+      case 'hist-delete':
+        state.historique.splice(parseInt(el.getAttribute('data-i'), 10), 1);
+        saveHistorique(state.historique);
+        render();
+        break;
+    }
+  });
+
+  // Saisie des champs du simulateur : met à jour l'état sans re-render (pour ne
+  // pas perdre le focus / le curseur pendant la frappe).
+  function onSimField(e){
+    // Champ d'une dépense : data-dep-field + data-i (index dans la liste)
+    var dl = e.target.closest('[data-dep-field]');
+    if(dl){
+      var i = parseInt(dl.getAttribute('data-i'), 10);
+      var d = state.sim.depenses[i];
+      if(d){
+        d[dl.getAttribute('data-dep-field')] = dl.value;
+        // Tient le titre de la carte à jour pendant la frappe.
+        if(dl.getAttribute('data-dep-field') === 'nom'){
+          var card = dl.closest('.dep-card');
+          var titre = card && card.querySelector('.dep-title');
+          if(titre){
+            var v = (dl.value || '').trim();
+            titre.textContent = v || 'Nouvelle dépense';
+            titre.classList.toggle('empty', !v);
+          }
+        }
+      }
+      return;
+    }
+    // Photo de profil : redimensionnée à 256 px avant d'aller en localStorage,
+    // sinon une photo d'iPhone sature le quota du navigateur.
+    // Curseur de projection de l'accueil : mise à jour directe, pas de re-render.
+    var ac = e.target.closest('[data-accueil-ca]');
+    if(ac){ majAccueilProjection(parseFloat(ac.value)); return; }
+    // Recherche du lexique : on met à jour la grille sans re-render (focus gardé).
+    var ls = e.target.closest('[data-lex-search]');
+    if(ls){ state.lexRecherche = ls.value; majLexique(); return; }
+    var imp = e.target.closest('[data-import-donnees]');
+    if(imp){
+      if(imp.files && imp.files[0]) importerDonnees(imp.files[0]);
+      return;
+    }
+    var ph = e.target.closest('[data-profil-photo]');
+    if(ph){
+      var fichier = ph.files && ph.files[0];
+      if(!fichier) return;
+      var lecteur = new FileReader();
+      lecteur.onload = function(ev){
+        var img = new Image();
+        img.onload = function(){
+          var cote = Math.min(img.width, img.height);      // recadrage carré centré
+          var cv = document.createElement('canvas');
+          cv.width = cv.height = 256;
+          cv.getContext('2d').drawImage(img, (img.width - cote) / 2, (img.height - cote) / 2,
+                                        cote, cote, 0, 0, 256, 256);
+          state.profil.photo = cv.toDataURL('image/jpeg', 0.85);
+          state.profilSaved = false;
+          render();
+        };
+        img.src = ev.target.result;
+      };
+      lecteur.readAsDataURL(fichier);
+      return;
+    }
+    var pl = e.target.closest('[data-profil-field]');
+    if(pl){
+      var kp = pl.getAttribute('data-profil-field');
+      state.profil[kp] = pl.value;
+      state.profilSaved = false;
+      // La forme juridique ouvre/ferme des champs, et la répartition clientèle a
+      // son total à recalculer. Les autres champs ne re-rendent pas : on garde le focus.
+      if(kp === 'forme') render();
+      else if(/^client/.test(kp)) majTotalClientele();
+      return;
+    }
+    // Charges du profil — partagées par 3 simulateurs.
+    var pc = e.target.closest('[data-pcharge-field]');
+    if(pc){
+      var ic = parseInt(pc.getAttribute('data-i'), 10);
+      var ligne = state.profil.charges[ic];
+      if(ligne){
+        ligne[pc.getAttribute('data-pcharge-field')] = pc.value;
+        state.profilSaved = false;
+        majTotalCharges();
+      }
+      return;
+    }
+    // Champs du comparateur. La catégorie et l'année changent l'affichage : on re-rend.
+    var vl = e.target.closest('[data-vl-field]');
+    if(vl){
+      var nom = vl.getAttribute('data-vl-field');
+      state.vl.form[nom] = vl.value;
+      if(nom === 'categorie' || nom === 'annee') render();
+      return;
+    }
+    // --- Simulateur « optimiser » : recalcul immédiat, sans re-render du formulaire ---
+    var of = e.target.closest('[data-optim-field]');
+    if(of){
+      state.optim.form[of.getAttribute('data-optim-field')] = of.value;
+      if(of.getAttribute('data-optim-field') === 'caAnnuel') state.optim.projection = null;
+      renderOptimResults();
+      return;
+    }
+    var oc = e.target.closest('[data-ocharge-field]');
+    if(oc){
+      var oi = parseInt(oc.getAttribute('data-i'), 10);
+      if(state.optim.charges[oi]){
+        state.optim.charges[oi][oc.getAttribute('data-ocharge-field')] = oc.value;
+        renderOptimResults();
+      }
+      return;
+    }
+    var lf = e.target.closest('[data-levier-field]');
+    if(lf){
+      state.optim.leviers[lf.getAttribute('data-levier-field')] = lf.value;
+      renderOptimResults();
+      return;
+    }
+    var orange = e.target.closest('[data-optim-range]');
+    if(orange){
+      var quoi = orange.getAttribute('data-optim-range');
+      if(quoi === 'projection'){
+        state.optim.projection = parseFloat(orange.value) || 0;
+        var opv = document.getElementById('optim-proj-value');
+        if(opv) opv.textContent = fmtEur(state.optim.projection);
+      } else {
+        state.optim.form[quoi] = orange.value;
+        // Met à jour l'intitulé du curseur sans reconstruire le formulaire.
+        var lab = orange.closest('.field') && orange.closest('.field').querySelector('label strong');
+        if(lab) lab.textContent = orange.value + ' %';
+      }
+      renderOptimResults();
+      return;
+    }
+    // --- Simulateur « société » : recalcul immédiat, sans re-render du formulaire ---
+    var sf = e.target.closest('[data-statut-field]');
+    if(sf){
+      state.statut.form[sf.getAttribute('data-statut-field')] = sf.value;
+      if(sf.getAttribute('data-statut-field') === 'caAnnuel') state.statut.projection = null;
+      renderStatutResults();
+      return;
+    }
+    var cf = e.target.closest('[data-charge-field]');
+    if(cf){
+      var ci = parseInt(cf.getAttribute('data-i'), 10);
+      if(state.statut.charges[ci]){
+        state.statut.charges[ci][cf.getAttribute('data-charge-field')] = cf.value;
+        var tot = document.querySelector('.charge-total');
+        if(tot) tot.innerHTML = 'Total : <strong>' + fmtEur(totalCharges()) + '</strong> par an';
+        renderStatutResults();
+      }
+      return;
+    }
+    var pf = e.target.closest('[data-param-field]');
+    if(pf){
+      var chemin = pf.getAttribute('data-param-field').split('.');
+      var v = parseFloat(pf.value);
+      if(!isNaN(v)){
+        // Les taux sont saisis en %, sauf la CFE et le plafond d'IS (en €).
+        var enEuros = (chemin[chemin.length-1] === 'cfe' || chemin[chemin.length-1] === 'plafondReduit');
+        var cible = state.statut.params;
+        for(var i = 0; i < chemin.length - 1; i++) cible = cible[chemin[i]];
+        cible[chemin[chemin.length-1]] = enEuros ? v : v / 100;
+        renderStatutResults();
+      }
+      return;
+    }
+    var rg = e.target.closest('[data-statut-range]');
+    if(rg){
+      state.statut.projection = parseFloat(rg.value) || 0;
+      var pv = document.getElementById('proj-value');
+      if(pv) pv.textContent = fmtEur(state.statut.projection);
+      renderStatutResults();
+      return;
+    }
+    // Champs du simulateur TVA.
+    var tv = e.target.closest('[data-tva-field]');
+    if(tv){
+      var n2 = tv.getAttribute('data-tva-field');
+      state.tva.form[n2] = tv.value;
+      // Ces champs modifient l'affichage (encarts, champs conditionnels, total).
+      if(['franchise','exoneree','strategie','partRecup','partProNon','partParticuliers'].indexOf(n2) !== -1) render();
+      return;
+    }
+    // Champs d'une dépense du simulateur TVA.
+    var td = e.target.closest('[data-tvadep-field]');
+    if(td){
+      var i2 = parseInt(td.getAttribute('data-i'), 10);
+      var dep = state.tva.depenses[i2];
+      if(dep){
+        var n3 = td.getAttribute('data-tvadep-field');
+        dep[n3] = td.value;
+        if(n3 === 'categorie'){ render(); return; }
+        if(n3 === 'nom'){
+          var carte = td.closest('.dep-card');
+          var titre2 = carte && carte.querySelector('.dep-title');
+          if(titre2){
+            var v2 = (td.value || '').trim();
+            titre2.textContent = v2 || 'Nouvelle dépense';
+            titre2.classList.toggle('empty', !v2);
+          }
+        }
+      }
+    }
+  }
+  document.getElementById('app').addEventListener('input', onSimField);
+  document.getElementById('app').addEventListener('change', onSimField);
+
+  // Exposé pour vérifier le moteur fiscal (tests, débogage).
+  window.FreeHub = { comparerVL: comparerVL, impotBareme: impotBareme, FISCAL: FISCAL,
+                     calculerTVA: calculerTVA, tvaDansTTC: tvaDansTTC, annualiser: annualiser };
+
+  // Relevé AVANT le premier rendu : celui-ci enregistre des clés (badges) qui
+  // feraient croire à un usage local préexistant chez un tout nouveau visiteur.
+  var usageLocalInitial = localStorageOk('freehub_onboarded')
+    || CLES_SAUVEGARDE.some(function(k){ return localStorageOk(k); });
+
+  render();
+  // Après le 1er rendu, les badges déjà mérités sont marqués sans célébration ;
+  // seuls les déblocages suivants déclenchent l'animation.
+  state.badgesInitialises = true;
+  // Session ouverte d'une visite précédente ? On la reprend et on synchronise.
+  verifierSession();
+})();

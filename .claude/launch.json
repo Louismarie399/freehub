@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "freehub",
+      "runtimeExecutable": "/Users/louisltddstudio/free-hub/.venv/bin/python",
+      "runtimeArgs": ["/Users/louisltddstudio/free-hub/server.py"],
+      "port": 8123
+    }
+  ]
+}

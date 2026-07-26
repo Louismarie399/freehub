@@ -1,0 +1,18 @@
+# Secrets — ne JAMAIS committer
+.env
+.deploy.env
+
+# Base de données locale (dev)
+freehub.db
+freehub.db-journal
+freehub.db-wal
+freehub.db-shm
+
+# Divers
+__pycache__/
+*.pyc
+.DS_Store
+*.dmg
+node_modules/
+.venv/
+freehub-deploy.zip
