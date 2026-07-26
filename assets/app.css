@@ -1002,6 +1002,92 @@
   .part-legal{margin-top:20px;font-size:12px;color:var(--muted);line-height:1.6;
     font-weight:500;max-width:860px}
 
+  /* ---------- Dashboard admin ---------- */
+  /* L'onglet admin est détaché du reste : c'est un espace à part. */
+  .nav-row.nav-admin{margin-top:14px;position:relative}
+  .nav-row.nav-admin::before{content:"";position:absolute;top:-8px;left:12px;right:12px;
+    height:1px;background:rgba(255,255,255,.1)}
+  .nav-row.nav-admin .nav-text{color:#ffd76e}
+  .nav-row.nav-admin.on .nav-text{color:#fff}
+
+  .adm-entete{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    flex-wrap:wrap;padding:18px 22px;border-radius:16px;margin-bottom:18px;
+    background:linear-gradient(135deg,#0f1b33 0%,#1e46b8 130%);color:#fff}
+  .adm-entete-t{font-size:16px;font-weight:800}
+  .adm-entete-s{font-size:12.5px;color:rgba(255,255,255,.7);font-weight:500;margin-top:3px}
+  .adm-refresh{flex:none;padding:9px 16px;border:none;border-radius:10px;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:700;color:#fff;
+    background:rgba(255,255,255,.16);transition:background .15s}
+  .adm-refresh:hover{background:rgba(255,255,255,.26)}
+
+  .adm-bloc{background:#fff;border:1px solid var(--border);border-radius:16px;
+    padding:20px 22px;margin-bottom:16px}
+  .adm-titre{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:14px}
+  .adm-sous-titre{font-size:12.5px;font-weight:800;color:var(--muted2);margin:18px 0 10px}
+
+  .adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .adm-stat{background:#f6f8fc;border-radius:13px;padding:15px 16px}
+  .adm-stat-v{font-size:27px;font-weight:800;line-height:1.1;color:var(--ink)}
+  .adm-stat-l{font-size:12.5px;font-weight:700;color:var(--muted2);margin-top:3px}
+  .adm-stat-a{font-size:11px;color:var(--muted);font-weight:500;margin-top:3px;line-height:1.35}
+  .adm-stat.bleu{background:#eef4ff}   .adm-stat.bleu .adm-stat-v{color:#2f6bff}
+  .adm-stat.or{background:#fff6e2}     .adm-stat.or .adm-stat-v{color:#b47500}
+  .adm-stat.violet{background:#f2eefe} .adm-stat.violet .adm-stat-v{color:#6d3fd4}
+  .adm-stat.vert{background:#eaf7f0}   .adm-stat.vert .adm-stat-v{color:#0f9d58}
+  .adm-stat.orange{background:#fef1e7} .adm-stat.orange .adm-stat-v{color:#d9741f}
+
+  .adm-rep-barre{height:12px;border-radius:100px;background:#e8ecf3;overflow:hidden;display:flex}
+  .adm-rep-barre > span{display:block;height:100%;background:linear-gradient(90deg,#2f6bff,#5b8dff)}
+  .adm-rep-legende{display:flex;gap:22px;flex-wrap:wrap;margin-top:11px;
+    font-size:12.5px;color:var(--muted2);font-weight:600}
+  .adm-rep-legende i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:7px}
+  .adm-rep-legende .p1{background:#2f6bff}
+  .adm-rep-legende .p2{background:#e8ecf3}
+  .adm-rep-legende b{color:var(--ink);font-weight:800}
+
+  .adm-formes{display:flex;flex-wrap:wrap;gap:8px}
+  .adm-forme{display:flex;align-items:center;gap:8px;background:#f6f8fc;border-radius:100px;
+    padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--muted2)}
+  .adm-forme b{color:var(--ink);font-weight:800}
+
+  .adm-liste{display:flex;flex-direction:column}
+  .adm-ligne{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:9px 0;border-bottom:1px solid #f0f3f8;font-size:13px}
+  .adm-ligne:last-child{border-bottom:none}
+  .adm-mail{font-weight:600;color:var(--ink);word-break:break-all}
+  .adm-mail em{color:var(--muted);font-style:normal;font-weight:500}
+  .adm-tags{display:flex;align-items:center;gap:7px;flex:none}
+  .adm-tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:100px;
+    background:#eef1f7;color:var(--muted2);white-space:nowrap}
+  .adm-tag.or{background:#fff2d6;color:#8a5a00}
+  .adm-date{font-size:11.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+  .adm-verrou{font-size:12px;opacity:.5;flex:none}
+  .adm-retirer{flex:none;padding:5px 12px;border:1px solid #e2c4c4;border-radius:8px;
+    background:#fff;color:#b91c1c;font-family:inherit;font-size:12px;font-weight:700;
+    cursor:pointer;transition:background .15s}
+  .adm-retirer:hover{background:#fef2f2}
+
+  .adm-ajout{display:flex;gap:9px;flex-wrap:wrap}
+  .adm-input{flex:1;min-width:200px;padding:10px 13px;border:1.5px solid #dfe5ee;
+    border-radius:10px;font-family:inherit;font-size:13.5px;outline:none;transition:.15s}
+  .adm-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,107,255,.14)}
+  .adm-btn{flex:none;padding:10px 20px;border:none;border-radius:10px;cursor:pointer;
+    font-family:inherit;font-size:13.5px;font-weight:700;color:#fff;background:var(--blue);
+    transition:background .15s}
+  .adm-btn:hover{background:var(--blue-dark)}
+  .adm-btn:disabled{background:#a9b3c6;cursor:not-allowed}
+
+  .adm-note{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:10px;line-height:1.5}
+  .adm-note code{background:#f0f3f9;padding:2px 6px;border-radius:5px;
+    font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted2)}
+  .adm-msg{margin-top:11px;font-size:12.5px;font-weight:600;padding:9px 12px;border-radius:9px;
+    background:#eaf7f0;color:#0f7040}
+  .adm-msg.err{background:#fef2f2;color:#b91c1c}
+  .adm-refus,.adm-vide{background:#fff;border:1px solid var(--border);border-radius:16px;
+    padding:28px;text-align:center;font-size:14px;font-weight:600;color:var(--muted2)}
+  .adm-vide-s{font-size:12.5px;color:var(--muted);font-weight:500}
+
   /* Bandeau « devenir partenaire » — ouvert à tous */
   .part-join{margin-top:22px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;
     justify-content:space-between;padding:20px 24px;border-radius:16px;

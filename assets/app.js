@@ -770,6 +770,7 @@
     calendrier: ['Anticiper','Calendrier',      'Tes échéances de l’année, réunies au même endroit.'],
     partenaires:['Écosystème','Nos partenaires','Les outils et les gens qu’on recommande pour bien t’entourer.'],
     profil:     ['Compte',  'Mon profil',    'Toutes tes informations, saisies une fois et réutilisées partout.'],
+    admin:      ['Administration','Dashboard admin','L’état de FreeHub en un coup d’œil. Réservé aux administrateurs.'],
   };
 
   // Profil d'entreprise — centralisé, persisté dans le navigateur (localStorage),
@@ -1706,6 +1707,8 @@
     profilSection: null,  // id de la section dépliée dans le profil
     importInfo: null,     // retour après un import de sauvegarde
     partOpen: null,       // index du partenaire dont la fiche est ouverte
+    // Espace d'administration (chargé à la demande depuis le serveur)
+    admin: { stats:null, chargement:false, erreur:'', msg:'', msgErr:false, busy:false },
     // Formulaire « devenir partenaire » (ouvert à tous).
     partForm: false, partFormBusy: false, partFormDone: false, partFormErr: '',
     historique: loadHistorique(),
@@ -2044,15 +2047,22 @@
               + '<line x1="9" y1="8" x2="14" y2="8"/>',
     calendrier: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><line x1="3.5" y1="9" x2="20.5" y2="9"/>'
               + '<line x1="8" y1="3" x2="8" y2="6"/><line x1="16" y1="3" x2="16" y2="6"/>',
+    // Espace admin : un bouclier, pour marquer l'accès restreint.
+    admin:      '<path d="M12 3.5 19 6v6c0 4-3 7-7 8.5C8 19 5 16 5 12V6z"/>'
+              + '<path d="M9.2 12.2l2 2 3.6-3.9"/>',
   };
   function navHtml(){
     var tabs = [ {key:'accueil',label:'Accueil'}, {key:'objectifs',label:'Mes objectifs'},
                  {key:'calendrier',label:'Calendrier'},
                  {key:'simulateur',label:'Simulateur'}, {key:'lexique',label:'Lexique'},
                  {key:'partenaires',label:'Nos partenaires'} ];
+    // Espace admin : tout en bas, et seulement pour les comptes administrateurs.
+    // (L'API vérifie de toute façon le rôle côté serveur.)
+    if(state.compte && state.compte.isAdmin) tabs.push({key:'admin', label:'Dashboard admin'});
     return tabs.map(function(t){
       var on = state.tab === t.key;
-      return '<button class="nav-row'+(on?' on':'')+'" data-action="tab" data-tab="'+t.key+'">'
+      return '<button class="nav-row'+(on?' on':'')+(t.key==='admin'?' nav-admin':'')
+        + '" data-action="tab" data-tab="'+t.key+'">'
         + '<span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
           + 'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+NAV_ICONES[t.key]+'</svg></span>'
         + '<span class="nav-text">'+esc(t.label)+'</span>'
@@ -5322,6 +5332,164 @@
       + '</div></div>';
   }
 
+  // ---------------------------------------------------------------------------
+  // Dashboard admin — l'état de FreeHub, réservé aux administrateurs
+  // ---------------------------------------------------------------------------
+  function adminChargerStats(){
+    if(state.admin.chargement) return;
+    state.admin.chargement = true;
+    apiJson('GET', 'api/admin/stats').then(function(res){
+      state.admin.chargement = false;
+      if(res.ok){ state.admin.stats = res.data; state.admin.erreur = ''; }
+      else { state.admin.erreur = (res.data && res.data.error) || 'Chargement impossible.'; }
+      render();
+    }, function(){
+      state.admin.chargement = false;
+      state.admin.erreur = 'Serveur injoignable.';
+      render();
+    });
+  }
+
+  function admStat(valeur, libelle, teinte, aide){
+    return '<div class="adm-stat'+(teinte?' '+teinte:'')+'">'
+      + '<div class="adm-stat-v">'+esc(String(valeur))+'</div>'
+      + '<div class="adm-stat-l">'+esc(libelle)+'</div>'
+      + (aide ? '<div class="adm-stat-a">'+esc(aide)+'</div>' : '')
+      + '</div>';
+  }
+
+  // Petite barre de répartition (deux parts), pour Google vs mot de passe.
+  function admBarre(a, b, labelA, labelB){
+    var total = a + b, pa = total ? Math.round(a / total * 100) : 0;
+    return '<div class="adm-rep">'
+      + '<div class="adm-rep-barre"><span style="width:'+pa+'%"></span></div>'
+      + '<div class="adm-rep-legende">'
+        + '<span><i class="p1"></i>'+esc(labelA)+' — <b>'+a+'</b> ('+pa+' %)</span>'
+        + '<span><i class="p2"></i>'+esc(labelB)+' — <b>'+b+'</b> ('+(total?100-pa:0)+' %)</span>'
+      + '</div></div>';
+  }
+
+  function adminHtml(){
+    // Double sécurité : même si l'onglet fuitait, rien ne s'affiche sans le rôle.
+    if(!(state.compte && state.compte.isAdmin)){
+      return '<div class="view"><div class="adm-refus">🔒 Cet espace est réservé aux administrateurs.</div></div>';
+    }
+    var a = state.admin, s = a.stats;
+
+    if(a.erreur) return '<div class="view"><div class="adm-refus">⚠️ '+esc(a.erreur)+'</div></div>';
+    if(!s){
+      if(!a.chargement) adminChargerStats();
+      return '<div class="view"><div class="adm-vide">Chargement des statistiques…</div></div>';
+    }
+
+    var tauxActivation = s.total ? Math.round(s.avecDonnees / s.total * 100) : 0;
+
+    // --- Comptes ---
+    var blocComptes = '<div class="adm-bloc">'
+      + '<div class="adm-titre">Comptes</div>'
+      + '<div class="adm-stats">'
+        + admStat(s.total, 'Utilisateurs', 'bleu')
+        + admStat(s.admins, 'Administrateurs', 'or')
+        + admStat(s.beta, 'Bêta testeurs', 'violet')
+        + admStat('+' + s.j7, 'Sur 7 jours', '', 'et +' + s.j30 + ' sur 30 jours')
+      + '</div></div>';
+
+    // --- Connexion ---
+    var blocConnexion = '<div class="adm-bloc">'
+      + '<div class="adm-titre">Mode de connexion</div>'
+      + admBarre(s.google, s.motDePasse, 'Google', 'Mot de passe')
+      + '</div>';
+
+    // --- Usage ---
+    var formes = s.formes.length
+      ? '<div class="adm-formes">' + s.formes.map(function(f){
+          return '<div class="adm-forme"><span>'+esc(f[0])+'</span><b>'+f[1]+'</b></div>';
+        }).join('') + '</div>'
+      : '<div class="adm-vide-s">Aucun statut renseigné pour l’instant.</div>';
+
+    var blocUsage = '<div class="adm-bloc">'
+      + '<div class="adm-titre">Usage réel</div>'
+      + '<div class="adm-stats">'
+        + admStat(s.avecDonnees, 'Comptes actifs', 'vert', 'ont des données synchronisées')
+        + admStat(tauxActivation + ' %', 'Taux d’activation', tauxActivation >= 50 ? 'vert' : 'orange')
+        + admStat(s.profilRempli, 'Profils renseignés', '', 'activité déclarée')
+        + admStat(s.demandesPartenaires, 'Demandes partenaires')
+      + '</div>'
+      + '<div class="adm-sous-titre">Répartition par statut juridique</div>'
+      + formes
+      + '</div>';
+
+    // --- Codes d'accès ---
+    var blocCodes = '<div class="adm-bloc">'
+      + '<div class="adm-titre">Alpha privée</div>'
+      + '<div class="adm-stats">'
+        + admStat(s.codesActifs, 'Codes actifs')
+        + admStat(s.codesUtilises, 'Codes consommés')
+      + '</div>'
+      + '<div class="adm-note">Les codes se gèrent en ligne de commande sur le serveur : '
+        + '<code>python3 codes.py add --note "Prénom"</code></div>'
+      + '</div>';
+
+    // --- Gestion des admins ---
+    var listeAdmins = s.listeAdmins.map(function(em){
+      var soi = state.compte && state.compte.email === em;
+      return '<div class="adm-ligne">'
+        + '<span class="adm-mail">'+esc(em)+(soi?' <em>(toi)</em>':'')+'</span>'
+        + (soi || s.listeAdmins.length <= 1
+            ? '<span class="adm-verrou" title="'+(soi?'Tu ne peux pas te retirer toi-même':'Dernier administrateur')+'">🔒</span>'
+            : '<button class="adm-retirer" data-action="adm-demote" data-email="'+esc(em)+'">Retirer</button>')
+        + '</div>';
+    }).join('');
+
+    var message = a.msg
+      ? '<div class="adm-msg'+(a.msgErr?' err':'')+'">'+esc(a.msg)+'</div>' : '';
+
+    var blocAdmins = '<div class="adm-bloc">'
+      + '<div class="adm-titre">Administrateurs</div>'
+      + '<div class="adm-liste">'+listeAdmins+'</div>'
+      + '<div class="adm-sous-titre">Ajouter un administrateur</div>'
+      + '<div class="adm-ajout">'
+        + '<input class="adm-input" data-adm="email" type="email" placeholder="adresse@exemple.fr" autocomplete="off">'
+        + '<button class="adm-btn"'+(a.busy?' disabled':'')+' data-action="adm-promote">'
+          + (a.busy?'…':'Promouvoir')+'</button>'
+      + '</div>'
+      + '<div class="adm-note">Le compte doit déjà exister. La personne devient admin '
+        + 'à sa prochaine ouverture de FreeHub.</div>'
+      + message
+      + '</div>';
+
+    // --- Dernières inscriptions ---
+    var derniers = s.derniers.map(function(d){
+      var quand = '';
+      try {
+        quand = new Date(d.created).toLocaleDateString('fr-FR',
+                { day:'2-digit', month:'short', year:'2-digit' });
+      } catch(e){}
+      return '<div class="adm-ligne">'
+        + '<span class="adm-mail">'+esc(d.email)
+          + (d.nom ? ' <em>'+esc(d.nom)+'</em>' : '')+'</span>'
+        + '<span class="adm-tags">'
+          + (d.admin ? '<span class="adm-tag or">admin</span>' : '')
+          + '<span class="adm-tag">'+(d.google?'Google':'mot de passe')+'</span>'
+          + '<span class="adm-date">'+esc(quand)+'</span>'
+        + '</span></div>';
+    }).join('');
+
+    var blocDerniers = '<div class="adm-bloc">'
+      + '<div class="adm-titre">Dernières inscriptions</div>'
+      + '<div class="adm-liste">'+(derniers || '<div class="adm-vide-s">Aucun compte.</div>')+'</div>'
+      + '</div>';
+
+    return '<div class="view">'
+      + '<div class="adm-entete">'
+        + '<div><div class="adm-entete-t">🛡️ Espace administrateur</div>'
+        + '<div class="adm-entete-s">Ces chiffres viennent du serveur et ne sont visibles que par les admins.</div></div>'
+        + '<button class="adm-refresh" data-action="adm-refresh">↻ Actualiser</button>'
+      + '</div>'
+      + blocComptes + blocConnexion + blocUsage + blocCodes + blocAdmins + blocDerniers
+      + '</div>';
+  }
+
   function partenairesHtml(){
     var cards = PARTENAIRES.map(function(p, i){
       // La carte reste volontairement courte : 3 points, le reste est dans la fiche.
@@ -5511,6 +5679,14 @@
     var app = document.getElementById('app');
     if(!app.querySelector('.app')){ app.innerHTML = shellHtml(); initBrand(); }
 
+    // La nav n'est bâtie qu'une fois ; or le rôle admin arrive après coup (session
+    // vérifiée en arrière-plan). On la reconstruit donc si l'onglet admin doit
+    // apparaître ou disparaître.
+    var navEl = app.querySelector('nav');
+    var admVisible = !!app.querySelector('.nav-row[data-tab="admin"]');
+    var admAttendu = !!(state.compte && state.compte.isAdmin);
+    if(navEl && admVisible !== admAttendu) navEl.innerHTML = navHtml();
+
     // Navigation : on bascule les classes, sans reconstruire les boutons.
     [].forEach.call(app.querySelectorAll('.nav-row'), function(row){
       row.classList.toggle('on', row.getAttribute('data-tab') === state.tab);
@@ -5553,6 +5729,7 @@
                       : state.tab === 'lexique' ? lexiqueHtml()
                       : state.tab === 'partenaires' ? partenairesHtml()
                       : state.tab === 'profil' ? profilHtml()
+                      : state.tab === 'admin' ? adminHtml()
                       : simulateurHtml();
 
     // Animation d'entrée uniquement quand on change réellement d'écran.
@@ -5670,6 +5847,43 @@
       case 'part-close':
         setState({ partOpen: null });
         break;
+      // ----- Dashboard admin -----
+      case 'adm-refresh':
+        state.admin.stats = null; state.admin.erreur = ''; state.admin.msg = '';
+        render();
+        break;
+      case 'adm-promote': {
+        var champA = document.querySelector('[data-adm="email"]');
+        var mailA = champA ? champA.value.trim().toLowerCase() : '';
+        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mailA)){
+          state.admin.msg = 'Indique une adresse e-mail valide.';
+          state.admin.msgErr = true; render(); break;
+        }
+        state.admin.busy = true; state.admin.msg = ''; render();
+        apiJson('POST', 'api/admin/promote', { email: mailA }).then(function(res){
+          state.admin.busy = false;
+          state.admin.msgErr = !res.ok;
+          state.admin.msg = res.ok ? mailA + ' est désormais administrateur.'
+                                   : ((res.data && res.data.error) || 'Impossible.');
+          if(res.ok) state.admin.stats = null;   // force le rechargement des chiffres
+          render();
+        }, function(){
+          state.admin.busy = false; state.admin.msgErr = true;
+          state.admin.msg = 'Serveur injoignable.'; render();
+        });
+        break;
+      }
+      case 'adm-demote': {
+        var mailD = el.getAttribute('data-email');
+        apiJson('POST', 'api/admin/demote', { email: mailD }).then(function(res){
+          state.admin.msgErr = !res.ok;
+          state.admin.msg = res.ok ? mailD + ' n’est plus administrateur.'
+                                   : ((res.data && res.data.error) || 'Impossible.');
+          if(res.ok) state.admin.stats = null;
+          render();
+        });
+        break;
+      }
       case 'part-form-open':
         setState({ partForm:true, partFormDone:false, partFormErr:'' });
         break;

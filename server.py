@@ -596,6 +596,138 @@ def put_data(payload: DataIn, req: Request):
     return {"ok": True, "updated": now_iso()}
 
 
+# --------------------------------------------------------------------------- #
+# Espace d'administration
+# --------------------------------------------------------------------------- #
+# ⚠️ SÉCURITÉ : le contrôle se fait ICI, côté serveur. Masquer l'onglet dans
+# l'interface ne protège rien — n'importe qui peut appeler l'API directement.
+def exige_admin(req: Request):
+    u = user_from_request(req)
+    if not u:
+        return None, JSONResponse(status_code=401, content={"error": "Non connecté."})
+    if not u["is_admin"]:
+        return None, JSONResponse(status_code=403, content={"error": "Accès réservé aux administrateurs."})
+    return u, None
+
+
+def _profil_de(blob: str) -> dict:
+    """Extrait le profil d'un paquet de données synchronisées (JSON dans du JSON)."""
+    try:
+        paquet = json.loads(blob)
+        brut = paquet.get("freehub_profil")
+        return json.loads(brut) if isinstance(brut, str) else (brut or {})
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        return {}
+
+
+@app.get("/api/admin/stats")
+def admin_stats(req: Request):
+    u, refus = exige_admin(req)
+    if refus:
+        return refus
+
+    conn = db()
+    q = lambda sql, *a: conn.execute(sql, a).fetchone()[0]
+
+    total = q("SELECT COUNT(*) FROM users")
+    admins = q("SELECT COUNT(*) FROM users WHERE is_admin = 1")
+    beta = q("SELECT COUNT(*) FROM users WHERE beta = 1")
+    google = q("SELECT COUNT(*) FROM users WHERE google_sub != ''")
+
+    maintenant = datetime.now(timezone.utc)
+    depuis = lambda j: (maintenant - timedelta(days=j)).isoformat()
+    j7 = q("SELECT COUNT(*) FROM users WHERE created >= ?", depuis(7))
+    j30 = q("SELECT COUNT(*) FROM users WHERE created >= ?", depuis(30))
+
+    # Activation : un compte qui a réellement des données synchronisées.
+    avec_donnees = q("SELECT COUNT(*) FROM data")
+
+    codes_actifs = q("SELECT COUNT(*) FROM invite_codes WHERE actif = 1")
+    codes_utilises = q("SELECT COALESCE(SUM(uses), 0) FROM invite_codes")
+    demandes = q("SELECT COUNT(*) FROM partner_requests")
+
+    # Répartition par statut juridique + activités, lues dans les profils synchronisés.
+    formes, activites = {}, 0
+    for r in conn.execute("SELECT blob FROM data"):
+        p = _profil_de(r["blob"])
+        f = (p.get("forme") or "").strip()
+        if f:
+            formes[f] = formes.get(f, 0) + 1
+        if (p.get("activite") or "").strip():
+            activites += 1
+
+    derniers = [
+        {"email": r["email"],
+         "nom": " ".join(filter(None, [r["prenom"] or "", r["nom"] or ""])).strip(),
+         "google": bool(r["google_sub"]), "admin": bool(r["is_admin"]),
+         "created": r["created"]}
+        for r in conn.execute(
+            "SELECT email, prenom, nom, google_sub, is_admin, created "
+            "FROM users ORDER BY created DESC LIMIT 8")
+    ]
+    liste_admins = [r["email"] for r in
+                    conn.execute("SELECT email FROM users WHERE is_admin = 1 ORDER BY email")]
+    conn.close()
+
+    return {
+        "total": total, "admins": admins, "beta": beta,
+        "google": google, "motDePasse": total - google,
+        "j7": j7, "j30": j30,
+        "avecDonnees": avec_donnees, "profilRempli": activites,
+        "codesActifs": codes_actifs, "codesUtilises": codes_utilises,
+        "demandesPartenaires": demandes,
+        "formes": sorted(formes.items(), key=lambda x: -x[1]),
+        "derniers": derniers, "listeAdmins": liste_admins,
+    }
+
+
+class AdminCible(BaseModel):
+    email: str
+
+
+@app.post("/api/admin/promote")
+def admin_promote(cible: AdminCible, req: Request):
+    u, refus = exige_admin(req)
+    if refus:
+        return refus
+    email = (cible.email or "").strip().lower()
+    conn = db()
+    row = conn.execute("SELECT id, is_admin FROM users WHERE email = ?", (email,)).fetchone()
+    if not row:
+        conn.close()
+        return JSONResponse(status_code=404,
+                            content={"error": "Aucun compte avec cette adresse."})
+    if row["is_admin"]:
+        conn.close()
+        return JSONResponse(status_code=409, content={"error": "Ce compte est déjà administrateur."})
+    conn.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (row["id"],))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "email": email}
+
+
+@app.post("/api/admin/demote")
+def admin_demote(cible: AdminCible, req: Request):
+    u, refus = exige_admin(req)
+    if refus:
+        return refus
+    email = (cible.email or "").strip().lower()
+    conn = db()
+    row = conn.execute("SELECT id FROM users WHERE email = ? AND is_admin = 1", (email,)).fetchone()
+    if not row:
+        conn.close()
+        return JSONResponse(status_code=404, content={"error": "Ce compte n'est pas administrateur."})
+    # Garde-fou : on ne retire jamais le dernier admin, sinon plus personne n'entre.
+    if conn.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1").fetchone()[0] <= 1:
+        conn.close()
+        return JSONResponse(status_code=409,
+                            content={"error": "Impossible : c'est le dernier administrateur."})
+    conn.execute("UPDATE users SET is_admin = 0 WHERE id = ?", (row["id"],))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "email": email}
+
+
 class PartnerReq(BaseModel):
     structure: str
     email: str
