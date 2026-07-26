@@ -161,8 +161,17 @@ partenaire). Rien d'autre à coder.
 1. **Domaine / sous-domaine** — choisir le domaine ou un sous-domaine (ex.
    `app.tondomaine.fr`) et le rattacher à un dossier, ex. `~/freehub`.
 
-2. **Téléverser le projet** dans ce dossier (SSH `git clone`/`rsync`/`scp`, ou le
-   Gestionnaire de fichiers cPanel), selon la liste ci-dessus.
+2. **Récupérer le projet** dans ce dossier. Le code est sur GitHub (dépôt **privé**) :
+   ```
+   git clone https://github.com/Louismarie399/freehub.git ~/freehub
+   ```
+   Le clone demandera l'identifiant GitHub et un token d'accès personnel (portées
+   `repo` + `workflow`). À défaut de git sur le serveur : `rsync`/`scp` depuis le Mac,
+   ou le Gestionnaire de fichiers cPanel, en suivant la liste ci-dessus.
+
+   ⚠️ Après le clone, `freehub.db` **n'existe pas** (il est volontairement exclu du
+   dépôt) : la base de production se crée vide au premier démarrage dans `FH_DATA_DIR`.
+   C'est le comportement attendu.
 
 3. **cPanel → « Setup Python App » / Application Manager** :
    - *Python version* : la plus récente proposée (**≥ 3.9**).
