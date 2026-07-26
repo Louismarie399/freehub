@@ -387,6 +387,10 @@ def init_db():
     for colonne in ("prenom", "nom", "google_sub", "invite_code"):
         if colonne not in existantes:
             conn.execute(f"ALTER TABLE users ADD COLUMN {colonne} TEXT DEFAULT ''")
+    # Rôles : admin (accordé à la main) et beta (automatique pendant l'alpha).
+    for colonne in ("is_admin", "beta"):
+        if colonne not in existantes:
+            conn.execute(f"ALTER TABLE users ADD COLUMN {colonne} INTEGER DEFAULT 0")
     conn.commit()
     conn.close()
 
@@ -410,8 +414,8 @@ def user_from_request(req: Request):
         return None
     conn = db()
     row = conn.execute(
-        "SELECT u.id, u.email, u.prenom, u.nom FROM sessions s JOIN users u ON u.id = s.user_id "
-        "WHERE s.token = ?", (token,)
+        "SELECT u.id, u.email, u.prenom, u.nom, u.is_admin, u.beta "
+        "FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?", (token,)
     ).fetchone()
     conn.close()
     return row
@@ -505,17 +509,19 @@ def signup(cred: Credentials):
     salt = secrets.token_hex(16)
     prenom = (cred.prenom or "").strip()[:80]
     nom = (cred.nom or "").strip()[:80]
+    # Qui s'inscrit pendant l'alpha est bêta testeur — l'insigne est définitif.
     conn.execute(
-        "INSERT INTO users(email, pw_hash, pw_salt, created, prenom, nom, invite_code) "
-        "VALUES (?,?,?,?,?,?,?)",
+        "INSERT INTO users(email, pw_hash, pw_salt, created, prenom, nom, invite_code, beta) "
+        "VALUES (?,?,?,?,?,?,?,?)",
         (email, hash_pw(pw, salt), salt, now_iso(), prenom, nom,
-         code_row["code"] if code_row else ""))
+         code_row["code"] if code_row else "", 0 if OPEN_SIGNUP else 1))
     if code_row:
         consommer_code(conn, code_row)
     conn.commit()
     uid = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()["id"]
     conn.close()
-    resp = JSONResponse(content={"email": email, "prenom": prenom, "nom": nom})
+    resp = JSONResponse(content={"email": email, "prenom": prenom, "nom": nom,
+                                 "isAdmin": False, "beta": not OPEN_SIGNUP})
     set_cookie(resp, open_session(uid))
     return resp
 
@@ -524,14 +530,17 @@ def signup(cred: Credentials):
 def login(cred: Credentials):
     email = (cred.email or "").strip().lower()
     conn = db()
-    row = conn.execute("SELECT id, pw_hash, pw_salt, prenom, nom FROM users WHERE email = ?",
+    row = conn.execute("SELECT id, pw_hash, pw_salt, prenom, nom, is_admin, beta "
+                       "FROM users WHERE email = ?",
                        (email,)).fetchone()
     conn.close()
     # hmac.compare_digest : comparaison à temps constant contre les attaques temporelles.
     if not row or not hmac.compare_digest(row["pw_hash"], hash_pw(cred.password or "", row["pw_salt"])):
         return JSONResponse(status_code=401, content={"error": "E-mail ou mot de passe incorrect."})
     resp = JSONResponse(content={"email": email, "prenom": row["prenom"] or "",
-                                 "nom": row["nom"] or ""})
+                                 "nom": row["nom"] or "",
+                                 "isAdmin": bool(row["is_admin"]),
+                                 "beta": bool(row["beta"])})
     set_cookie(resp, open_session(row["id"]))
     return resp
 
@@ -554,7 +563,8 @@ def me(req: Request):
     u = user_from_request(req)
     if not u:
         return JSONResponse(status_code=401, content={"error": "Non connecté."})
-    return {"email": u["email"], "prenom": u["prenom"] or "", "nom": u["nom"] or ""}
+    return {"email": u["email"], "prenom": u["prenom"] or "", "nom": u["nom"] or "",
+            "isAdmin": bool(u["is_admin"]), "beta": bool(u["beta"])}
 
 
 @app.get("/api/data")
@@ -722,11 +732,11 @@ def google_callback(state: str = "", code: str = "", error: str = ""):
         # Pas de mot de passe utilisable : la connexion se fait via Google.
         salt = secrets.token_hex(16)
         conn.execute(
-            "INSERT INTO users(email, pw_hash, pw_salt, created, prenom, nom, google_sub, invite_code) "
-            "VALUES (?,?,?,?,?,?,?,?)",
+            "INSERT INTO users(email, pw_hash, pw_salt, created, prenom, nom, google_sub, "
+            "invite_code, beta) VALUES (?,?,?,?,?,?,?,?,?)",
             (email, hash_pw(secrets.token_urlsafe(32), salt), salt, now_iso(),
              (infos.get("given_name") or "")[:80], (infos.get("family_name") or "")[:80],
-             sub, code_row["code"] if code_row else ""))
+             sub, code_row["code"] if code_row else "", 0 if OPEN_SIGNUP else 1))
         if code_row:
             consommer_code(conn, code_row)
         uid = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()["id"]

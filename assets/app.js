@@ -1854,7 +1854,8 @@
         if(!aDesDonneesLocales()) window.location.replace('./');
         return;
       }
-      state.compte = { email: res.data.email, prenom: res.data.prenom, nom: res.data.nom };
+      state.compte = { email: res.data.email, prenom: res.data.prenom, nom: res.data.nom,
+                       isAdmin: !!res.data.isAdmin, beta: !!res.data.beta };
       identiteDepuisCompte(state.compte);
       apiJson('GET', 'api/data').then(function(d){
         if(d.ok && d.data.donnees && Object.keys(d.data.donnees).length){
@@ -5475,6 +5476,7 @@
           + '<div class="user clickable" data-action="open-profil">'
             + '<div class="avatar"></div>'
             + '<div style="min-width:0"><div class="user-name"></div>'
+            + '<div class="user-roles"></div>'
             + '<div class="user-sub"></div></div>'
             + '<span class="user-cog">⚙</span></div>'
         + '</div>'
@@ -5521,6 +5523,13 @@
     // Bloc utilisateur : nom, prénom et photo viennent du profil.
     var nomComplet = ((state.profil.prenom || '') + ' ' + (state.profil.nom || '')).trim();
     app.querySelector('.user-name').textContent = nomComplet || 'Mon profil';
+
+    // Insignes de rôle : ils viennent du compte (serveur), jamais du profil local,
+    // pour qu'on ne puisse pas s'auto-attribuer « admin » en bidouillant le stockage.
+    var roles = '';
+    if(state.compte && state.compte.isAdmin) roles += '<span class="rbadge admin">★ Admin</span>';
+    if(state.compte && state.compte.beta)    roles += '<span class="rbadge beta">Bêta testeur</span>';
+    app.querySelector('.user-roles').innerHTML = roles;
     var av = app.querySelector('.avatar');
     if(state.profil.photo){
       av.innerHTML = '<img src="'+esc(state.profil.photo)+'" alt="">';
@@ -5711,7 +5720,8 @@
             setState({ authBusy:false, authErr: res.data.error || 'Une erreur est survenue.' });
             return;
           }
-          state.compte = { email: res.data.email, prenom: res.data.prenom, nom: res.data.nom };
+          state.compte = { email: res.data.email, prenom: res.data.prenom, nom: res.data.nom,
+                       isAdmin: !!res.data.isAdmin, beta: !!res.data.beta };
           identiteDepuisCompte(state.compte);
           state.authBusy = false; state.authOpen = false;
           // Signup : on ensemence le compte avec les données locales.
