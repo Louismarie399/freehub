@@ -6,6 +6,9 @@ qui interroge l'API Claude pour analyser une ou plusieurs dépenses.
 Lancer :  double-clic sur « Lancer FreeHub.command »
    ou :   python3 server.py          (puis http://localhost:8123)
 
+En production, le déploiement est automatique : tout push sur `main` déclenche
+le workflow GitHub Actions, qui synchronise les fichiers puis redémarre l'app.
+
 La clé API Claude est lue, dans l'ordre :
   1. la variable d'environnement ANTHROPIC_API_KEY ;
   2. un fichier « .env » placé à côté de ce script (ANTHROPIC_API_KEY=...) ;

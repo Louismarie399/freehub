@@ -7,6 +7,13 @@
 #   O2S_PATH     chemin absolu de l'app, ex. /home/tonuser/freehub
 #   O2S_SSH_KEY  la clé PRIVÉE de déploiement (contenu complet du fichier)
 #   O2S_PORT     (facultatif) port SSH ; 22 par défaut
+#
+# IMPORTANT : O2Switch limite l'accès SSH (port 22) à 5 IP autorisées
+# manuellement (cPanel → Sécurité → Autorisation SSH). Les runners GitHub
+# cloud (ubuntu-latest) n'ont pas d'IP fixe et ne peuvent donc PAS être
+# whitelistés. Ce workflow tourne donc sur un runner "self-hosted" installé
+# sur le Mac de Louis (dont l'IP est whitelistée) — voir GitHub →
+# Settings → Actions → Runners pour l'installer/le lancer.
 
 name: Déploiement O2Switch
 
@@ -22,7 +29,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v4
