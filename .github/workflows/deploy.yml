@@ -1,92 +1,89 @@
-# Déploiement automatique de FreeHub sur O2Switch — backend PHP.
+# Déploiement automatique de FreeHub sur O2Switch — via l'API cPanel.
 #
-# PHP est exécuté nativement par LiteSpeed : pas de dépendances à installer,
-# pas de process à relancer. Le déploiement se résume à un rsync, suivi d'un
-# contrôle de santé de l'API.
+# ARCHITECTURE (depuis juillet 2026) : le serveur TIRE le code lui-même.
+#   push sur main → runner cloud GitHub → API cPanel (HTTPS, port 2083) :
+#     1. VersionControl::update            → le serveur fait « git pull »
+#     2. VersionControlDeployment::create  → exécute .cpanel.yml (rsync local
+#        clone → docroot, protections .deployignore)
+#     3. contrôle de santé sur /api/ping
 #
-# Runner : self-hosted (sur le Mac de Louis), car O2Switch limite le SSH à des
-# IP autorisées manuellement dans cPanel — les runners cloud GitHub n'ont pas
-# d'IP fixe. Le runner est installé en service (svc.sh), il survit aux reboots.
+# Pourquoi : le port SSH d'O2Switch est limité à une liste blanche d'IP, ce qui
+# cassait les déploiements dès que le Mac (ancien runner self-hosted) changeait
+# de réseau. L'API cPanel, elle, est accessible en HTTPS de partout — plus de
+# dépendance à une IP fixe ni à une machine locale allumée.
 #
-# Secrets requis (Settings → Secrets and variables → Actions) :
-#   O2S_HOST     cronos.o2switch.net
-#   O2S_USER     rtym5189
-#   O2S_PATH     /home/rtym5189/free-hub.fr
-#   O2S_SSH_KEY  clé privée de déploiement
-#   O2S_PORT     (facultatif) 22 par défaut
+# Secret requis (Settings → Secrets and variables → Actions) :
+#   CPANEL_TOKEN  — jeton créé dans cPanel → Sécurité → Gérer les jetons d'API.
+# L'hôte, l'utilisateur et le chemin du clone ne sont pas des secrets : en clair ici.
 
 name: Déploiement O2Switch
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:        # bouton « Run workflow » pour déployer à la demande
+  workflow_dispatch:
 
-# Un seul déploiement à la fois : évite deux rsync concurrents sur le serveur.
 concurrency:
   group: deploy-o2switch
   cancel-in-progress: false
 
+env:
+  CP_HOTE: cronos.o2switch.net
+  CP_USER: rtym5189
+  CP_REPO: /home/rtym5189/repositories/freehub
+
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
-      - name: Récupérer le code
-        uses: actions/checkout@v4
-
-      # Si les secrets manquent, on s'arrête proprement au lieu d'échouer en rouge.
+      # Si le jeton n'est pas encore créé, on s'arrête proprement (pas d'échec rouge).
       - name: Vérifier la configuration
         id: cfg
         env:
-          HOTE: ${{ secrets.O2S_HOST }}
-          UTILISATEUR: ${{ secrets.O2S_USER }}
-          CHEMIN: ${{ secrets.O2S_PATH }}
-          CLE: ${{ secrets.O2S_SSH_KEY }}
+          JETON: ${{ secrets.CPANEL_TOKEN }}
         run: |
-          if [ -z "$HOTE" ] || [ -z "$UTILISATEUR" ] || [ -z "$CHEMIN" ] || [ -z "$CLE" ]; then
+          if [ -z "$JETON" ]; then
             echo "pret=non" >> "$GITHUB_OUTPUT"
-            echo "::notice::Secrets O2Switch absents — déploiement ignoré."
+            echo "::notice::Secret CPANEL_TOKEN absent — déploiement ignoré (voir MISE-EN-LIGNE-BRIEF §13)."
           else
             echo "pret=oui" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Préparer la clé SSH
+      - name: Tirer le code sur le serveur (git pull)
         if: steps.cfg.outputs.pret == 'oui'
         env:
-          CLE: ${{ secrets.O2S_SSH_KEY }}
-          HOTE: ${{ secrets.O2S_HOST }}
-          PORT: ${{ secrets.O2S_PORT || 22 }}
+          JETON: ${{ secrets.CPANEL_TOKEN }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$CLE" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          # Épingle l'empreinte du serveur : refuse de parler à un hôte inattendu.
-          ssh-keyscan -p "$PORT" -H "$HOTE" >> ~/.ssh/known_hosts 2>/dev/null
+          REP=$(curl -sS --max-time 90 \
+            -H "Authorization: cpanel $CP_USER:$JETON" \
+            "https://$CP_HOTE:2083/execute/VersionControl/update" \
+            --data-urlencode "repository_root=$CP_REPO" \
+            --data-urlencode "branch=main")
+          echo "$REP" | head -c 600
+          echo "$REP" | grep -q '"status":1' || { echo "::error::Échec du pull côté serveur."; exit 1; }
 
-      - name: Envoyer les fichiers
+      - name: Déployer (exécuter .cpanel.yml)
         if: steps.cfg.outputs.pret == 'oui'
         env:
-          HOTE: ${{ secrets.O2S_HOST }}
-          USER: ${{ secrets.O2S_USER }}
-          CHEMIN: ${{ secrets.O2S_PATH }}
-          PORT: ${{ secrets.O2S_PORT || 22 }}
+          JETON: ${{ secrets.CPANEL_TOKEN }}
         run: |
-          # --delete supprime du serveur ce qui a disparu du dépôt, SAUF ce que
-          # .deployignore protège (base de données, .well-known, etc.).
-          rsync -az --delete --exclude-from=.deployignore \
-            -e "ssh -i ~/.ssh/id_deploy -p $PORT" \
-            ./ "$USER@$HOTE:$CHEMIN/"
+          REP=$(curl -sS --max-time 90 \
+            -H "Authorization: cpanel $CP_USER:$JETON" \
+            "https://$CP_HOTE:2083/execute/VersionControlDeployment/create" \
+            --data-urlencode "repository_root=$CP_REPO")
+          echo "$REP" | head -c 600
+          echo "$REP" | grep -q '"status":1' || { echo "::error::Échec du déploiement côté serveur."; exit 1; }
 
       - name: Contrôle de santé
         if: steps.cfg.outputs.pret == 'oui'
         run: |
-          # L'API doit répondre en JSON après le déploiement. Sinon, échec visible.
-          for i in $(seq 1 10); do
+          # Le rsync serveur est quasi instantané, mais on laisse quelques essais.
+          for i in $(seq 1 12); do
             if curl -s --max-time 15 "https://free-hub.fr/api/ping" | grep -q '"ok":true'; then
               echo "✅ API en ligne — déploiement vérifié."
               exit 0
             fi
-            sleep 3
+            sleep 5
           done
           echo "::error::L'API ne répond pas après le déploiement."
           exit 1

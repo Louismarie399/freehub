@@ -27,6 +27,7 @@ cgi-bin/
 .gitignore
 .deployignore
 .deploy.env.exemple
+.cpanel.yml
 deploy.sh
 dev.php
 

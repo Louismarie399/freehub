@@ -33,19 +33,51 @@ config.exemple.php   → modèle du config.php de production
 .github/workflows/deploy.yml, .deployignore, deploy.sh → déploiement
 ```
 
-## Déploiement automatique
+## Déploiement automatique (§13) — via l'API cPanel, sans IP fixe ni Mac allumé
 
-`git push` sur `main` → GitHub Actions (**runner self-hosted sur le Mac de Louis**,
-installé en service `svc.sh`, car O2Switch limite le SSH aux IP autorisées dans
-cPanel) → `rsync --delete` avec les protections de `.deployignore` → **contrôle de
-santé** sur `https://free-hub.fr/api/ping` (échec visible si l'API ne répond pas).
+**Architecture** : `git push` sur `main` → runner **cloud** GitHub (`ubuntu-latest`)
+→ API cPanel en HTTPS (port 2083, non soumise à la liste blanche d'IP SSH) :
+1. `VersionControl::update` — le serveur fait lui-même `git pull` du dépôt ;
+2. `VersionControlDeployment::create` — exécute `.cpanel.yml` (rsync **local**
+   clone → docroot, avec les protections `.deployignore`) ;
+3. contrôle de santé sur `https://free-hub.fr/api/ping`.
 
-Rien à installer, rien à redémarrer : PHP est servi nativement.
+**Pourquoi** : l'ancien schéma (runner self-hosted sur le Mac + rsync SSH) cassait
+dès que le Mac changeait de réseau — le SSH d'O2Switch n'accepte que des IP
+autorisées manuellement. L'API cPanel est accessible de partout ; le serveur tire
+le code au lieu de le recevoir.
 
-- Secours manuel : `./deploy.sh` (ou `--dry-run`) après avoir rempli `.deploy.env`.
-- Si le runner est arrêté : `cd ~/actions-runner && ./svc.sh start`.
-- ⚠️ Les données de prod (`freehub_data/`) sont HORS du dossier déployé : un
-  déploiement ne peut pas les toucher.
+### Mise en place (une seule fois, dans les interfaces web)
+
+1. **Clé de dépôt** — cPanel → *Accès SSH* → *Gérer les clés SSH* → générer une
+   clé (sans phrase de passe) si le compte n'en a pas, puis copier la **publique**.
+   Sur GitHub : dépôt `freehub` → *Settings* → *Deploy keys* → *Add deploy key*
+   (lecture seule). C'est ce qui permet au serveur de cloner le dépôt privé.
+2. **Clone sur le serveur** — cPanel → *Git™ Version Control* → *Create* :
+   - Clone URL : `git@github.com:Louismarie399/freehub.git`
+   - Repository Path : `repositories/freehub`  (= `/home/rtym5189/repositories/freehub`,
+     le chemin attendu par `.cpanel.yml` et le workflow)
+   - Branche : `main`
+3. **Jeton API** — cPanel → *Sécurité* → *Gérer les jetons d'API* → créer un jeton
+   (nom : `github-deploy`, sans expiration ou à renouveler).
+4. **Secret GitHub** — dépôt → *Settings* → *Secrets and variables* → *Actions* →
+   `CPANEL_TOKEN` = le jeton. (Hôte, utilisateur et chemin sont en clair dans le
+   workflow : seuls les jetons sont des secrets.)
+
+Tant que `CPANEL_TOKEN` n'existe pas, le workflow s'arrête proprement (pas d'échec).
+
+### Notes
+
+- ⚠️ Les données de prod (`freehub_data/`) sont HORS du docroot ET hors du clone :
+  aucun déploiement ne peut les toucher.
+- Le SSH direct (débogage, `outils.php`) reste soumis à la liste blanche :
+  cPanel → *Sécurité* → *Autorisation SSH* pour ajouter l'IP du moment. Le
+  **Terminal intégré de cPanel** (menu Avancé) fonctionne, lui, de partout.
+- L'ancien runner self-hosted (`~/actions-runner` sur le Mac) est obsolète :
+  `cd ~/actions-runner && ./svc.sh stop && ./svc.sh uninstall` une fois la
+  nouvelle chaîne vérifiée.
+- Secours manuel : `./deploy.sh` (rsync SSH) reste utilisable depuis une IP
+  autorisée.
 
 ## Exploitation courante (SSH sur le serveur, dossier du site)
 
