@@ -45,7 +45,13 @@ $routes = [
     'POST /analyze'              => 'route_analyze',
 
     // Sonde de santé (sans secret : ne révèle rien de sensible).
-    'GET /ping'                  => fn() => json_reponse(['ok' => true, 'php' => PHP_VERSION]),
+    // `maj` = date de dernière mise à jour de ce fichier : permet de vérifier
+    // d'un simple curl qu'un déploiement est bien arrivé jusqu'en production.
+    'GET /ping'                  => fn() => json_reponse([
+        'ok'  => true,
+        'php' => PHP_VERSION,
+        'maj' => date('Y-m-d H:i', (int) filemtime(__FILE__)) . ' UTC',
+    ]),
 ];
 
 $cle = $methode . ' ' . $chemin;
