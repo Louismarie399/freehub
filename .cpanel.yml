@@ -5,7 +5,12 @@
 # du clone git vers le docroot, avec les mêmes protections que l'ancien rsync
 # distant (.deployignore préserve les données, .well-known, etc.).
 #
-# Chemin du clone : créé dans cPanel → Git™ Version Control (voir MISE-EN-LIGNE-BRIEF §13).
+# ⚠️ PERMISSIONS : le clone cPanel est créé en 700, et `rsync -a` recopie les
+# permissions du dossier source sur le docroot — qui passait donc en 700 à
+# chaque déploiement (LiteSpeed → 403 « unable to read htaccess »).
+# `--chmod=D755,F644` force dossiers 755 / fichiers 644 quoi qu'il arrive,
+# et le chmod final re-garantit le docroot lui-même.
 deployment:
   tasks:
-    - /usr/bin/rsync -a --delete --exclude-from=/home/rtym5189/repositories/freehub/.deployignore /home/rtym5189/repositories/freehub/ /home/rtym5189/free-hub.fr/
+    - /usr/bin/rsync -a --delete --chmod=D755,F644 --exclude-from=/home/rtym5189/repositories/freehub/.deployignore /home/rtym5189/repositories/freehub/ /home/rtym5189/free-hub.fr/
+    - /bin/chmod 755 /home/rtym5189/free-hub.fr

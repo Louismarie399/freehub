@@ -68,6 +68,10 @@ Tant que `CPANEL_TOKEN` n'existe pas, le workflow s'arrête proprement (pas d'é
 
 ### Notes
 
+- ⚠️ **Permissions** : le clone cPanel est en `700` et `rsync -a` recopiait ces
+  permissions sur le docroot → site en 403 après le premier déploiement.
+  Corrigé dans `.cpanel.yml` (`--chmod=D755,F644` + `chmod 755` final) — ne pas
+  retirer ces options.
 - ⚠️ Les données de prod (`freehub_data/`) sont HORS du docroot ET hors du clone :
   aucun déploiement ne peut les toucher.
 - Le SSH direct (débogage, `outils.php`) reste soumis à la liste blanche :
