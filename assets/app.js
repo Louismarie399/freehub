@@ -21,6 +21,12 @@
   // `cat` reprend les domaines pour la couleur ; `def` = 1 à 3 phrases, sans
   // jargon. On n'invente aucun chiffre : les définitions restent qualitatives.
   var LEXIQUE = [
+    { id:'client-recup', t:'Client qui récupère la TVA', cat:'tva',
+      court:'En général, une entreprise assujettie à la TVA.',
+      def:'Un client assujetti à la TVA la récupère sur ses achats : pour lui, ta TVA n’est pas un coût définitif, juste une avance de trésorerie. En pratique, c’est le cas de la plupart des sociétés (SAS, SARL, EURL…) et des indépendants qui ont opté pour la TVA. Leur facturer la TVA ne change donc quasiment rien pour eux.' },
+    { id:'client-non-recup', t:'Client qui ne récupère pas la TVA', cat:'tva',
+      court:'Particuliers, auto-entrepreneurs en franchise, associations.',
+      def:'Si tu travailles avec des particuliers ou des auto-entrepreneurs en franchise en base, aucun des deux ne récupère la TVA : ta hausse de prix devient pour eux une vraie augmentation. Même chose pour beaucoup d’associations et d’activités exonérées. C’est cette part de clientèle qui rend le passage à la TVA délicat commercialement.' },
     { id:'micro', t:'Micro-entreprise', cat:'statut',
       court:'Le régime simplifié de l’entreprise individuelle.',
       def:'Un régime simplifié pour exercer en solo : démarches allégées, comptabilité réduite, et des cotisations calculées en pourcentage de ce que tu encaisses. On dit aussi « auto-entreprise ».' },
@@ -808,11 +814,11 @@
     ca: '60000',
     periodeCa: 'annuel',
     // 4 · TVA
-    tva: 'Société assujettie à la TVA',
+    tva: 'Je suis à la TVA',
+    regimeTva: 'Régime réel simplifié',
     tauxVente: '0.2',
     clientRecup: '70',
-    clientProNon: '10',
-    clientParticuliers: '20',
+    clientProNon: '30',
     // 5 · Foyer fiscal
     parts: '1',
     autresRevenus: '',
@@ -831,6 +837,13 @@
     ],
   };
 
+  // Est-on à la TVA ? On accepte les anciennes formulations du profil
+  // (« Société assujettie à la TVA ») pour ne pas casser les profils existants.
+  function estAssujettiTVA(p){
+    var t = (p && p.tva) || '';
+    if(/pas encore|franchise/i.test(t)) return false;
+    return /^je suis à la tva$/i.test(t.trim()) || /assujettie/i.test(t);
+  }
   function estMicro(p){
     return /micro|individuelle/i.test(p.forme || '');
   }
@@ -1233,15 +1246,15 @@
     source: 'impots.gouv.fr · entreprendre.service-public.fr',
     verifieLe: '23/07/2026',
     tauxVente: [
-      { v:'0.2',   l:'20 % — taux normal' },
-      { v:'0.1',   l:'10 % — taux intermédiaire' },
-      { v:'0.055', l:'5,5 % — taux réduit' },
-      { v:'0.021', l:'2,1 % — taux particulier' },
+      { v:'0.2',   l:'20% — taux normal' },
+      { v:'0.1',   l:'10% — taux intermédiaire' },
+      { v:'0.055', l:'5,5% — taux réduit' },
+      { v:'0.021', l:'2,1% — taux particulier' },
     ],
     tauxDepense: [
-      { v:'0.2',   l:'20 %' }, { v:'0.1',   l:'10 %' },
-      { v:'0.055', l:'5,5 %' }, { v:'0.021', l:'2,1 %' },
-      { v:'0',     l:'0 % / sans TVA' },
+      { v:'0.2',   l:'20%' }, { v:'0.1',   l:'10%' },
+      { v:'0.055', l:'5,5%' }, { v:'0.021', l:'2,1%' },
+      { v:'0',     l:'0% / sans TVA' },
     ],
     // Seuils de franchise en base : volontairement non renseignés — le brief ne
     // les chiffre pas et inventer un seuil fiscal serait pire que ne rien dire.
@@ -1249,7 +1262,22 @@
     // Seuils de recommandation : règles PRODUIT, pas des règles fiscales.
     seuilFavorable: 0.01,      // gain net > 1 % du CA
     seuilDefavorable: -0.01,   // perte nette > 1 % du CA
-    baisseVentes: { aucune:0, faible:0.05, moderee:0.10, importante:0.20 },
+    // Risque commercial estimé à partir de la part de clients qui NE récupèrent
+    // PAS la TVA (pour eux, ta hausse de prix est une vraie augmentation).
+    // Repères PRODUIT, pas des statistiques : plus la clientèle est sensible,
+    // plus le risque de perdre des clients est réel.
+    ancresRisque: [[0, 0], [0.3, 0.075], [0.5, 0.20], [1, 0.30]],
+    // Ordres de grandeur du coût administratif annuel du passage à la TVA.
+    // Sources : grille tarifaire publique d'Abby (plan Pro = premier niveau
+    // gérant la TVA) et fourchette d'honoraires d'expert-comptable.
+    coutsOutils: [
+      { id:'seul',      l:'Tu déclares toi-même',      min:0,    max:0,
+        d:'Gratuit, mais c’est du temps et un risque d’erreur à assumer.' },
+      { id:'logiciel',  l:'Un logiciel type Abby',     min:144,  max:180,
+        d:'Plan Pro (12 €/mois avec engagement annuel, 15 €/mois sans engagement) : déclarations CA3 générées depuis tes factures.' },
+      { id:'comptable', l:'Un expert-comptable',       min:1800, max:3000,
+        d:'À partir d’environ 150 €/mois pour un suivi complet — il gère bien plus que la TVA.' },
+    ],
     // Catégories dont la TVA est souvent limitée ou exclue.
     categoriesSensibles: ['vehicule','carburant','restaurant','hebergement','cadeau','mixte','logement'],
   };
@@ -1270,6 +1298,19 @@
     return frequence === 'mensuelle' ? m * 12 : m;
   }
 
+  // Interpolation linéaire entre les ancres de risque commercial.
+  function risqueCommercial(partSensible){
+    var a = TVA_PARAMS.ancresRisque;
+    var x = Math.min(1, Math.max(0, partSensible));
+    for(var i = 1; i < a.length; i++){
+      if(x <= a[i][0]){
+        var t = (x - a[i-1][0]) / (a[i][0] - a[i-1][0] || 1);
+        return a[i-1][1] + t * (a[i][1] - a[i-1][1]);
+      }
+    }
+    return a[a.length-1][1];
+  }
+
   function calculerTVA(f, depenses){
     var p = TVA_PARAMS;
     var ca = Math.max(0, parseFloat(f.ca) || 0);
@@ -1278,8 +1319,8 @@
 
     var pRecup = (parseFloat(f.partRecup) || 0) / 100;
     var pProNon = (parseFloat(f.partProNon) || 0) / 100;
-    var pParticuliers = (parseFloat(f.partParticuliers) || 0) / 100;
-    var pSensible = pProNon + pParticuliers;   // ceux pour qui la TVA est un coût
+    var pParticuliers = 0;                      // fusionné dans « ne récupèrent pas »
+    var pSensible = pProNon;                    // ceux pour qui la TVA est un coût
 
     // --- TVA récupérable sur les dépenses ---
     var lignes = (depenses || []).map(function(d){
@@ -1295,7 +1336,9 @@
       };
     });
     var tvaRecuperable = lignes.reduce(function(s, l){ return s + l.recuperable; }, 0);
-    var coutsAdmin = Math.max(0, parseFloat(f.coutsAdmin) || 0);
+    // Le coût administratif n'est plus demandé : on le présente en scénarios
+    // dans le résultat. Le gain « brut » se calcule donc sans lui.
+    var coutsAdmin = 0;
 
     // --- Un scénario = un taux de répercussion par groupe de clients ---
     // rRecup / rSensible ∈ [0,1] : part de la TVA ajoutée au prix actuel.
@@ -1316,13 +1359,11 @@
       };
     }
 
-    // --- Scénario retenu selon la stratégie déclarée ---
+    // --- Scénario de référence ---
+    // On ne demande plus « que ferais-tu de tes prix ? » : on part de l'hypothèse
+    // la plus courante et la plus lisible — la TVA s'ajoute aux prix, le revenu
+    // HT est donc préservé. Les autres stratégies restent comparées plus bas.
     var rRecup = 1, rSensible = 1;
-    if(f.strategie === 'conserver'){ rRecup = 0; rSensible = 0; }
-    else if(f.strategie === 'adapter'){
-      rRecup = 1;
-      rSensible = Math.min(1, Math.max(0, (parseFloat(f.repercussionSensible) || 0) / 100));
-    }
     var principal = scenario(rRecup, rSensible);
 
     // --- Les trois scénarios de référence ---
@@ -1332,14 +1373,30 @@
       mixte: scenario(1, 0),
     };
 
-    // --- Risque commercial : chiffré à part, jamais fondu dans le gain ---
-    var baisse = p.baisseVentes[f.baisseVentes] !== undefined ? p.baisseVentes[f.baisseVentes] : null;
-    var perteCommerciale = (baisse === null) ? null : ca * pSensible * baisse;
+    // --- Risque commercial : estimé automatiquement, jamais fondu dans le gain ---
+    // Fourchette autour de l'estimation centrale : on affiche un ordre de
+    // grandeur, pas une prédiction au point près.
+    var baisse = risqueCommercial(pSensible);
+    var perteCommerciale = ca * pSensible * baisse;
+    var risque = {
+      taux: baisse,
+      tauxMin: baisse * 0.7,
+      tauxMax: baisse * 1.3,
+      caExpose: ca * pSensible,
+      perte: perteCommerciale,
+      perteMin: ca * pSensible * baisse * 0.7,
+      perteMax: ca * pSensible * baisse * 1.3,
+    };
+
+    // --- Coût administratif : trois scénarios, jamais imposé ---
+    var coutsScenarios = p.coutsOutils.map(function(o){
+      return { id:o.id, l:o.l, d:o.d, min:o.min, max:o.max,
+               gainMin: tvaRecuperable - o.max, gainMax: tvaRecuperable - o.min };
+    });
 
     // --- Avis ---
-    var sommeParts = Math.round((pRecup + pProNon + pParticuliers) * 100);
-    var incomplet = !(ca > 0) || !(taux > 0) || sommeParts !== 100
-                    || f.strategie === 'inconnu' || f.exoneree === 'oui' || f.exoneree === 'partiel';
+    var sommeParts = Math.round((pRecup + pProNon) * 100);
+    var incomplet = !(ca > 0) || !(taux > 0) || sommeParts !== 100;
     var relatif = ca > 0 ? principal.gain / ca : 0;
     var avis;
     if(incomplet) avis = 'gris';
@@ -1357,8 +1414,8 @@
       lignes: lignes, tvaRecuperable: tvaRecuperable, coutsAdmin: coutsAdmin,
       principal: principal, scenarios: scenarios,
       perteCommerciale: perteCommerciale, baisse: baisse,
+      risque: risque, coutsScenarios: coutsScenarios,
       avis: avis, relatif: relatif, sommeParts: sommeParts,
-      strategie: f.strategie, exoneree: f.exoneree,
       rRecup: rRecup, rSensible: rSensible,
     };
   }
@@ -1550,7 +1607,9 @@
   var SIM_OPTIONS = {
     forme: ['Micro-entreprise','Entreprise individuelle','EURL','SASU','SARL','SAS','Autre société','Je ne sais pas'],
     regime: ['Impôt sur les sociétés','Impôt sur le revenu','Je ne sais pas'],
-    tva: ['Société assujettie à la TVA','Franchise en base de TVA','Exonération particulière','Je ne sais pas'],
+    // Formulé du point de vue de l'utilisateur, pas du vocabulaire fiscal.
+    tva: ['Je suis à la TVA','Je ne suis pas encore à la TVA','Je ne sais pas'],
+    regimeTva: ['Régime réel simplifié','Régime réel normal','Franchise en base (pas de TVA)','Je ne sais pas'],
     usage: ['Exclusivement professionnelle','Majoritairement professionnelle','Mixte professionnelle et personnelle','Principalement personnelle','Je ne sais pas'],
     beneficiaire: ["L'entreprise",'Le dirigeant','Un salarié','Un client','Un prospect','Plusieurs personnes','Autre'],
     justificatif: ['Facture au nom de la société','Facture au nom du dirigeant','Ticket de caisse','Relevé bancaire uniquement','Aucun justificatif pour le moment'],
@@ -1622,15 +1681,17 @@
       champs:[
         { k:'tva', l:'Ta situation', lex:'franchise', large:true,
           options:SIM_OPTIONS.tva.map(function(x){ return {v:x,l:x}; }) },
-        { k:'tauxVente', l:'Taux de TVA de tes ventes', large:true, options:TVA_PARAMS.tauxVente },
+        // Le régime ne se pose que si l'on est effectivement à la TVA.
+        { k:'regimeTva', l:'Ton régime de TVA', large:true, si:estAssujettiTVA,
+          options:SIM_OPTIONS.regimeTva.map(function(x){ return {v:x,l:x}; }),
+          aide:'Il détermine la fréquence de tes déclarations. En cas de doute, regarde ton avis de situation ou demande à ton comptable.' },
+        { k:'tauxVente', l:'Taux de TVA', large:true, options:TVA_PARAMS.tauxVente },
         { k:'clientRecup', l:'Clients qui récupèrent la TVA', type:'number', suffixe:'%',
-          aide:'Sociétés et pros assujettis.' },
-        { k:'clientProNon', l:'Pros qui ne la récupèrent pas', type:'number', suffixe:'%',
-          aide:'Micro en franchise, associations.' },
-        { k:'clientParticuliers', l:'Particuliers', type:'number', suffixe:'%',
-          aide:'Ils supportent le prix TTC.' },
+          lex:'client-recup', aide:'En général, les entreprises assujetties à la TVA.' },
+        { k:'clientProNon', l:'Clients qui ne la récupèrent pas', type:'number', suffixe:'%',
+          lex:'client-non-recup', aide:'Particuliers, auto-entrepreneurs en franchise, associations.' },
       ],
-      total:{ cles:['clientRecup','clientProNon','clientParticuliers'], attendu:100,
+      total:{ cles:['clientRecup','clientProNon'], attendu:100,
               l:'Répartition de ta clientèle' },
     },
     {
@@ -1679,9 +1740,42 @@
   function loadProfil(){
     try {
       var raw = localStorage.getItem('freehub_profil');
-      if(raw) return Object.assign({}, DEFAULT_PROFIL, JSON.parse(raw));
+      if(raw) return migrerProfil(Object.assign({}, DEFAULT_PROFIL, JSON.parse(raw)));
     } catch(e){}
     return Object.assign({}, DEFAULT_PROFIL);
+  }
+
+  // Reprise des profils créés avant la simplification du bloc TVA :
+  // trois catégories de clients sont devenues deux, et les libellés de
+  // situation ont été reformulés du point de vue de l'utilisateur.
+  var profilMigre = false;   // évite de réécrire le stockage à chaque lecture
+  function migrerProfil(p){
+    var avant = p.tva + '|' + p.clientProNon + '|' + p.clientParticuliers;
+    p = migrerProfilChamps(p);
+    // Une fois migré, on réécrit le stockage : sinon les anciennes clés
+    // repartiraient vers le compte à la prochaine synchronisation.
+    if(!profilMigre && avant !== p.tva + '|' + p.clientProNon + '|' + p.clientParticuliers){
+      profilMigre = true;
+      try { localStorage.setItem('freehub_profil', JSON.stringify(p)); } catch(e){}
+    }
+    return p;
+  }
+
+  function migrerProfilChamps(p){
+    if(p.clientParticuliers !== undefined && p.clientParticuliers !== ''){
+      p.clientProNon = String((parseFloat(p.clientProNon) || 0)
+                            + (parseFloat(p.clientParticuliers) || 0));
+      delete p.clientParticuliers;
+    }
+    var anciens = { 'Société assujettie à la TVA':'Je suis à la TVA',
+                    'Franchise en base de TVA':'Je ne suis pas encore à la TVA' };
+    if(anciens[p.tva]){
+      if(p.tva === 'Franchise en base de TVA') p.regimeTva = 'Franchise en base (pas de TVA)';
+      p.tva = anciens[p.tva];
+    } else if(p.tva === 'Exonération particulière'){
+      p.tva = 'Je ne sais pas';
+    }
+    return p;
   }
   function saveProfil(p){
     try { localStorage.setItem('freehub_profil', JSON.stringify(p)); } catch(e){}
@@ -1774,9 +1868,10 @@
     // Simulateur de passage à la TVA (calcul déterministe, sans IA)
     tva: {
       step: 'form',
+      // Parcours guidé : une pop-up centrée, pas un formulaire à remplir.
+      onb: { actif:false, etape:0 },
       form: { franchise:'oui', exoneree:'non', ca:'', caMensuel:false, tauxVente:'0.2',
-              partRecup:'', partProNon:'', partParticuliers:'', strategie:'',
-              repercussionSensible:'50', coutsAdmin:'', baisseVentes:'aucune' },
+              partRecup:'', partProNon:'' },
       depenses: [ { nom:'', montant:'', frequence:'mensuelle', taux:'0.2', recup:'100', categorie:'' } ],
       result: null,
       formError: null,
@@ -1926,7 +2021,6 @@
       ca: caAn, caMensuel: false,
       tauxVente: p.tauxVente,
       partRecup: p.clientRecup, partProNon: p.clientProNon,
-      partParticuliers: p.clientParticuliers,
     });
     state.tva.depenses = (p.charges || []).map(function(c){
       return { nom:c.nom, montant:c.montant, frequence:c.frequence,
@@ -1984,7 +2078,7 @@
         return m[p.categorieFiscale] || 'Non précisée';
       }
       case 'tauxVente': return fmtPct(parseFloat(p.tauxVente) || 0);
-      case 'clientele': return (p.clientRecup||0)+' / '+(p.clientProNon||0)+' / '+(p.clientParticuliers||0)+' %';
+      case 'clientele': return (p.clientRecup||0)+'% récup / '+(p.clientProNon||0)+'% non';
       case 'remuneration': return fmtEur(p.remMensuelle) + ' / mois';
       case 'dividendes': return (p.dividendes || 0) + ' %';
       case 'tresorerie': return fmtEur(p.tresorerie) + ' / an';
@@ -3551,67 +3645,28 @@
   function tvaFormHtml(){
     var f = state.tva.form;
     var err = state.tva.formError ? '<div class="form-error">'+esc(state.tva.formError)+'</div>' : '';
-    var somme = (parseFloat(f.partRecup)||0) + (parseFloat(f.partProNon)||0) + (parseFloat(f.partParticuliers)||0);
+    var somme = (parseFloat(f.partRecup)||0) + (parseFloat(f.partProNon)||0);
     var sommeOk = Math.round(somme) === 100;
 
     var h = state.tva.historique;
     var hist = h.length
-      ? '<div class="hist-h" style="margin-top:34px"><div class="hist-title">Mes simulations précédentes</div></div>'
-        + '<div class="hist-list">' + h.map(tvaHistItemHtml).join('') + '</div>'
+      ? '<div class="tva-sims-t">'+(h.length > 1 ? 'Mes simulations' : 'Ma simulation')+'</div>'
+        + '<div class="tva-sims">' + h.map(tvaHistItemHtml).join('') + '</div>'
       : '';
 
     return '<div class="sim-wrap">'
-      + profilBandeHtml(['tva','ca','tauxVente','clientele','charges'])
-      + (f.franchise === 'non'
-          ? '<div class="vl-note" style="margin-top:0">D’après ton profil tu factures déjà la TVA. '
-            + 'Ce simulateur s’adresse aux entreprises encore en franchise qui envisagent d’y opter.</div>' : '')
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       + (!sommeOk
           ? '<div class="vl-note" style="margin-top:0;background:#fef2f2">La répartition de ta clientèle '
-            + 'fait <strong>'+Math.round(somme)+' %</strong> au lieu de 100 % — corrige-la dans ton profil.</div>' : '')
-      + (f.exoneree === 'oui' || f.exoneree === 'partiel'
-          ? '<div class="vl-note" style="margin-top:0;background:#fffbeb">Ton profil indique une activité '
-            + '<strong>exonérée</strong>. Ce n’est pas la même chose qu’une franchise : l’option pour la TVA '
-            + 'n’est pas forcément possible ni avantageuse. Une analyse professionnelle est recommandée.</div>' : '')
-      + '<div class="vl-grid">'
-
-        // --- Stratégie tarifaire ---
-        + '<div class="card tinted">'
-          + '<div class="card-title">Ta stratégie de prix</div>'
-          + '<div class="vl-note" style="margin-top:0">Si tu factures 1 000 € aujourd’hui, tu peux soit '
-            + 'facturer 1 200 € TTC (ton revenu HT est préservé), soit rester à 1 000 € TTC (tu absorbes '
-            + 'la TVA et ton revenu HT tombe à 833 €).</div>'
-          + tvaField('strategie','Que ferais-tu de tes prix ?', f.strategie, {req:true, placeholder:true, options:[
-              {v:'ajouter',  l:'Ajouter la TVA à tous mes prix'},
-              {v:'conserver',l:'Garder les mêmes prix TTC pour tous'},
-              {v:'adapter',  l:'Adapter selon le type de client'},
-              {v:'inconnu',  l:'Je ne sais pas encore'}]})
-          + (f.strategie === 'adapter'
-              ? tvaField('repercussionSensible','Part de TVA répercutée aux clients qui ne la récupèrent pas (%)',
-                         f.repercussionSensible, {type:'number', ph:'50',
-                         aide:'100 % = tu ajoutes toute la TVA · 0 % = tu gardes ton prix TTC actuel.'})
-              : '')
-          + tvaField('baisseVentes','Baisse de ventes redoutée chez ces clients', f.baisseVentes, {options:[
-              {v:'aucune',l:'Aucune baisse prévue'},{v:'faible',l:'Faible (≈ 5 %)'},
-              {v:'moderee',l:'Modérée (≈ 10 %)'},{v:'importante',l:'Importante (≈ 20 %)'}],
-              aide:'Hypothèse commerciale, pas une donnée fiscale. Affichée à part du gain.'})
-          + tvaField('coutsAdmin','Coûts administratifs annuels (facultatif)', f.coutsAdmin,
-                     {type:'number', ph:'300 €', aide:'Logiciel, honoraires comptables, temps de gestion.'})
-        + '</div>'
-      + '</div>'
-
-      // --- Dépenses : reprises du profil, ajustables ici pour la simulation ---
-      + '<div class="card-title" style="margin:26px 0 6px">Tes dépenses professionnelles</div>'
-      + '<div class="field-eg" style="margin-bottom:12px">Reprises de ton profil. Tu peux les ajuster '
-        + 'pour cette simulation — pour un changement durable, passe par ton profil.</div>'
-      + '<div class="dep-grid">'
-        + state.tva.depenses.map(tvaDepCardHtml).join('')
-        + '<button class="dep-add" data-action="tvadep-add">'
-          + '<div class="dep-add-plus">+</div>Ajouter une dépense</button>'
+            + 'fait <strong>'+Math.round(somme)+'%</strong> au lieu de 100% — corrige-la dans ton profil.</div>' : '')
+      + '<div class="tva-lancer">'
+        + '<div class="tva-lancer-e">🧮</div>'
+        + '<div class="tva-lancer-t">Faut-il passer à la TVA ?</div>'
+        + '<div class="tva-lancer-s">Quatre écrans guidés, à partir de ton profil. '
+          + 'On calcule ce que tu récupérerais, ce que ça coûterait à gérer, et le risque côté clients.</div>'
+        + '<button class="btn-primary" data-action="tva-onb-start">Lancer la simulation</button>'
       + '</div>'
       + err
-      + '<div class="sim-actions">'
-        + '<button class="btn-primary" data-action="tva-compute">Simuler le passage à la TVA</button>'
-      + '</div>'
       + bandeauMillesimeHtml('tva')
       + hist
       + '</div>';
@@ -3627,16 +3682,15 @@
     if(r.avis === 'gris'){
       titre = 'Impossible de conclure de façon fiable';
       sousTitre = r.sommeParts !== 100
-        ? 'La répartition de ta clientèle doit faire exactement 100 % (actuellement ' + r.sommeParts + ' %).'
-        : (r.exoneree === 'oui' || r.exoneree === 'partiel'
-            ? 'Ton activité est exonérée ou partiellement exonérée : une analyse professionnelle est nécessaire.'
-            : 'Complète ta stratégie de prix, ton chiffre d’affaires et ton taux de TVA.');
+        ? 'La répartition de ta clientèle doit faire exactement 100% (actuellement ' + r.sommeParts + '%).'
+        : 'Complète ton chiffre d’affaires et ton taux de TVA dans ton profil.';
     } else if(g > 0){
-      titre = 'Le passage à la TVA pourrait te faire gagner environ ' + fmtEur(g) + ' par an';
-      sousTitre = 'Avec la stratégie de prix que tu as choisie.';
+      titre = 'Tu récupérerais environ ' + fmtEur(g) + ' de TVA par an';
+      sousTitre = 'En ajoutant la TVA à tes prix — ton revenu hors taxes reste identique. '
+                + 'Reste à en retirer les coûts de gestion, ci-dessous.';
     } else {
-      titre = 'Le passage à la TVA réduirait ton revenu d’environ ' + fmtEur(-g) + ' par an';
-      sousTitre = 'Avec la stratégie de prix que tu as choisie.';
+      titre = 'Le passage à la TVA ne te rapporterait rien';
+      sousTitre = 'Tes dépenses ne portent pas assez de TVA récupérable pour compenser.';
     }
     var libelle = { vert:'Le passage à la TVA semble financièrement intéressant',
                     orange:'Le passage à la TVA mérite d’être étudié',
@@ -3652,8 +3706,7 @@
     var carteClients = '<div class="card"><div class="card-title">Ta clientèle</div>'
       + segLigne('Récupèrent la TVA', r.parts.recup, r.segments.recup,
                  'Pour eux, la TVA ajoutée ne devrait pas être un coût définitif.')
-      + segLigne('Pros sans récupération', r.parts.proNon, r.segments.proNon)
-      + segLigne('Particuliers', r.parts.particuliers, r.segments.particuliers,
+      + segLigne('Ne la récupèrent pas', r.parts.proNon, r.segments.proNon,
                  'Pour eux, la TVA est une hausse de prix réelle.')
       + '</div>';
 
@@ -3687,27 +3740,67 @@
     var carteBilan = '<div class="card"><div class="card-title">Bilan annuel estimé</div>'
       + bilanLigne('TVA récupérable sur les dépenses', r.tvaRecuperable, 1)
       + bilanLigne('TVA absorbée dans tes prix', r.principal.absorbee, -1)
-      + bilanLigne('Coûts administratifs', r.coutsAdmin, -1)
       + '<div class="vl-line fort" style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px">'
-        + '<span>Gain net estimé</span>'
+        + '<span>Gain brut estimé</span>'
         + '<span style="color:'+(g >= 0 ? STATUT.vert.color : STATUT.rouge.color)+'">'
         + (g >= 0 ? '+' : '−') + fmtEur(Math.abs(g)) + '</span></div>'
-      + '<div class="field-eg">La TVA que tu collecterais ('+fmtEur(r.principal.collectee)+') n’apparaît pas '
-        + 'ici : elle est encaissée pour être reversée, ce n’est pas un revenu.</div>'
-      + (r.perteCommerciale !== null && r.perteCommerciale > 0
-          ? '<div class="vl-note" style="background:#fffbeb">Si tes ventes baissaient de '
-            + Math.round(r.baisse*100) + ' % chez les clients qui ne récupèrent pas la TVA, cela '
-            + 'représenterait ' + fmtEur(r.perteCommerciale) + ' de chiffre d’affaires en moins. '
-            + 'Non déduit du gain ci-dessus : l’impact réel dépend de ta marge.</div>'
-          : '')
+      + '<div class="field-eg">Avant coûts de gestion (ci-dessous). La TVA que tu collecterais ('
+        + fmtEur(r.principal.collectee)+') n’apparaît pas ici : elle est encaissée pour être reversée, '
+        + 'ce n’est pas un revenu.</div>'
       + '</div>';
+
+    // --- Coût de gestion : trois scénarios, mis face au gain ---
+    var lignesCouts = r.coutsScenarios.map(function(c){
+      var net = c.gainMin;   // hypothèse haute du coût = le net le plus prudent
+      var couleur = net >= 0 ? STATUT.vert.color : STATUT.rouge.color;
+      var cout = c.max === 0 ? 'aucun coût'
+               : fmtEur(c.min) + (c.max !== c.min ? ' à ' + fmtEur(c.max) : '') + ' / an';
+      return '<div class="tva-cout">'
+        + '<div class="tva-cout-h"><span class="tva-cout-l">'+esc(c.l)+'</span>'
+          + '<span class="tva-cout-n" style="color:'+couleur+'">'
+          + (net >= 0 ? '+' : '−') + fmtEur(Math.abs(net)) + '</span></div>'
+        + '<div class="tva-cout-d">'+esc(c.d)+'</div>'
+        + '<div class="tva-cout-c">Coût : '+cout+'</div>'
+        + '</div>';
+    }).join('');
+    var carteCouts = '<div class="card"><div class="card-title">Ce que ça coûte à gérer</div>'
+      + '<div class="field-eg" style="margin-bottom:12px">Passer à la TVA, c’est des déclarations '
+        + 'régulières. Voici ce qu’il te resterait selon la façon de les gérer — ordres de grandeur, '
+        + 'à confirmer avec les tarifs du moment.</div>'
+      + lignesCouts
+      + '</div>';
+
+    // --- Risque commercial estimé automatiquement ---
+    var q = r.risque;
+    var carteRisque = q.caExpose > 0
+      ? '<div class="card"><div class="card-title">Le risque côté clients</div>'
+        + '<div class="tva-risque-t">'+Math.round(r.parts.proNon*100)+'% de ton chiffre d’affaires '
+          + 'vient de clients qui ne récupèrent pas la TVA</div>'
+        + '<div class="field-eg" style="margin:6px 0 14px">Pour eux, ta hausse de prix est une vraie '
+          + 'augmentation. Une partie pourrait s’en aller ou négocier.</div>'
+        + '<div class="tva-risque-b">'
+          + '<div class="tva-risque-v">'+Math.round(q.tauxMin*100)+' à '+Math.round(q.tauxMax*100)+'%</div>'
+          + '<div class="tva-risque-l">de perte de clientèle plausible sur cette part</div>'
+        + '</div>'
+        + '<div class="vl-line" style="margin-top:12px"><span>Chiffre d’affaires exposé</span>'
+          + '<span>'+fmtEur(q.caExpose)+'</span></div>'
+        + '<div class="vl-line"><span>Perte estimée</span>'
+          + '<span style="color:'+STATUT.rouge.color+'">−'+fmtEur(q.perteMin)+' à '+fmtEur(q.perteMax)+'</span></div>'
+        + '<div class="field-eg">Estimation indicative bâtie sur ta répartition clientèle, pas une '
+          + 'prédiction : tout dépend de ton positionnement et de la valeur perçue. '
+          + 'Non déduite du gain — l’impact réel dépend de ta marge.</div>'
+        + '</div>'
+      : '<div class="card"><div class="card-title">Le risque côté clients</div>'
+        + '<div class="tva-risque-t" style="color:'+STATUT.vert.color+'">Quasi nul 👌</div>'
+        + '<div class="field-eg" style="margin-top:6px">Tous tes clients récupèrent la TVA : '
+          + 'la leur facturer ne change presque rien pour eux.</div></div>';
 
     // --- Les trois scénarios ---
     var s = r.scenarios;
     var ligneScenario = function(label, sc, actif){
       var v = sc.gain;
       return '<tr'+(actif?' style="background:var(--soft)"':'')+'>'
-        + '<td><strong>'+esc(label)+'</strong>'+(actif?' <span class="field-eg">— ton choix</span>':'')+'</td>'
+        + '<td><strong>'+esc(label)+'</strong>'+(actif?' <span class="field-eg">— hypothèse retenue</span>':'')+'</td>'
         + '<td>'+fmtEur(sc.caHT)+'</td>'
         + '<td>'+fmtEur(sc.absorbee)+'</td>'
         + '<td style="color:'+(v>=0?STATUT.vert.color:STATUT.rouge.color)+';font-weight:800">'
@@ -3716,22 +3809,16 @@
     // Si la stratégie choisie ne correspond à aucun des trois scénarios types
     // (répercussion partielle), on l'ajoute comme ligne à part pour éviter
     // d'afficher un « ton choix » qui contredirait le résultat principal.
-    var strategieSurMesure = (r.strategie === 'adapter' && r.rSensible > 0 && r.rSensible < 1);
     var carteScenarios = '<div class="card"><div class="card-title">Et si tu changeais de stratégie ?</div>'
       + '<div class="recap-scroll"><table class="recap-t" style="min-width:0"><thead><tr>'
         + '<th>Scénario</th><th>CA HT</th><th>TVA absorbée</th><th>Gain / perte</th></tr></thead><tbody>'
-        + ligneScenario('TVA ajoutée à tous les prix', s.ajoutee, r.strategie === 'ajouter')
-        + ligneScenario('Prix TTC conservés partout', s.conservee, r.strategie === 'conserver')
-        + ligneScenario('TVA ajoutée aux pros seulement', s.mixte,
-                        r.strategie === 'adapter' && r.rSensible === 0)
-        + (strategieSurMesure
-            ? ligneScenario('Ta stratégie — ' + Math.round(r.rSensible*100) + ' % répercuté aux autres clients',
-                            r.principal, true)
-            : '')
+        + ligneScenario('TVA ajoutée à tous les prix', s.ajoutee, true)
+        + ligneScenario('Prix TTC conservés partout', s.conservee, false)
+        + ligneScenario('TVA ajoutée aux clients qui la récupèrent seulement', s.mixte, false)
       + '</tbody></table></div></div>';
 
     // --- Graphique gains / coûts ---
-    var maxi = Math.max(r.tvaRecuperable, r.principal.absorbee, r.coutsAdmin, Math.abs(g), 1);
+    var maxi = Math.max(r.tvaRecuperable, r.principal.absorbee, Math.abs(g), 1);
     var barre = function(label, val, color){
       return '<div class="cmp-row"><div class="cmp-label">'+esc(label)+'</div>'
         + '<div class="cmp-track"><div class="cmp-bar" style="width:'+(Math.abs(val)/maxi*100)+'%;background:'+color+'"></div></div>'
@@ -3740,7 +3827,6 @@
     var carteGraph = '<div class="card"><div class="card-title">Ce qui compose le résultat</div>'
       + barre('TVA récupérable', r.tvaRecuperable, STATUT.vert.bg)
       + barre('TVA absorbée', r.principal.absorbee, STATUT.rouge.bg)
-      + barre('Coûts administratifs', r.coutsAdmin, '#94a3b8')
       + '</div>';
 
     // --- Points de vigilance ---
@@ -3749,8 +3835,7 @@
       vigilance.push('Certaines dépenses relèvent de catégories dont la TVA est souvent limitée ou exclue : vérifie ton droit à déduction.');
     if(r.parts.sensible > 0.5)
       vigilance.push('Plus de la moitié de ta clientèle supporterait la TVA comme un coût : ta capacité à ajuster tes prix est déterminante.');
-    if(r.strategie === 'conserver')
-      vigilance.push('En conservant tes prix TTC, tu absorbes la TVA : ton chiffre d’affaires hors taxes diminue mécaniquement.');
+    vigilance.push('Le calcul suppose que tu ajoutes la TVA à tes prix. Si tu gardes tes prix TTC actuels, tu absorbes la TVA et ton revenu hors taxes baisse (voir le tableau des scénarios).');
     vigilance.push('Le passage à la TVA ajoute des obligations déclaratives et un suivi de trésorerie (la TVA encaissée ne t’appartient pas).');
     vigilance.push('Les seuils de franchise en base ne sont pas vérifiés ici : au-delà, la TVA devient obligatoire et non plus optionnelle.');
     vigilance.push('Opérations internationales, autoliquidation, TVA sur marge et régularisations ne sont pas prises en compte.');
@@ -3771,6 +3856,7 @@
       + '</div>'
       + '<div class="vl-cards">' + carteClients + carteDepenses + '</div>'
       + '<div class="vl-cards">' + carteBilan + carteGraph + '</div>'
+      + '<div class="vl-cards">' + carteCouts + carteRisque + '</div>'
       + carteScenarios
       + '<div class="card tinted" style="margin-top:16px">'
         + '<div class="card-title">Points de vigilance</div>'
@@ -3786,20 +3872,207 @@
       + '</div>';
   }
 
+  // Carte d'une simulation enregistrée : date, verdict, accès au détail.
   function tvaHistItemHtml(sim, i){
     var d = new Date(sim.date);
     var jour = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
     var heure = d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
-    var col = { vert:STATUT.vert.bg, orange:STATUT.orange.bg, rouge:STATUT.rouge.bg, gris:STATUT.gris.bg }[sim.avis];
-    return '<div class="hist-item" data-action="tva-hist-view" data-i="'+i+'">'
-      + '<div style="flex:1;min-width:0">'
-        + '<div class="hist-date">'+esc(jour)+' · '+esc(heure)+'</div>'
-        + '<div class="hist-meta">CA '+fmtEur(sim.ca)+' · '
-          + (sim.gain >= 0 ? '+' : '−') + fmtEur(Math.abs(sim.gain)) + ' / an</div>'
-      + '</div>'
-      + '<span class="hist-dot" style="background:'+col+'"></span>'
-      + '<button class="icon-btn danger" data-action="tva-hist-delete" data-i="'+i+'" title="Supprimer">✕</button>'
+    var st = STATUT[sim.avis] || STATUT.gris;
+    var libelle = { vert:'Semble intéressant', orange:'Mérite réflexion',
+                    rouge:'Peu avantageux en l’état', gris:'Informations à compléter' }[sim.avis];
+    var g = sim.gain || 0;
+    return '<div class="tva-sim" style="--c:'+st.color+'">'
+      + '<button class="tva-sim-x" data-action="tva-hist-delete" data-i="'+i+'" title="Supprimer">✕</button>'
+      + '<div class="tva-sim-date">'+esc(jour)+' · '+esc(heure)+'</div>'
+      + '<div class="tva-sim-g" style="color:'+st.color+'">'
+        + (g >= 0 ? '+' : '−') + fmtEur(Math.abs(g)) + '<span> / an</span></div>'
+      + '<div class="tva-sim-l">'+esc(libelle || '')+'</div>'
+      + '<div class="tva-sim-meta">CA '+fmtEur(sim.ca)+'</div>'
+      + '<button class="tva-sim-btn" data-action="tva-hist-view" data-i="'+i+'">Voir le détail →</button>'
       + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parcours guidé du simulateur TVA
+  //
+  // Plutôt qu'un long formulaire, une pop-up centrée qui déroule les étapes.
+  // Presque tout vient du profil : on montre, on fait valider, on complète.
+  // Étapes : 0 = accueil (avec clin d'œil si déjà à la TVA) · 1 = récap profil
+  //          2 = charges reprises du profil · 3 = ajout libre · puis simulation.
+  // ---------------------------------------------------------------------------
+  function tvaOnbNav(precedent, suivant, labelSuivant){
+    return '<div class="tvo-nav">'
+      + (precedent ? '<button class="tvo-back" data-action="tvo-prev">← Retour</button>'
+                   : '<button class="tvo-back" data-action="tvo-quit">Quitter</button>')
+      + (suivant ? '<button class="tvo-next" data-action="tvo-next">'
+                   + esc(labelSuivant || 'Continuer') + ' →</button>' : '')
+      + '</div>';
+  }
+
+  function tvaOnbCorpsHtml(){
+    var p = state.profil;
+    var f = state.tva.form;
+    var e = state.tva.onb.etape;
+    var total = 4;
+
+    var points = '<div class="tvo-dots">' + [0,1,2,3].map(function(i){
+      return '<span class="'+(i <= e ? 'on' : '')+'"></span>';
+    }).join('') + '</div>';
+
+    // --- Étape 0 : accueil, avec clin d'œil si la personne est déjà à la TVA ---
+    if(e === 0){
+      if(estAssujettiTVA(p)){
+        return '<div class="tvo-emoji">✅</div>'
+          + '<div class="tvo-q">Tu es déjà à la TVA !</div>'
+          + '<div class="tvo-sub">Ce simulateur sert à décider s’il vaut le coup d’y passer… '
+            + 'et toi, c’est déjà fait. Tu peux quand même jeter un œil pour vérifier que '
+            + 'l’opération est rentable dans ton cas.</div>'
+          + '<div class="tvo-actions">'
+            + '<button class="tvo-next" data-action="tvo-next">Continuer quand même →</button>'
+            + '<button class="tvo-ghost" data-action="tvo-quit-sims">Retour aux simulateurs</button>'
+          + '</div>';
+      }
+      return '<div class="tvo-emoji">🧮</div>'
+        + '<div class="tvo-q">Faut-il passer à la TVA ?</div>'
+        + '<div class="tvo-sub">Quatre écrans, presque tout est déjà dans ton profil. '
+          + 'On regarde ce que tu récupérerais sur tes achats, ce que ça coûterait à gérer, '
+          + 'et le risque côté clients.</div>'
+        + '<div class="tvo-actions">'
+          + '<button class="tvo-next" data-action="tvo-next">C’est parti →</button>'
+        + '</div>'
+        + '<button class="tvo-skip" data-action="tvo-quit-sims">Retour aux simulateurs</button>';
+    }
+
+    // --- Étape 1 : ce que dit le profil ---
+    if(e === 1){
+      var caAn = (parseFloat(f.ca) || 0) * (f.caMensuel ? 12 : 1);
+      var ligne = function(label, valeur){
+        return '<div class="tvo-rec"><span>'+esc(label)+'</span><b>'+valeur+'</b></div>';
+      };
+      var nbCharges = (p.charges || []).length;
+      return points
+        + '<div class="tvo-q">D’après ton profil</div>'
+        + '<div class="tvo-sub">Voici les informations de ton activité. Si tout est bon, on continue.</div>'
+        + '<div class="tvo-recap">'
+          + ligne('Chiffre d’affaires', fmtEur(caAn) + ' / an')
+          + ligne('Taux de TVA', fmtPct(parseFloat(f.tauxVente) || 0))
+          + ligne('Clients qui récupèrent la TVA', Math.round(parseFloat(f.partRecup) || 0) + '%')
+          + ligne('Clients qui ne la récupèrent pas', Math.round(parseFloat(f.partProNon) || 0) + '%')
+          + ligne('Charges enregistrées', nbCharges + (nbCharges > 1 ? ' charges' : ' charge'))
+        + '</div>'
+        + '<button class="tvo-lien" data-action="tvo-profil">Modifier mes informations</button>'
+        + tvaOnbNav(true, true);
+    }
+
+    // --- Étape 2 : les charges reprises du profil ---
+    if(e === 2){
+      var reprises = state.tva.depenses.filter(function(d){
+        return (d.nom || '').trim() && (parseFloat(d.montant) || 0) > 0;
+      });
+      var liste = reprises.length
+        ? '<div class="tvo-charges">' + reprises.map(function(d){
+            return '<div class="tvo-ch"><span class="tvo-ch-n">'+esc(d.nom)+'</span>'
+              + '<span class="tvo-ch-m">'+fmtEur(parseFloat(d.montant) || 0)
+              + (d.frequence === 'mensuelle' ? ' / mois' : d.frequence === 'annuelle' ? ' / an' : '')
+              + '</span><span class="tvo-ch-t">'+fmtPct(parseFloat(d.taux) || 0)+'</span></div>';
+          }).join('') + '</div>'
+        : '<div class="tvo-vide">Aucune charge dans ton profil pour l’instant. '
+          + 'Tu pourras en ajouter à l’écran suivant.</div>';
+      return points
+        + '<div class="tvo-q">Tes charges actuelles</div>'
+        + '<div class="tvo-sub">Reprises de ton profil. C’est sur elles qu’on calcule la TVA '
+          + 'que tu pourrais récupérer.</div>'
+        + liste
+        + '<button class="tvo-lien" data-action="tvo-profil">Les modifier dans mon profil</button>'
+        + tvaOnbNav(true, true, reprises.length ? 'Je valide' : 'Continuer');
+    }
+
+    // --- Étape 3 : ajout libre, volontairement minimal ---
+    var cartes = state.tva.depenses.map(tvoDepCarteHtml).join('');
+    return points
+      + '<div class="tvo-q">Autre chose à ajouter ?</div>'
+      + '<div class="tvo-sub">Facultatif. Ajoute les dépenses sur lesquelles tu paies de la TVA '
+        + 'et qui ne sont pas encore listées.</div>'
+      + '<div class="tvo-deps">' + cartes
+        + '<button class="tvo-add" data-action="tvo-dep-add">＋ Ajouter une dépense</button>'
+      + '</div>'
+      + tvaOnbNav(true, true, 'Lancer la simulation');
+  }
+
+  // Carte de saisie ultra-simple : nom, période, montant, taux — rien d'autre.
+  function tvoDepCarteHtml(d, i){
+    var seg = function(champ, valeur, options){
+      return '<div class="tvo-seg">' + options.map(function(o){
+        return '<button class="tvo-seg-b'+(String(d[champ]) === String(o.v) ? ' on' : '')+'" '
+          + 'data-action="tvo-dep-set" data-i="'+i+'" data-champ="'+champ+'" data-v="'+esc(o.v)+'">'
+          + esc(o.l)+'</button>';
+      }).join('') + '</div>';
+    };
+    var multi = state.tva.depenses.length > 1;
+    return '<div class="tvo-dep">'
+      + '<div class="tvo-dep-h">'
+        + '<input class="tvo-dep-n" data-tvadep-field="nom" data-i="'+i+'" value="'+esc(d.nom || '')
+          + '" placeholder="Nom de la dépense">'
+        + (multi ? '<button class="tvo-dep-x" data-action="tvo-dep-remove" data-i="'+i+'" '
+                   + 'title="Supprimer">✕</button>' : '')
+      + '</div>'
+      + seg('frequence', d.frequence, [{v:'mensuelle',l:'Par mois'},{v:'annuelle',l:'Par an'}])
+      + '<div class="tvo-dep-m"><input data-tvadep-field="montant" data-i="'+i+'" type="number" '
+        + 'min="0" step="any" value="'+esc(d.montant || '')+'" placeholder="0"><span>€ TTC</span></div>'
+      + '<div class="tvo-dep-l">Taux de TVA sur cette dépense</div>'
+      + seg('taux', d.taux, [{v:'0.021',l:'2,1%'},{v:'0.055',l:'5,5%'},
+                             {v:'0.1',l:'10%'},{v:'0.2',l:'20%'}])
+      + '</div>';
+  }
+
+  function tvaOnbHtml(){
+    if(!(state.tva.onb.actif && state.sim.open === 'tva')) return '';
+    return '<div class="tvo-overlay"><div class="tvo-card">'+tvaOnbCorpsHtml()+'</div></div>';
+  }
+
+  // Mise à jour ciblée : la carte seule est reconstruite, jamais l'overlay —
+  // sinon l'animation d'apparition se rejouerait à chaque clic.
+  function majTvaOnb(){
+    var root = document.getElementById('tvo-root');
+    if(!root) return;
+    if(!(state.tva.onb.actif && state.sim.open === 'tva')){ root.innerHTML = ''; return; }
+    var card = root.querySelector('.tvo-card');
+    if(!card){
+      root.innerHTML = '<div class="tvo-overlay"><div class="tvo-card"></div></div>';
+      card = root.querySelector('.tvo-card');
+    }
+    card.innerHTML = tvaOnbCorpsHtml();
+  }
+
+  // Fin du parcours : on calcule, on enregistre, et on revient sur la page du
+  // simulateur où la simulation apparaît sous forme de carte datée.
+  function lancerSimulationTVA(){
+    var tf = state.tva.form;
+    var somme = (parseFloat(tf.partRecup) || 0) + (parseFloat(tf.partProNon) || 0);
+    if(!(parseFloat(tf.ca) > 0)){
+      state.tva.onb.actif = false;
+      state.tva.formError = 'Indique ton chiffre d’affaires dans ton profil.';
+      render(); return;
+    }
+    if(Math.round(somme) !== 100){
+      state.tva.onb.actif = false;
+      state.tva.formError = 'La répartition de ta clientèle doit être égale à 100% (actuellement '
+        + Math.round(somme) + '%). Corrige-la dans ton profil.';
+      render(); return;
+    }
+    marquerFait('sim:tva');
+    state.tva.formError = null;
+    var res = calculerTVA(tf, state.tva.depenses);
+    state.tva.result = res;
+    state.tva.onb.actif = false;
+    state.tva.step = 'form';          // on revient sur la liste des simulations
+    state.tva.historique.unshift({
+      date: Date.now(), ca: res.ca, gain: res.principal.gain, avis: res.avis,
+      form: Object.assign({}, tf),
+      depenses: state.tva.depenses.map(function(d){ return Object.assign({}, d); }),
+    });
+    saveHistTVA(state.tva.historique);
+    render();
   }
 
   function tvaHtml(){
@@ -4318,8 +4591,7 @@
       { k:'tva', l:'Situation TVA', ok:function(p){ return p.tva && !/je ne sais pas/i.test(p.tva); } },
       { k:'tauxVente', l:'Taux de TVA' },
       { k:'clientele', l:'Répartition clientèle', ok:function(p){
-          var t = (parseFloat(p.clientRecup)||0) + (parseFloat(p.clientProNon)||0)
-                + (parseFloat(p.clientParticuliers)||0);
+          var t = (parseFloat(p.clientRecup)||0) + (parseFloat(p.clientProNon)||0);
           return Math.round(t) === 100; } },
     ],
     foyer: [
@@ -4534,7 +4806,7 @@
   }
   // Evite les 2,1999999999999997 % dus a l'arithmetique flottante.
   function fmtPct(taux){
-    return String(Math.round(taux * 10000) / 100).replace('.', ',') + ' %';
+    return String(Math.round(taux * 10000) / 100).replace('.', ',') + '%';
   }
 
   // ---------- Étape 1 : accueil ----------
@@ -6153,7 +6425,8 @@
       + '</main>'
       + '</div>'
       + '<div id="modal-root"></div>'
-      + '<div id="onb-root"></div>';
+      + '<div id="onb-root"></div>'
+      + '<div id="tvo-root"></div>';
   }
 
   // Si assets/freehub-logo.png est absent, on bascule sur le wordmark CSS.
@@ -6248,6 +6521,7 @@
     // L'onboarding vit dans son propre root persistant : on ne remplace que le
     // contenu de sa carte, sans recréer l'overlay ni rejouer son animation.
     majOnboarding();
+    majTvaOnb();
   }
 
   // ---------------------------------------------------------------------------
@@ -6578,7 +6852,58 @@
         // Statut et cockpit produisent un résultat dès l'ouverture (temps réel).
         if(quel === 'statut' || quel === 'optim') marquerFait('sim:'+quel);
         if(quel === 'depenses') marquerFait('sim:depenses');
+        // Le simulateur TVA s'ouvre directement sur son parcours guidé.
+        if(quel === 'tva'){ state.tva.onb = { actif:true, etape:0 }; }
         render();
+        break;
+      }
+      // ----- Parcours guidé du simulateur TVA -----
+      case 'tva-onb-start':
+        state.tva.onb = { actif:true, etape:0 };
+        appliquerProfil();
+        render();
+        break;
+      case 'tvo-next': {
+        var o = state.tva.onb;
+        if(o.etape >= 3){ lancerSimulationTVA(); break; }
+        o.etape += 1;
+        majTvaOnb();
+        break;
+      }
+      case 'tvo-prev':
+        state.tva.onb.etape = Math.max(0, state.tva.onb.etape - 1);
+        majTvaOnb();
+        break;
+      case 'tvo-quit':
+        state.tva.onb.actif = false;
+        render();
+        break;
+      case 'tvo-quit-sims':
+        state.tva.onb.actif = false;
+        state.sim.open = null;
+        render();
+        break;
+      case 'tvo-profil':
+        // On quitte le parcours pour aller corriger le profil, sans rien perdre.
+        state.tva.onb.actif = false;
+        setState({ tab:'profil', profilReturn:'simulateur' });
+        break;
+      case 'tvo-dep-add':
+        state.tva.depenses.push({ nom:'', montant:'', frequence:'mensuelle',
+                                  taux:'0.2', recup:'100', categorie:'' });
+        majTvaOnb();
+        break;
+      case 'tvo-dep-remove':
+        state.tva.depenses.splice(parseInt(el.getAttribute('data-i'), 10), 1);
+        if(!state.tva.depenses.length)
+          state.tva.depenses = [{ nom:'', montant:'', frequence:'mensuelle',
+                                  taux:'0.2', recup:'100', categorie:'' }];
+        majTvaOnb();
+        break;
+      case 'tvo-dep-set': {
+        var dep = state.tva.depenses[parseInt(el.getAttribute('data-i'), 10)];
+        if(dep) dep[el.getAttribute('data-champ')] = el.getAttribute('data-v');
+        majTvaOnb();
         break;
       }
       // ----- Guide des dépenses pro -----
@@ -6915,35 +7240,9 @@
           state.tva.depenses = [{ nom:'', montant:'', frequence:'mensuelle', taux:'0.2', recup:'100', categorie:'' }];
         render();
         break;
-      case 'tva-compute': {
-        var tf = state.tva.form;
-        var somme = (parseFloat(tf.partRecup)||0) + (parseFloat(tf.partProNon)||0)
-                  + (parseFloat(tf.partParticuliers)||0);
-        if(!(parseFloat(tf.ca) > 0)){
-          state.tva.formError = 'Indique ton chiffre d’affaires.'; render(); break;
-        }
-        if(Math.round(somme) !== 100){
-          state.tva.formError = 'La répartition de ta clientèle doit être égale à 100 % (actuellement '
-            + Math.round(somme) + ' %).';
-          render(); break;
-        }
-        if(!tf.strategie){
-          state.tva.formError = 'Choisis ce que tu ferais de tes prix.'; render(); break;
-        }
-        marquerFait('sim:tva');
-        state.tva.formError = null;
-        var res = calculerTVA(tf, state.tva.depenses);
-        state.tva.result = res;
-        state.tva.step = 'result';
-        state.tva.historique.unshift({
-          date: Date.now(), ca: res.ca, gain: res.principal.gain, avis: res.avis,
-          form: Object.assign({}, tf),
-          depenses: state.tva.depenses.map(function(d){ return Object.assign({}, d); }),
-        });
-        saveHistTVA(state.tva.historique);
-        render();
+      case 'tva-compute':
+        lancerSimulationTVA();
         break;
-      }
       case 'tva-back':
         state.tva.step = 'form';
         render();
@@ -7241,7 +7540,7 @@
       var n2 = tv.getAttribute('data-tva-field');
       state.tva.form[n2] = tv.value;
       // Ces champs modifient l'affichage (encarts, champs conditionnels, total).
-      if(['franchise','exoneree','strategie','partRecup','partProNon','partParticuliers'].indexOf(n2) !== -1) render();
+      if(['franchise','exoneree','partRecup','partProNon'].indexOf(n2) !== -1) render();
       return;
     }
     // Champs d'une dépense du simulateur TVA.
