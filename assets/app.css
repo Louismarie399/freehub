@@ -1020,12 +1020,12 @@
   .dg-intro-t{font-size:18px;font-weight:800;letter-spacing:-.015em}
   .dg-intro-s{font-size:13px;color:rgba(255,255,255,.75);font-weight:500;margin-top:6px;
     line-height:1.5;max-width:560px}
-  .dg-legende{flex:none;width:190px}
-  .dg-leg-track{height:9px;border-radius:100px;
-    background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e)}
-  .dg-leg-labels{display:flex;justify-content:space-between;margin-top:6px;
-    font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-    color:rgba(255,255,255,.65)}
+  .dg-legende{flex:none;width:290px}
+  .dg-leg-track{height:10px;border-radius:100px;
+    background:linear-gradient(90deg,#c81e1e,#ef4444,#f97316,#f59e0b,#eab308,#84cc16,#22c55e,#16a34a)}
+  .dg-leg-labels{display:flex;justify-content:space-between;margin-top:7px;
+    font-size:8.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;
+    color:rgba(255,255,255,.62);gap:4px}
 
   .dg-micro{background:#fdf6e7;border:1.5px solid #ecd9a8;border-radius:14px;
     padding:16px 20px;margin-bottom:16px}
@@ -1080,14 +1080,14 @@
   .dg-dans{align-self:flex-start;font-size:10px;font-weight:800;color:#0f7040;
     background:#e6f6ee;border-radius:100px;padding:2px 9px}
 
-  /* Jauge de facilité */
+  /* Jauge de facilité — segments fins, dégradé continu (non binaire) */
   .dj{margin-top:2px}
-  .dj-track{height:7px;border-radius:100px;background:#edf0f6;overflow:hidden}
-  .dj-fill{display:block;height:100%;border-radius:100px}
-  .dj-fill.vert{background:linear-gradient(90deg,#7ddaa5,#22c55e)}
-  .dj-fill.orange{background:linear-gradient(90deg,#f8cd7c,#f59e0b)}
-  .dj-fill.rouge{background:linear-gradient(90deg,#f49d9d,#ef4444)}
-  .dj-l{font-size:10.5px;font-weight:700;margin-top:5px}
+  .dj-seg{display:flex;align-items:flex-end;gap:2px;height:14px}
+  .dj-seg i{flex:1;height:100%;border-radius:1.5px;transition:background .2s}
+  .dj.grand .dj-seg{height:20px;gap:2.5px}
+  .dj.grand .dj-seg i{border-radius:2px}
+  .dj-l{font-size:10.5px;font-weight:800;margin-top:6px;letter-spacing:.01em}
+  .dj.grand .dj-l{font-size:13px;margin-top:9px}
 
   .dg-disclaimer{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.6;
     font-weight:500;max-width:760px}
@@ -1106,17 +1106,60 @@
     background:#fff;font-size:17px;color:#c3cddd;cursor:pointer;transition:color .15s}
   .dgf-fav:hover{color:var(--ink)}
   .dgf-fav.on{color:#f0a020}
-  .dgf-jauge .dj-track{height:10px}
-  .dgf-jauge .dj-l{font-size:12px}
-  .dgf-verdict{font-size:14.5px;font-weight:800;line-height:1.35;margin-top:13px}
-  .dgf-detail{font-size:13.5px;color:var(--muted2);font-weight:500;line-height:1.6;margin:9px 0 0}
+  .dgf-body{padding-top:26px;padding-bottom:26px}
+  .dgf-jauge{padding:16px 18px;background:#f8fafd;border-radius:13px}
+  .dgf-verdict{font-size:15px;font-weight:800;line-height:1.4;margin-top:22px}
+  .dgf-detail{font-size:13.5px;color:var(--muted2);font-weight:500;line-height:1.65;margin:11px 0 0}
   .dgf-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
-    color:var(--muted);margin:17px 0 9px}
-  .dgf-vigi{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-  .dgf-vigi li{display:flex;gap:10px;align-items:flex-start;font-size:13px;font-weight:600;
-    color:var(--ink);line-height:1.45}
+    color:var(--muted);margin:26px 0 12px}
+  .dgf-vigi{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+  .dgf-vigi li{display:flex;gap:11px;align-items:flex-start;font-size:13px;font-weight:600;
+    color:var(--ink);line-height:1.5}
   .dgf-tiret{width:7px;height:7px;border-radius:50%;flex:none;margin-top:6px}
-  .dgf-lien{display:inline-block;margin-top:15px;font-size:12.5px;font-weight:700}
+  .dgf-lien{display:inline-block;margin-top:20px;font-size:12.5px;font-weight:700}
+
+  /* Formulaire d'ajout aux charges, dans la fiche */
+  .dga{margin-top:24px;padding-top:22px;border-top:1px solid var(--border)}
+  .dga-t{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:14px}
+  .dga-l{display:block;font-size:11.5px;font-weight:800;color:var(--muted2);margin:14px 0 6px}
+  .dga-l:first-of-type{margin-top:0}
+  .dga-in,.dga-m input{width:100%;padding:10px 13px;border:1.5px solid #dfe5ee;border-radius:10px;
+    font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);outline:none}
+  .dga-in:focus,.dga-m input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,107,255,.14)}
+  .dga-aide{font-size:11px;color:var(--muted);font-weight:500;margin-top:6px;line-height:1.45}
+  .dga-seg{display:flex;gap:8px}
+  .dga-seg-b{flex:1;padding:10px;border:1.5px solid #e3e8f1;border-radius:10px;background:#fff;
+    font-family:inherit;font-size:13px;font-weight:700;color:var(--muted2);cursor:pointer;
+    transition:all .15s}
+  .dga-seg-b:hover{border-color:#b9c6dc}
+  .dga-seg-b.on{background:var(--blue);border-color:var(--blue);color:#fff}
+  .dga-m{position:relative}
+  .dga-m input{padding-right:38px}
+  .dga-m span{position:absolute;right:13px;top:50%;transform:translateY(-50%);
+    font-size:13px;font-weight:700;color:var(--muted)}
+  .dga-err{margin-top:10px;font-size:12.5px;font-weight:600;color:#b91c1c;background:#fef2f2;
+    border-radius:9px;padding:9px 12px}
+  .dga-btns{display:flex;gap:10px;margin-top:18px}
+  .dga-ok{text-align:center}
+  .dga-ok-t{font-size:15px;font-weight:800;color:#0f7040}
+  .dga-ok-s{font-size:12.5px;color:var(--muted2);font-weight:500;line-height:1.5;margin-top:5px}
+
+  /* Suggestions du parcours d'accueil du guide */
+  .dgo-sugg{display:flex;flex-direction:column;gap:9px;margin-top:18px;text-align:left}
+  .dgo-sg{display:flex;align-items:center;gap:12px;width:100%;background:#fff;cursor:pointer;
+    border:1.5px solid #e3e8f1;border-radius:13px;padding:12px 14px;font-family:inherit;
+    transition:all .15s}
+  .dgo-sg:hover{border-color:var(--c);transform:translateY(-2px);
+    box-shadow:0 14px 26px -20px rgba(15,27,51,.5)}
+  .dgo-sg-e{font-size:21px;flex:none}
+  .dgo-sg-txt{flex:1;min-width:0;text-align:left}
+  .dgo-sg-n{display:block;font-size:13px;font-weight:800;color:var(--ink)}
+  .dgo-sg-r{display:block;font-size:11.5px;color:var(--muted2);font-weight:500;line-height:1.4;
+    margin-top:2px}
+  .dgo-sg-fl{color:var(--c);font-weight:800;flex:none}
+
+  /* Pied du guide : mention + partenaire */
+  .dg-fin{margin-top:26px;padding-top:22px;border-top:1px solid var(--border)}
   .dgf-foot{display:flex;gap:10px;flex-wrap:wrap}
   .dgf-btn{flex:1;min-width:170px;padding:11px 16px;border:none;border-radius:11px;cursor:pointer;
     font-family:inherit;font-size:13px;font-weight:700;color:#fff;background:var(--blue);
