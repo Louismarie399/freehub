@@ -1878,7 +1878,7 @@
       scenarios: loadScenarios(),
       onb: { actif:false, etape:0 },
       essai: false,   // profil en micro : on teste le cockpit sans rien écrire
-      lance: false,            // false = écran de lancement, true = tableau de bord
+      outil: null,             // 'profil' | 'charges' | 'tableau' : modale d'outil ouverte
       importInfo: null,        // message après un import
     },
     // Simulateur « Quand passer en société ? » — recalcul en temps réel
@@ -1893,7 +1893,7 @@
       projection: null,        // CA du curseur (null = CA réel saisi)
       onb: { actif:false, etape:0 },
       essai: false,            // profil déjà en société : on teste sans rien écrire
-      lance: false,            // false = écran de lancement, true = tableau de bord
+      outil: null,             // 'profil' | 'charges' | 'tableau' : modale d'outil ouverte
     },
     // Simulateur de passage à la TVA (calcul déterministe, sans IA)
     tva: {
@@ -2966,9 +2966,8 @@
         + '</div>';
     }).join('');
 
-    return '<div class="card statut-form">'
-      + profilBandeHtml(['forme','ca','tva','parts','remuneration','tresorerie','cfe','charges'])
-      + '<div class="card-title">Propre à cette simulation</div>'
+    return '<div class="card optim-reglages">'
+      + '<div class="card-title">Tes réglages</div>'
       + '<div class="seg-group" style="width:100%;margin-bottom:16px">'
         + '<button class="seg'+(o.statut==='eurl'?' on':'')+'" data-action="optim-statut" data-s="eurl" style="flex:1">EURL</button>'
         + '<button class="seg'+(o.statut==='sasu'?' on':'')+'" data-action="optim-statut" data-s="sasu" style="flex:1">SASU</button>'
@@ -2977,17 +2976,13 @@
       + '<div class="field"><label>Dividendes distribués : <strong>'+esc(f.dividendes)+' %</strong> du distribuable</label>'
         + '<input data-optim-range="dividendes" type="range" min="0" max="100" step="5" value="'+esc(f.dividendes)+'"></div>'
 
-      + '<div class="card-title" style="margin-top:24px">Tes charges</div>'
-      + '<div class="field-eg" style="margin-bottom:10px">Reprises de ton profil — ajustables ici pour tester.</div>'
       + (importables > 0
           ? '<button class="btn-import" data-action="optim-import">↓ Reprendre la déductibilité analysée '
             + 'sur '+importables+' dépense'+(importables>1?'s':'')+'</button>'
           : '')
       + (o.importInfo ? '<div class="import-info">'+esc(o.importInfo)+'</div>' : '')
-      + '<div class="ocharges">'+chargesHtml+'</div>'
-      + '<button class="btn-link" data-action="ocharge-add">+ Ajouter une charge</button>'
 
-      + '<div class="card-title" style="margin-top:24px">Leviers d’optimisation</div>'
+      + '<div class="card-title" style="margin-top:22px">Leviers d’optimisation</div>'
       + '<div class="field-eg" style="margin-bottom:10px">Chacun est une charge déductible pour la société. '
         + 'Les plafonds d’exonération propres à chaque dispositif ne sont pas vérifiés ici.</div>'
       + '<div class="leviers">'+leviersHtml+'</div>'
@@ -3084,26 +3079,6 @@
           + 'société à tes côtés, avec une équipe qui parle ton langage.');
   }
 
-  // Écran de lancement du cockpit, dans le jaune de sa carte.
-  function optimLancerHtml(){
-    var sc = state.optim.scenarios || [];
-    var liste = sc.length
-      ? '<div class="tva-sims-t">'+(sc.length > 1 ? 'Mes scénarios' : 'Mon scénario')+'</div>'
-        + '<div class="tva-sims">' + sc.map(scenCarteHtml).join('') + '</div>'
-      : '';
-    return '<div class="sim-wrap">'
-      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
-      + '<div class="sim-lancer optim">'
-        + '<div class="sim-lancer-e">🎛️</div>'
-        + '<div class="sim-lancer-t">Optimiser ta société</div>'
-        + '<div class="sim-lancer-s">Rémunération, dividendes, trésorerie, leviers : on regarde ce '
-          + 'que tu te verses vraiment et comment en garder davantage</div>'
-        + '<button class="btn-primary" data-action="optim-onb-start">Ouvrir le cockpit</button>'
-      + '</div>'
-      + liste
-      + '</div>';
-  }
-
   // Carte d'un scénario enregistré, sur l'écran de lancement.
   function scenCarteHtml(sc, i){
     var d = new Date(sc.date);
@@ -3119,7 +3094,6 @@
   }
 
   function optimHtml(){
-    if(!state.optim.lance) return optimLancerHtml();
     var ca = caOptimReel();
     var maxCurseur = Math.max(250000, Math.round(ca * 2 / 10000) * 10000);
     var proj = state.optim.projection;
@@ -3127,8 +3101,13 @@
     // chose : avant, il n'y a rien à mémoriser.
     var modifie = proj !== null || Object.keys(state.optim.leviers || {}).some(function(k){
       return (parseFloat(state.optim.leviers[k]) || 0) > 0; });
+    var avis = estMicro(state.profil)
+      ? '<div class="sim-avis">🎛️ Rémunération, dividendes et trésorerie n’existent pas en '
+        + 'auto-entreprise. Tu peux explorer ce cockpit pour voir à quoi ressemble le pilotage '
+        + 'd’une société</div>' : '';
     return '<div class="sim-wrap">'
       + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
+      + avis
       + '<div class="statut-bar">'
         + '<div class="proj" style="max-width:520px">'
           + '<div class="proj-l">Projection du chiffre d’affaires'
@@ -3142,10 +3121,9 @@
             ? '<button class="btn-primary" data-action="scen-save">Enregistrer ce scénario</button>'
             : '<div class="scen-hint">Bouge un levier ou le curseur pour comparer des scénarios</div>')
       + '</div>'
-      + '<div class="statut-layout">'
-        + optimFormHtml()
-        + '<div id="optim-results">' + optimResultsHtml() + '</div>'
-      + '</div>'
+      + simOutilsHtml('optim', BESOINS_SIM.optim)
+      + '<div id="optim-results">' + optimResultsHtml() + '</div>'
+      + optimFormHtml()
       + '<div class="final-note">Estimation indicative fondée sur les informations renseignées et sur des '
         + 'paramètres sociaux et fiscaux <strong>à valider</strong>. Elle ne constitue ni un conseil '
         + 'juridique, ni fiscal, ni comptable. Certaines optimisations dépendent de ta situation '
@@ -3158,20 +3136,6 @@
   function renderOptimResults(){
     var zone = document.getElementById('optim-results');
     if(zone) zone.innerHTML = optimResultsHtml();
-  }
-
-  // Écran de lancement du comparateur, dans l'orange de sa carte.
-  function statutLancerHtml(){
-    return '<div class="sim-wrap">'
-      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
-      + '<div class="sim-lancer societe">'
-        + '<div class="sim-lancer-e">🏛️</div>'
-        + '<div class="sim-lancer-t">Faut-il passer en société ?</div>'
-        + '<div class="sim-lancer-s">On compare ton auto-entreprise à une EURL et une SASU, et on '
-          + 'cherche le chiffre d’affaires à partir duquel la société te rapporte plus</div>'
-        + '<button class="btn-primary" data-action="statut-onb-start">Lancer la comparaison</button>'
-      + '</div>'
-      + '</div>';
   }
 
   // ===========================================================================
@@ -3439,9 +3403,7 @@
             return '<td'+(c?' style="color:'+c+';font-weight:800"':'')+'>'+fmtEur(valeurs[k])+'</td>';
           }).join('') + '</tr>';
     };
-    var tableau = '<details class="card pliable"><summary class="card-title">Comparaison détaillée'
-      + '<span class="pliable-i">▾</span></summary>'
-      + '<div class="recap-scroll"><table class="recap-t" style="min-width:0"><thead><tr><th>Élément</th>'
+    var tableau = '<div class="recap-scroll"><table class="recap-t" style="min-width:0"><thead><tr><th>Élément</th>'
       + cles.map(function(k){ return '<th>'+esc(STATUT_LABELS[k])+'</th>'; }).join('')
       + '</tr></thead><tbody>'
         + '<tr><td><strong>Chiffre d’affaires</strong></td>'
@@ -3462,7 +3424,8 @@
               }).join('');
             })()
         + '</tr>'
-      + '</tbody></table></div></details>';
+      + '</tbody></table></div>';
+    state.statut.tableauHtml = tableau;   // repris par la modale « Comparatif détaillé »
 
     // --- Analyse automatique ---
     var analyses = {
@@ -3481,75 +3444,25 @@
         + '<div class="res-line">'+esc(analyses[k])+'</div></div>';
     }).join('') + '</div>';
 
+    // Verdict d'abord, chiffres ensuite, recommandations tout à la fin.
     return '<div class="statut-verdict" style="border-left-color:'+recoCouleur+'">'
         + '<div class="vl-verdict-t" style="color:'+recoCouleur+'">'+esc(recoTitre)+'</div>'
         + '<div class="vl-verdict-s">'+esc(reco)+'</div>'
       + '</div>'
       + '<div class="stat-cards">'+cartes+'</div>'
       + camembertsHtml(r, cles, ca)
-      + bandeauMillesimeHtml('statut')
       + (basculesHtml ? '<div class="card"><div class="card-title">Points de bascule</div>'
           + '<div class="bascules">'+basculesHtml+'</div></div>' : '')
       + grapheEvolution()
-      + tableau
       + analyse
+      + bandeauMillesimeHtml('statut')
+      + '<div class="sim-reco-t">Pour aller plus loin</div>'
       + (meilleur !== 'micro'
           ? simPartenaireHtml(0, 'Une '+STATUT_LABELS[meilleur]+' semble t’avantager ? '
-              + 'LegalPlace crée ta société sans paperasse — statuts et immatriculation compris.')
-          : simPartenaireHtml(3, 'Avant de trancher, un avis d’expert peut valoir le coup. '
-              + 'Icon Invest fait le point avec toi, sans jargon.'));
-  }
-
-  function statutFormHtml(){
-    var f = state.statut.form;
-    var P = state.statut.params;
-    var ca = caReel();
-    var maxCurseur = Math.max(150000, Math.round(ca * 2 / 10000) * 10000);
-
-    var champ = function(nom, label, valeur, o){
-      o = o || {};
-      var inner;
-      if(o.options){
-        inner = '<select data-statut-field="'+nom+'">' + o.options.map(function(op){
-          return '<option value="'+esc(op.v)+'"'+(String(valeur)===String(op.v)?' selected':'')+'>'
-            + esc(op.l)+'</option>'; }).join('') + '</select>';
-      } else {
-        inner = '<input data-statut-field="'+nom+'" type="'+(o.type||'text')+'" value="'+esc(valeur||'')
-          + '" placeholder="'+esc(o.ph||'')+'"'+(o.type==='number'?' min="0" step="any"':'')+'>';
-      }
-      return '<div class="field"><label>'+esc(label)+'</label>'+inner
-        + (o.aide ? '<div class="field-eg">'+esc(o.aide)+'</div>' : '') + '</div>';
-    };
-
-    var chargesHtml = state.statut.charges.map(function(c, i){
-      return '<div class="charge-row">'
-        + '<input data-charge-field="nom" data-i="'+i+'" value="'+esc(c.nom||'')+'" placeholder="Nom de la charge">'
-        + '<input data-charge-field="montant" data-i="'+i+'" type="number" min="0" step="any" '
-          + 'value="'+esc(c.montant||'')+'" placeholder="0 €">'
-        + '<select data-charge-field="frequence" data-i="'+i+'">'
-          + '<option value="mensuelle"'+(c.frequence==='mensuelle'?' selected':'')+'>/ mois</option>'
-          + '<option value="annuelle"'+(c.frequence==='annuelle'?' selected':'')+'>/ an</option>'
-        + '</select>'
-        + '<button class="icon-btn danger" data-action="charge-remove" data-i="'+i+'" title="Supprimer">✕</button>'
-        + '</div>';
-    }).join('');
-
-    return '<div class="card statut-form">'
-      + profilBandeHtml(['categorieFiscale','ca','versementLiberatoire','parts','remuneration','cfe','charges'])
-      + '<div class="card-title">Propre à cette simulation</div>'
-      + champ('investissement', 'Investissement prévu cette année', f.investissement,
-              { type:'number', ph:'0 €', aide:'Matériel, véhicule… Déductible en société, pas en micro.' })
-
-      + '<div class="card-title" style="margin-top:24px">Tes charges professionnelles</div>'
-      + '<div class="field-eg" style="margin-bottom:10px">Reprises de ton profil — ajustables ici pour tester.</div>'
-      + '<div class="charges">'+chargesHtml+'</div>'
-      + '<button class="btn-link" data-action="charge-add">+ Ajouter une charge</button>'
-      + '<div class="charge-total">Total : <strong>'+fmtEur(totalCharges())+'</strong> par an</div>'
-
-      + '<button class="btn-link" data-action="statut-toggle-avance" style="margin-top:20px">'
-        + (state.statut.avance ? '− Masquer les paramètres fiscaux' : '⚙ Ajuster les paramètres fiscaux') + '</button>'
-      + (state.statut.avance ? statutParamsHtml() : '')
-      + '</div>';
+              + 'LegalPlace crée ta société sans paperasse, statuts et immatriculation compris')
+          : '')
+      + simPartenaireHtml(3, 'Avant de trancher, un avis d’expert peut valoir le coup. '
+          + 'Icon Invest fait le point avec toi, sans jargon');
   }
 
   function statutParamsHtml(){
@@ -3602,6 +3515,110 @@
       + '</div>';
   }
 
+  // Barre d'outils compacte : tout ce qui relève de la saisie est rangé dans
+  // des boutons, pour laisser la place aux chiffres.
+  function simOutilsHtml(cle, besoins){
+    var secs = sectionsProfil();
+    var manque = secs.filter(function(x){ return besoins.indexOf(x.id) >= 0 && !x.fiable; });
+    var champs = [];
+    manque.forEach(function(x){ champs = champs.concat(x.bloquants); });
+    var nbCharges = (cle === 'statut' ? state.statut.charges : state.optim.charges)
+                    .filter(function(c){ return c.nom && c.montant; }).length;
+    return '<div class="sim-outils">'
+      + '<button class="outil'+(champs.length ? ' alerte' : '')+'" data-action="'+cle+'-outil" data-o="profil">'
+        + '<span class="outil-i">🗂</span>Profil'
+        + (champs.length ? '<span class="outil-pastille" title="'+esc(champs.join(', '))+'">!</span>'
+                         : '<span class="outil-ok">✓</span>')
+      + '</button>'
+      + '<button class="outil" data-action="'+cle+'-outil" data-o="charges">'
+        + '<span class="outil-i">🧾</span>Charges<span class="outil-n">'+nbCharges+'</span></button>'
+      + (cle === 'statut'
+          ? '<button class="outil" data-action="statut-outil" data-o="tableau">'
+            + '<span class="outil-i">📊</span>Comparatif détaillé</button>'
+          : '')
+      + '</div>';
+  }
+
+  // Total des charges du cockpit, pour la modale d'outil.
+  function totalChargesOptim(){
+    return (state.optim.charges || []).reduce(function(a, c){
+      return a + annualiser(parseFloat(c.montant) || 0, c.frequence); }, 0);
+  }
+
+  // Modales d'outil : profil, charges, comparatif détaillé.
+  function simOutilModalHtml(){
+    var cle = state.statut.outil ? 'statut' : (state.optim.outil ? 'optim' : null);
+    if(!cle) return '';
+    var outil = state[cle].outil;
+    var titres = { profil:'Tes informations', charges:'Tes charges professionnelles',
+                   tableau:'Comparatif détaillé' };
+    var corps = '';
+
+    if(outil === 'profil'){
+      var besoins = BESOINS_SIM[cle] || [];
+      var manque = sectionsProfil().filter(function(x){ return besoins.indexOf(x.id) >= 0 && !x.fiable; });
+      var champs = [];
+      manque.forEach(function(x){ champs = champs.concat(x.bloquants); });
+      var lignes = cle === 'statut'
+        ? ['categorieFiscale','ca','versementLiberatoire','parts','remuneration','cfe']
+        : ['forme','ca','tva','parts','remuneration','tresorerie'];
+      corps = (champs.length
+          ? '<div class="outil-alerte">⚠ À compléter pour un résultat fiable : <strong>'
+            + champs.map(esc).join(', ') + '</strong></div>' : '')
+        + '<div class="pb-items">' + lignes.map(function(k){
+            return '<div class="pb-item"><span class="pb-k">'+esc(PROFIL_LIBELLES[k] || k)+'</span>'
+              + '<span class="pb-v">'+esc(valeurProfil(k))+'</span></div>'; }).join('') + '</div>'
+        + (cle === 'statut'
+            ? '<div class="outil-sep">Propre à cette simulation</div>'
+              + '<label class="tvo-lab">Investissement prévu cette année</label>'
+              + '<div class="tvo-champ"><input data-statut-field="investissement" type="number" min="0" '
+              + 'step="any" value="'+esc(state.statut.form.investissement || '')+'"><span>€</span></div>'
+              + '<div class="tvo-aide">Matériel, véhicule… Déductible en société, jamais en micro</div>'
+            : '')
+        + '<div class="dga-btns" style="margin-top:18px">'
+          + '<button class="dgf-btn sec" data-action="open-profil">Modifier mon profil →</button></div>';
+    }
+
+    if(outil === 'charges'){
+      var liste = cle === 'statut' ? state.statut.charges : state.optim.charges;
+      var cf = cle === 'statut' ? 'charge-field' : 'ocharge-field';
+      var rows = liste.map(function(c, i){
+        return '<div class="outil-charge-bloc">'
+          + '<div class="outil-charge">'
+            + '<input data-'+cf+'="nom" data-i="'+i+'" value="'+esc(c.nom||'')+'" placeholder="Nom de la charge">'
+            + '<div class="outil-charge-m"><input data-'+cf+'="montant" data-i="'+i+'" type="number" '
+              + 'min="0" step="any" value="'+esc(c.montant||'')+'" placeholder="0"><span>€</span></div>'
+            + '<button class="tvo-ch-f" data-action="sim-charge-freq" data-cle="'+cle+'" data-i="'+i+'">'
+              + (c.frequence === 'mensuelle' ? '/mois' : '/an')+'</button>'
+            + '<button class="tvo-ch-x" data-action="'+(cle === 'statut' ? 'charge-remove' : 'ocharge-remove')
+              + '" data-i="'+i+'" title="Retirer">✕</button>'
+          + '</div>'
+          + (c.nouvelle
+              ? '<label class="outil-garder"><input type="checkbox" data-sim-garder="'+i+'" '
+                + 'data-cle="'+cle+'"'+(c.dansProfil ? ' checked' : '')+'>'
+                + '<span>Enregistrer aussi dans mon profil</span></label>'
+              : '')
+          + '</div>';
+      }).join('');
+      corps = '<div class="tvo-aide" style="margin:0 0 14px">Reprises de ton profil. Tu peux les ajuster '
+          + 'ici pour tester : sans la case cochée, ton profil n’est pas modifié</div>'
+        + '<div class="outil-charges">'+rows+'</div>'
+        + '<button class="tvo-add" data-action="'+(cle === 'statut' ? 'charge-add' : 'ocharge-add')+'">'
+          + '＋ Ajouter une charge</button>'
+        + '<div class="outil-total">Total <strong>'
+          + fmtEur(cle === 'statut' ? totalCharges() : totalChargesOptim())+'</strong> par an</div>';
+    }
+
+    if(outil === 'tableau') corps = state.statut.tableauHtml || '';
+
+    return '<div class="overlay" data-action="sim-outil-close">'
+      + '<div class="modal" style="width:'+(outil === 'tableau' ? '780' : '540')+'px" data-action="stop">'
+        + '<div class="modal-head"><div class="modal-title">'+esc(titres[outil])+'</div></div>'
+        + '<div class="modal-body">'+corps+'</div>'
+        + '<div class="modal-foot"><button class="btn-primary" data-action="sim-outil-close">Fermer</button></div>'
+      + '</div></div>';
+  }
+
   function statutHtml(){
     var ca = caReel();
     var maxCurseur = Math.max(150000, Math.round(ca * 2 / 10000) * 10000);
@@ -3611,10 +3628,14 @@
       return '<button class="seg'+(mode===v?' on':'')+'" data-action="statut-mode" data-mode="'+v+'">'
         + esc(l)+'</button>';
     };
+    // Contrôle de cohérence, en bandeau discret plutôt qu'en pop-up bloquante.
+    var deja = estSociete(state.profil)
+      ? '<div class="sim-avis">🏛️ Tu es déjà en '+esc(state.profil.forme)+'. Ce comparateur sert '
+        + 'surtout à vérifier que ton statut reste le bon</div>' : '';
 
-    if(!state.statut.lance) return statutLancerHtml();
     return '<div class="sim-wrap">'
       + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
+      + deja
       + '<div class="statut-bar">'
         + '<div class="seg-group">'
           + bouton('eurl','Auto-entreprise vs EURL')
@@ -3623,27 +3644,15 @@
         + '</div>'
         + '<div class="proj">'
           + '<div class="proj-l">Projection du chiffre d’affaires'
-            + (proj !== null ? ' <button class="btn-link" data-action="statut-reset-proj">— revenir à '
+            + (proj !== null ? ' <button class="btn-link" data-action="statut-reset-proj">revenir à '
                 + fmtEur(ca) + '</button>' : '') + '</div>'
           + '<input type="range" data-statut-range min="10000" max="'+maxCurseur+'" step="1000" '
             + 'value="'+(proj !== null ? proj : ca)+'">'
           + '<div class="proj-v" id="proj-value">'+fmtEur(proj !== null ? proj : ca)+'</div>'
         + '</div>'
       + '</div>'
-      + '<div class="statut-layout">'
-        + statutFormHtml()
-        + '<div id="statut-results">' + statutResultsHtml() + '</div>'
-      + '</div>'
-      + '<details class="card tinted pliable" style="margin-top:16px">'
-        + '<summary class="card-title">Pour comprendre<span class="pliable-i">▾</span></summary>'
-        + '<ul class="res-list">'
-          + '<li><strong>Les charges déductibles changent tout</strong> : en auto-entreprise, ton abattement est forfaitaire, tes vraies dépenses ne réduisent jamais ton impôt.</li>'
-          + '<li><strong>L’IS devient intéressant</strong> quand ton taux marginal d’impôt sur le revenu dépasse le taux d’IS sur les bénéfices laissés dans la société.</li>'
-          + '<li><strong>La SASU coûte plus cher en cotisations</strong> mais ouvre une meilleure protection sociale ; l’EURL est souvent choisie pour l’inverse.</li>'
-          + '<li><strong>Les dividendes</strong> échappent aux cotisations sociales en SASU, mais subissent le PFU. L’arbitrage salaire / dividendes est déterminant.</li>'
-          + '<li><strong>Un investissement important</strong> est déductible en société et ne l’est pas en micro : il peut à lui seul faire basculer le résultat.</li>'
-        + '</ul>'
-      + '</details>'
+      + simOutilsHtml('statut', BESOINS_SIM.statut)
+      + '<div id="statut-results">' + statutResultsHtml() + '</div>'
       + '<div class="final-note">Estimation fondée sur les informations renseignées et sur des paramètres '
         + 'fiscaux <strong>à valider</strong>. Elle ne constitue ni un conseil juridique, ni fiscal, ni '
         + 'comptable. Le résultat réel dépend de ton foyer fiscal, de tes choix de rémunération, de ton '
@@ -3651,6 +3660,7 @@
         + 'statut, fais valider ton projet par un expert-comptable.</div>'
       + '</div>';
   }
+
 
   // Recalcule uniquement la zone de résultats (temps réel, sans perdre le focus).
   function renderStatutResults(){
@@ -4162,6 +4172,23 @@
     saveProfil(state.profil);
   }
 
+  // Une charge testée dans un simulateur ne rejoint le profil que sur demande.
+  function synchroniserChargeVersProfil(c){
+    if(!c.nom || !c.montant) return;
+    state.profil.charges = state.profil.charges || [];
+    var idx = state.profil.charges.findIndex(function(x){ return x.__simRef === c; });
+    var entree = { nom:c.nom, montant:c.montant, frequence:c.frequence,
+                   tauxTVA:c.tauxTVA || '0.2', deductible:c.deductible || '100',
+                   categorie:c.categorie || '', __simRef:c };
+    if(idx >= 0) state.profil.charges[idx] = entree;
+    else state.profil.charges.push(entree);
+    saveProfil(state.profil);
+  }
+  function retirerChargeDuProfil(c){
+    state.profil.charges = (state.profil.charges || []).filter(function(x){ return x.__simRef !== c; });
+    saveProfil(state.profil);
+  }
+
   function tvaOnbHtml(){
     if(!(state.tva.onb.actif && state.sim.open === 'tva')) return '';
     return '<div class="tvo-overlay"><div class="tvo-card">'+tvaOnbCorpsHtml()+'</div></div>';
@@ -4398,123 +4425,6 @@
   // Chacun garde un contrôle de cohérence : le comparateur de statuts n'a pas
   // de sens si tu es déjà en société, le cockpit n'en a pas si tu es en micro.
   // ---------------------------------------------------------------------------
-  function simOnbChamp(champ, label, valeur, unite, action){
-    return '<label class="tvo-lab">'+esc(label)+'</label>'
-      + '<div class="tvo-champ"><input data-'+action+'="'+champ+'" type="number" min="0" '
-      + 'step="any" value="'+esc(valeur || '')+'"><span>'+unite+'</span></div>';
-  }
-
-  function statutOnbCorpsHtml(){
-    var p = state.profil, f = state.statut.form, e = state.statut.onb.etape;
-    if(e === 0){
-      if(estSociete(p)){
-        return '<div class="tvo-emoji">🏛️</div>'
-          + '<div class="tvo-q">Tu es déjà en société</div>'
-          + '<div class="tvo-sub">Ce comparateur sert à décider quand quitter l’auto-entreprise. '
-            + 'Avec ton '+esc(p.forme || 'statut')+', la question est derrière toi</div>'
-          + '<div class="tvo-alerte">Tu peux quand même l’ouvrir pour comparer les trois statuts. '
-            + 'Les valeurs que tu saisiras ne toucheront pas à ton profil</div>'
-          + '<div class="tvo-actions">'
-            + '<button class="tvo-next" data-action="statut-onb-essai">Comparer quand même →</button>'
-            + '<button class="tvo-ghost" data-action="statut-onb-quit">Retour aux simulateurs</button>'
-          + '</div>';
-      }
-      return '<div class="tvo-emoji">🏛️</div>'
-        + '<div class="tvo-q">Faut-il passer en société ?</div>'
-        + '<div class="tvo-sub">On compare ton auto-entreprise à une EURL et une SASU, et on cherche '
-          + 'le chiffre d’affaires à partir duquel la société te rapporte plus</div>'
-        + '<div class="tvo-actions">'
-          + '<button class="tvo-next" data-action="statut-onb-next">C’est parti →</button>'
-        + '</div>'
-        + '<button class="tvo-skip" data-action="statut-onb-quit">Retour aux simulateurs</button>';
-    }
-    var essai = state.statut.essai;
-    var cats = [{v:'venteBIC',l:'Vente'},{v:'serviceBIC',l:'Services'},{v:'bnc',l:'Libéral'}];
-    var chips = cats.map(function(c){
-      return '<button class="tvo-chip'+(f.categorie === c.v ? ' on' : '')+'" '
-        + 'data-action="statut-onb-cat" data-v="'+c.v+'">'+esc(c.l)+'</button>';
-    }).join('');
-    var nbCh = (p.charges || []).length;
-    return '<div class="tvo-dots"><span class="on"></span><span class="on"></span></div>'
-      + '<div class="tvo-q">'+(essai ? 'Saisis des valeurs pour comparer' : 'D’après ton profil')+'</div>'
-      + (essai ? '<div class="tvo-sub">Rien ne sera enregistré dans ton profil</div>' : '')
-      + '<div class="tvo-edit">'
-        + '<label class="tvo-lab">Catégorie de ton activité</label>'
-        + '<div class="tvo-chips">'+chips+'</div>'
-        + simOnbChamp('caAnnuel', 'Chiffre d’affaires annuel', f.caAnnuel, '€', 'statut-onb')
-        + simOnbChamp('remMensuelle', 'Rémunération nette que tu veux te verser', f.remMensuelle, '€ / mois', 'statut-onb')
-        + simOnbChamp('parts', 'Parts fiscales du foyer', f.parts, 'parts', 'statut-onb')
-        + '<div class="tvo-aide">'+nbCh+(nbCh > 1 ? ' charges reprises' : ' charge reprise')
-          + ' de ton profil. En société elles se déduisent, en auto-entreprise jamais : '
-          + 'c’est souvent ce qui fait basculer le calcul</div>'
-      + '</div>'
-      + '<div class="tvo-nav">'
-        + '<button class="tvo-back" data-action="statut-onb-prev">← Retour</button>'
-        + '<button class="tvo-next" data-action="statut-onb-lancer">Voir la comparaison →</button>'
-      + '</div>';
-  }
-
-  function optimOnbCorpsHtml(){
-    var p = state.profil, f = state.optim.form, e = state.optim.onb.etape;
-    if(e === 0){
-      if(estMicro(p)){
-        return '<div class="tvo-emoji">🎛️</div>'
-          + '<div class="tvo-q">Ce cockpit s’adresse aux sociétés</div>'
-          + '<div class="tvo-sub">Rémunération, dividendes, trésorerie : ces leviers n’existent pas '
-            + 'en auto-entreprise, où ton revenu suit directement ton chiffre d’affaires</div>'
-          + '<div class="tvo-alerte">Tu peux l’ouvrir pour voir à quoi ressemble le pilotage d’une '
-            + 'société. Rien ne sera enregistré dans ton profil</div>'
-          + '<div class="tvo-actions">'
-            + '<button class="tvo-next" data-action="optim-onb-essai">Jeter un œil →</button>'
-            + '<button class="tvo-ghost" data-action="optim-onb-quit">Retour aux simulateurs</button>'
-          + '</div>';
-      }
-      return '<div class="tvo-emoji">🎛️</div>'
-        + '<div class="tvo-q">Optimiser ta société</div>'
-        + '<div class="tvo-sub">On regarde ce que tu te verses, ce que tu distribues et ce que tu '
-          + 'laisses dans la société, puis ce qu’il te reste vraiment</div>'
-        + '<div class="tvo-actions">'
-          + '<button class="tvo-next" data-action="optim-onb-next">C’est parti →</button>'
-        + '</div>'
-        + '<button class="tvo-skip" data-action="optim-onb-quit">Retour aux simulateurs</button>';
-    }
-    var essai = state.optim.essai;
-    var statuts = [{v:'eurl',l:'EURL / SARL'},{v:'sasu',l:'SASU / SAS'}];
-    var chips = statuts.map(function(c){
-      return '<button class="tvo-chip'+(state.optim.statut === c.v ? ' on' : '')+'" '
-        + 'data-action="optim-onb-statut" data-v="'+c.v+'">'+esc(c.l)+'</button>';
-    }).join('');
-    return '<div class="tvo-dots"><span class="on"></span><span class="on"></span></div>'
-      + '<div class="tvo-q">'+(essai ? 'Saisis des valeurs pour essayer' : 'D’après ton profil')+'</div>'
-      + (essai ? '<div class="tvo-sub">Rien ne sera enregistré dans ton profil</div>' : '')
-      + '<div class="tvo-edit">'
-        + '<label class="tvo-lab">Forme de ta société</label>'
-        + '<div class="tvo-chips">'+chips+'</div>'
-        + simOnbChamp('caAnnuel', 'Chiffre d’affaires annuel', f.caAnnuel, '€', 'optim-onb')
-        + simOnbChamp('remMensuelle', 'Rémunération nette mensuelle', f.remMensuelle, '€ / mois', 'optim-onb')
-        + simOnbChamp('dividendes', 'Part du bénéfice distribuée en dividendes', f.dividendes, '%', 'optim-onb')
-        + '<div class="tvo-aide">Tu pourras tout ajuster en direct ensuite, avec les leviers '
-          + 'd’optimisation et le curseur de chiffre d’affaires</div>'
-      + '</div>'
-      + '<div class="tvo-nav">'
-        + '<button class="tvo-back" data-action="optim-onb-prev">← Retour</button>'
-        + '<button class="tvo-next" data-action="optim-onb-lancer">Ouvrir le cockpit →</button>'
-      + '</div>';
-  }
-
-  function majSimOnb(cle, corps){
-    var root = document.getElementById(cle + 'o-root');
-    if(!root) return;
-    if(!(state[cle].onb.actif && state.sim.open === cle)){ root.innerHTML = ''; return; }
-    var card = root.querySelector('.tvo-card');
-    if(!card){
-      root.innerHTML = '<div class="tvo-overlay"><div class="tvo-card"></div></div>';
-      card = root.querySelector('.tvo-card');
-    }
-    card.innerHTML = corps();
-  }
-  function majStatutOnb(){ majSimOnb('statut', statutOnbCorpsHtml); }
-  function majOptimOnb(){ majSimOnb('optim', optimOnbCorpsHtml); }
 
   // --- Visualisation du barème progressif ---
   var TRANCHE_COULEURS = ['#e8edf5', '#c7dcff', '#8fb4ff', '#f7c9a0', '#f2a3a3'];
@@ -7095,9 +7005,7 @@
       + '<div id="onb-root"></div>'
       + '<div id="tvo-root"></div>'
       + '<div id="dgo-root"></div>'
-      + '<div id="vlo-root"></div>'
-      + '<div id="statuto-root"></div>'
-      + '<div id="optimo-root"></div>';
+      + '<div id="vlo-root"></div>';
   }
 
   // Si assets/freehub-logo.png est absent, on bascule sur le wordmark CSS.
@@ -7188,7 +7096,7 @@
 
     document.getElementById('modal-root').innerHTML =
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
-      + lexModalHtml() + depFicheHtml() + authModalHtml() + badgeCelebreHtml();
+      + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml() + badgeCelebreHtml();
 
     // L'onboarding vit dans son propre root persistant : on ne remplace que le
     // contenu de sa carte, sans recréer l'overlay ni rejouer son animation.
@@ -7196,15 +7104,12 @@
     majTvaOnb();
     majDepOnb();
     majVlOnb();
-    majStatutOnb();
-    majOptimOnb();
 
     // Une pop-up ouverte fige le défilement de la page derrière.
     document.body.classList.toggle('pop-ouverte',
       !!document.querySelector('#modal-root .overlay, #onb-root .tvo-overlay,'
                              + ' #tvo-root .tvo-overlay, #dgo-root .tvo-overlay,'
-                             + ' #vlo-root .tvo-overlay, #statuto-root .tvo-overlay,'
-                             + ' #optimo-root .tvo-overlay'));
+                             + ' #vlo-root .tvo-overlay'));
   }
 
   // ---------------------------------------------------------------------------
@@ -7542,9 +7447,9 @@
           marquerFait('sim:depenses');
         }
         // Le simulateur TVA s'ouvre directement sur son parcours guidé.
-        // Comparateur et cockpit repartent de leur écran de lancement.
-        if(quel === 'statut') state.statut.lance = false;
-        if(quel === 'optim') state.optim.lance = false;
+        // Comparateur et cockpit : on arrive directement sur le simulateur.
+        if(quel === 'statut'){ state.statut.outil = null; marquerFait('sim:statut'); }
+        if(quel === 'optim'){ state.optim.outil = null; marquerFait('sim:optim'); }
         if(quel === 'vl'){
           state.vl.step = 'form';
           var vuVl = false;
@@ -7562,74 +7467,30 @@
         render();
         break;
       }
-      // ----- Parcours de « Passer en société ? » -----
-      case 'statut-onb-start': {
-        var vuSt = false;
-        try { vuSt = !!localStorage.getItem('freehub_statut_onb'); } catch(err){}
-        if(!state.statut.essai) appliquerProfil();
-        if(vuSt){ state.statut.lance = true; marquerFait('sim:statut'); }
-        else state.statut.onb = { actif:true, etape:0 };
+      // ----- Outils compacts des simulateurs statut et cockpit -----
+      case 'statut-outil':
+        setState({ 'statut': Object.assign(state.statut, { outil: el.getAttribute('data-o') }) });
+        break;
+      case 'optim-outil':
+        setState({ 'optim': Object.assign(state.optim, { outil: el.getAttribute('data-o') }) });
+        break;
+      case 'sim-outil-close':
+        state.statut.outil = null; state.optim.outil = null;
         render();
         break;
-      }
-      case 'statut-onb-next':
-        state.statut.onb.etape = 1; majStatutOnb(); break;
-      case 'statut-onb-prev':
-        state.statut.onb.etape = 0; majStatutOnb(); break;
-      case 'statut-onb-essai':
-        state.statut.essai = true;
-        state.statut.onb.etape = 1; majStatutOnb(); break;
-      case 'statut-onb-quit':
-        state.statut.onb.actif = false;
-        state.sim.open = null; render(); break;
-      case 'statut-onb-cat':
-        state.statut.form.categorie = el.getAttribute('data-v');
-        if(!state.statut.essai){
-          state.profil.categorieFiscale = el.getAttribute('data-v');
-          saveProfil(state.profil);
+      case 'sim-charge-freq': {
+        var cleF = el.getAttribute('data-cle');
+        var iCh = parseInt(el.getAttribute('data-i'), 10);
+        var lst = cleF === 'statut' ? state.statut.charges : state.optim.charges;
+        var chg = lst[iCh];
+        if(chg){
+          chg.frequence = chg.frequence === 'mensuelle' ? 'annuelle' : 'mensuelle';
+          el.textContent = chg.frequence === 'mensuelle' ? '/mois' : '/an';
+          if(chg.dansProfil) synchroniserChargeVersProfil(chg);
+          if(cleF === 'statut') renderStatutResults(); else renderOptimResults();
         }
-        [].forEach.call(el.parentElement.querySelectorAll('.tvo-chip'), function(b){
-          b.classList.toggle('on', b === el); });
-        break;
-      case 'statut-onb-lancer':
-        state.statut.onb.actif = false;
-        state.statut.lance = true;
-        try { localStorage.setItem('freehub_statut_onb','1'); } catch(err){}
-        marquerFait('sim:statut');
-        render(); break;
-
-      // ----- Parcours d'« Optimiser ma société » -----
-      case 'optim-onb-start': {
-        var vuOp = false;
-        try { vuOp = !!localStorage.getItem('freehub_optim_onb'); } catch(err){}
-        if(!state.optim.essai) appliquerProfil();
-        if(vuOp){ state.optim.lance = true; marquerFait('sim:optim'); }
-        else state.optim.onb = { actif:true, etape:0 };
-        render();
         break;
       }
-      case 'optim-onb-next':
-        state.optim.onb.etape = 1; majOptimOnb(); break;
-      case 'optim-onb-prev':
-        state.optim.onb.etape = 0; majOptimOnb(); break;
-      case 'optim-onb-essai':
-        state.optim.essai = true;
-        state.optim.onb.etape = 1; majOptimOnb(); break;
-      case 'optim-onb-quit':
-        state.optim.onb.actif = false;
-        state.sim.open = null; render(); break;
-      case 'optim-onb-statut':
-        state.optim.statut = el.getAttribute('data-v');
-        [].forEach.call(el.parentElement.querySelectorAll('.tvo-chip'), function(b){
-          b.classList.toggle('on', b === el); });
-        break;
-      case 'optim-onb-lancer':
-        state.optim.onb.actif = false;
-        state.optim.lance = true;
-        try { localStorage.setItem('freehub_optim_onb','1'); } catch(err){}
-        marquerFait('sim:optim');
-        render(); break;
-
       // ----- Parcours guidé du versement libératoire -----
       case 'vl-onb-start':
         state.vl.onb = { actif:true, etape:0 };
@@ -8067,7 +7928,7 @@
         render();
         break;
       case 'ocharge-add':
-        state.optim.charges.push({ nom:'', montant:'', frequence:'mensuelle',
+        state.optim.charges.push({ nouvelle:true, nom:'', montant:'', frequence:'mensuelle',
                                    tauxTVA:'0.2', deductible:'100', categorie:'fonctionnement' });
         render();
         break;
@@ -8120,7 +7981,6 @@
           state.optim.charges = (sc.charges || []).map(function(c){ return Object.assign({}, c); });
           state.optim.leviers = Object.assign({}, sc.leviers);
           state.optim.projection = null;
-          state.optim.lance = true;   // reprendre un scénario ouvre le cockpit
           render();
         }
         break;
@@ -8150,7 +8010,7 @@
         render();
         break;
       case 'charge-add':
-        state.statut.charges.push({ nom:'', montant:'', frequence:'mensuelle' });
+        state.statut.charges.push({ nom:'', montant:'', frequence:'mensuelle', nouvelle:true });
         render();
         break;
       case 'charge-remove':
@@ -8303,6 +8163,20 @@
     if(ls){ state.lexRecherche = ls.value; majLexique(); return; }
     var ds = e.target.closest('[data-dep-search]');
     if(ds){ state.depRecherche = ds.value; majGuideDep(); return; }
+    // Charge ajoutée depuis un simulateur : on ne l'écrit dans le profil que si
+    // la case est cochée. Sans elle, la simulation reste un test.
+    var garder = e.target.closest('[data-sim-garder]');
+    if(garder){
+      var iG = parseInt(garder.getAttribute('data-sim-garder'), 10);
+      var lstG = garder.getAttribute('data-cle') === 'statut' ? state.statut.charges : state.optim.charges;
+      var cG = lstG[iG];
+      if(cG){
+        cG.dansProfil = garder.checked;
+        if(garder.checked) synchroniserChargeVersProfil(cG);
+        else retirerChargeDuProfil(cG);
+      }
+      return;
+    }
     var dga = e.target.closest('[data-dga]');
     if(dga){ state.depAjout[dga.getAttribute('data-dga')] = dga.value; return; }
     // Parcours TVA : la saisie alimente le simulateur ET le profil.
@@ -8333,35 +8207,6 @@
     }
     var tb = e.target.closest('[data-tvo-brouillon]');
     if(tb){ state.tva.brouillon[tb.getAttribute('data-tvo-brouillon')] = tb.value; return; }
-    // Parcours « société » et « cockpit » : en mode essai, rien ne remonte au profil.
-    var sto = e.target.closest('[data-statut-onb]');
-    if(sto){
-      var cS = sto.getAttribute('data-statut-onb');
-      state.statut.form[cS] = sto.value;
-      if(!state.statut.essai){
-        var vS = { caAnnuel:'ca', remMensuelle:'remMensuelle', parts:'parts' }[cS];
-        if(vS){
-          state.profil[vS] = sto.value;
-          if(cS === 'caAnnuel') state.profil.periodeCa = 'annuel';
-          saveProfil(state.profil);
-        }
-      }
-      return;
-    }
-    var opo = e.target.closest('[data-optim-onb]');
-    if(opo){
-      var cO = opo.getAttribute('data-optim-onb');
-      state.optim.form[cO] = opo.value;
-      if(!state.optim.essai){
-        var vO = { caAnnuel:'ca', remMensuelle:'remMensuelle', dividendes:'dividendes' }[cO];
-        if(vO){
-          state.profil[vO] = opo.value;
-          if(cO === 'caAnnuel') state.profil.periodeCa = 'annuel';
-          saveProfil(state.profil);
-        }
-      }
-      return;
-    }
     // Parcours VL : en mode essai, rien ne remonte au profil.
     var vlo = e.target.closest('[data-vl-onb]');
     if(vlo){
