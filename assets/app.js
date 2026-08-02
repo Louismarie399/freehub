@@ -3079,6 +3079,7 @@
     var maxCurseur = Math.max(250000, Math.round(ca * 2 / 10000) * 10000);
     var proj = state.optim.projection;
     return '<div class="sim-wrap">'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       + '<div class="statut-bar">'
         + '<div class="proj" style="max-width:520px">'
           + '<div class="proj-l">Projection du chiffre d’affaires'
@@ -3546,6 +3547,7 @@
     };
 
     return '<div class="sim-wrap">'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       + '<div class="statut-bar">'
         + '<div class="seg-group">'
           + bouton('eurl','Auto-entreprise vs EURL')
@@ -3684,11 +3686,11 @@
       + (!sommeOk
           ? '<div class="vl-note" style="margin-top:0;background:#fef2f2">La répartition de ta clientèle '
             + 'fait <strong>'+Math.round(somme)+'%</strong> au lieu de 100% — corrige-la dans ton profil.</div>' : '')
-      + '<div class="tva-lancer">'
-        + '<div class="tva-lancer-e">🧮</div>'
-        + '<div class="tva-lancer-t">Faut-il passer à la TVA ?</div>'
-        + '<div class="tva-lancer-s">Quatre écrans guidés, à partir de ton profil. '
-          + 'On calcule ce que tu récupérerais, ce que ça coûterait à gérer, et le risque côté clients.</div>'
+      + '<div class="sim-lancer tva">'
+        + '<div class="sim-lancer-e">🧮</div>'
+        + '<div class="sim-lancer-t">Faut-il passer à la TVA ?</div>'
+        + '<div class="sim-lancer-s">On regarde ce que tu récupérerais sur tes achats, ce que ça '
+          + 'coûterait à gérer, et le risque côté clients</div>'
         + '<button class="btn-primary" data-action="tva-onb-start">Lancer la simulation</button>'
       + '</div>'
       + err
@@ -3769,9 +3771,9 @@
         + '</div>';
     }).join('');
     var carteCouts = '<div class="card"><div class="card-title">Ce que ça coûte à gérer</div>'
-      + '<div class="field-eg" style="margin-bottom:12px">Passer à la TVA, c’est des déclarations '
-        + 'régulières. Voici ce qu’il te resterait selon la façon de les gérer — ordres de grandeur, '
-        + 'à confirmer avec les tarifs du moment.</div>'
+      + '<div class="field-eg" style="margin-bottom:14px">Passer à la TVA, c’est des déclarations '
+        + 'régulières. Voici ce qu’il te resterait selon la façon de les gérer, en ordres de grandeur '
+        + 'à confirmer avec les tarifs du moment</div>'
       + lignesCouts
       + '</div>';
 
@@ -3845,12 +3847,13 @@
     vigilance.push('Opérations internationales, autoliquidation, TVA sur marge et régularisations ne sont pas prises en compte.');
 
     return '<div class="sim-wrap">'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       + '<div class="res-topbar">'
         + '<h2>Résultat de la simulation</h2>'
         + '<div class="export-bar">'
-          + '<button class="btn-ghost" data-action="tva-print">Imprimer / PDF</button>'
-          + '<button class="btn-ghost" data-action="tva-back">Modifier mes informations</button>'
-          + '<button class="btn-primary" data-action="tva-new">Nouvelle simulation</button>'
+          + '<button class="btn-ghost egal" data-action="tva-print">Imprimer / PDF</button>'
+          + '<button class="btn-ghost egal" data-action="tva-hist">Mes simulations</button>'
+          + '<button class="btn-primary egal" data-action="tva-new">Nouvelle simulation</button>'
         + '</div>'
       + '</div>'
       + '<div class="vl-verdict" style="border-left-color:'+st.color+'">'
@@ -4185,24 +4188,139 @@
         + '<div class="hist-list">' + h.map(vlHistItemHtml).join('') + '</div>'
       : '';
 
-    // Tout vient du profil : il ne reste ici que l'année de simulation.
     return '<div class="sim-wrap">'
-      + profilBandeHtml(['categorieFiscale','ca','parts','autresRevenus','rfr'])
-      + (f.categorie === 'inconnu' || !f.categorie
-          ? '<div class="vl-note" style="margin-top:0">Ta <strong>catégorie fiscale</strong> n’est pas '
-            + 'renseignée dans ton profil, et elle change tout le calcul. Vérifie-la sur ton attestation '
-            + 'Urssaf, puis indique-la dans ton profil.'
-            + (metier ? ' Ton activité déclarée : « '+esc(metier)+' ».' : '') + '</div>'
-          : '')
-      + '<div class="vl-note" style="margin-top:0">Éligibilité jugée sur ton revenu fiscal de '
-        + 'référence ' + p.anneeRfr + ' — plafond ' + fmtEur(p.plafondRfrParPart) + ' par part.</div>'
-      + err
-      + '<div class="sim-actions" style="margin-top:18px">'
-        + '<button class="btn-primary" data-action="vl-compare">Comparer les deux options</button>'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
+      + '<div class="sim-lancer vl">'
+        + '<div class="sim-lancer-e">⚖️</div>'
+        + '<div class="sim-lancer-t">Versement libératoire ou impôt classique ?</div>'
+        + '<div class="sim-lancer-s">On compare les deux modes d’imposition de ta micro-entreprise '
+          + 'et on te dit lequel te coûte le moins cher, chiffres à l’appui</div>'
+        + '<button class="btn-primary" data-action="vl-onb-start">Lancer la comparaison</button>'
       + '</div>'
+      + err
       + bandeauMillesimeHtml('fiscal')
       + hist
       + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parcours guidé du versement libératoire
+  //
+  // Le VL n'existe qu'en micro-entreprise. Une société peut quand même essayer
+  // le simulateur : on bascule alors en « mode essai », où les valeurs saisies
+  // ne touchent pas au profil.
+  // ---------------------------------------------------------------------------
+  function vlOnbCorpsHtml(){
+    var p = state.profil;
+    var f = state.vl.form;
+    var e = state.vl.onb.etape;
+    var par = FISCAL[f.annee] || FISCAL['2025'];
+
+    if(e === 0){
+      if(estSociete(p)){
+        return '<div class="tvo-emoji">🏛️</div>'
+          + '<div class="tvo-q">Le versement libératoire n’existe pas en société</div>'
+          + '<div class="tvo-sub">C’est une option réservée à la micro-entreprise. Avec ton statut '
+            + '('+esc(p.forme || 'société')+'), tu relèves d’un autre régime d’imposition</div>'
+          + '<div class="tvo-alerte">Tu peux quand même essayer le simulateur pour voir comment ça '
+            + 'marche. Dans ce cas tu saisis des valeurs à la volée, et rien n’est enregistré dans '
+            + 'ton profil</div>'
+          + '<div class="tvo-actions">'
+            + '<button class="tvo-next" data-action="vl-onb-essai">Essayer quand même →</button>'
+            + '<button class="tvo-ghost" data-action="vl-onb-quit-sims">Retour aux simulateurs</button>'
+          + '</div>';
+      }
+      return '<div class="tvo-emoji">⚖️</div>'
+        + '<div class="tvo-q">Versement libératoire ou impôt classique ?</div>'
+        + '<div class="tvo-sub">Deux écrans, presque tout vient de ton profil. On calcule ce que '
+          + 'chaque option te coûte réellement</div>'
+        + '<div class="tvo-actions">'
+          + '<button class="tvo-next" data-action="vl-onb-next">C’est parti →</button>'
+        + '</div>'
+        + '<button class="tvo-skip" data-action="vl-onb-quit-sims">Retour aux simulateurs</button>';
+    }
+
+    // Étape 1 : les données du calcul, éditables. En mode essai elles ne
+    // remontent pas au profil ; sinon elles le mettent à jour.
+    var essai = state.vl.essai;
+    var cats = [{v:'venteBIC',l:'Vente'},{v:'serviceBIC',l:'Services'},{v:'bnc',l:'Libéral'}];
+    var chips = cats.map(function(c){
+      return '<button class="tvo-chip'+(f.categorie === c.v ? ' on' : '')+'" '
+        + 'data-action="vl-onb-set" data-champ="categorie" data-v="'+c.v+'">'+esc(c.l)+'</button>';
+    }).join('');
+    var ligne = function(champ, label, val, unite){
+      return '<label class="tvo-lab">'+esc(label)+'</label>'
+        + '<div class="tvo-champ"><input data-vl-onb="'+champ+'" type="number" min="0" step="any" '
+        + 'value="'+esc(val || '')+'"><span>'+unite+'</span></div>';
+    };
+    return '<div class="tvo-dots"><span class="on"></span><span class="on"></span></div>'
+      + '<div class="tvo-q">'+(essai ? 'Saisis des valeurs pour essayer' : 'D’après ton profil')+'</div>'
+      + (essai ? '<div class="tvo-sub">Rien de tout ça ne sera enregistré dans ton profil</div>' : '')
+      + '<div class="tvo-edit">'
+        + '<label class="tvo-lab">Catégorie de ton activité</label>'
+        + '<div class="tvo-chips">'+chips+'</div>'
+        + ligne('ca', 'Chiffre d’affaires annuel', f.ca, '€')
+        + ligne('parts', 'Parts fiscales du foyer', f.parts, 'parts')
+        + ligne('autresRevenus', 'Autres revenus imposables du foyer', f.autresRevenus, '€')
+        + ligne('rfr', 'Revenu fiscal de référence ' + par.anneeRfr, f.rfr, '€')
+        + '<div class="tvo-aide">L’éligibilité au versement libératoire se juge sur ce revenu '
+          + 'fiscal de référence, avec un plafond de ' + fmtEur(par.plafondRfrParPart) + ' par part</div>'
+      + '</div>'
+      + '<div class="tvo-nav">'
+        + '<button class="tvo-back" data-action="vl-onb-prev">← Retour</button>'
+        + '<button class="tvo-next" data-action="vl-onb-lancer">Comparer les deux options →</button>'
+      + '</div>';
+  }
+
+  // Fin du parcours : on valide, on calcule, on ouvre le résultat.
+  function lancerComparaisonVL(){
+    var vf = state.vl.form;
+    var stop = function(msg){
+      state.vl.onb.actif = false;
+      state.vl.formError = msg;
+      render();
+    };
+    if(!vf.categorie || vf.categorie === 'inconnu')
+      return stop('Choisis la catégorie fiscale de ton activité pour lancer la comparaison');
+    if(!(parseFloat(vf.ca) > 0)) return stop('Indique ton chiffre d’affaires');
+    if(vf.autresRevenus === '' || isNaN(parseFloat(vf.autresRevenus)))
+      return stop('Indique les autres revenus imposables de ton foyer, 0 si tu n’en as pas');
+
+    marquerFait('sim:vl');
+    state.vl.formError = null;
+    // Le CA saisi au mois est ramené à l'année.
+    var calc = Object.assign({}, vf);
+    if(vf.caMensuel) calc.ca = String((parseFloat(vf.ca) || 0) * 12);
+    var r = comparerVL(calc);
+    state.vl.result = r;
+    state.vl.onb.actif = false;
+    state.vl.step = 'result';
+    // En mode essai, la simulation ne rejoint pas l'historique du compte.
+    if(!state.vl.essai){
+      state.vl.historique.unshift({
+        date: Date.now(), ca: r.ca, ecart: r.ecart, vl: r.vl,
+        coutClassique: r.coutClassique, form: Object.assign({}, vf),
+      });
+      saveHistVL(state.vl.historique);
+    }
+    render();
+  }
+
+  function vlOnbHtml(){
+    if(!(state.vl.onb.actif && state.sim.open === 'vl')) return '';
+    return '<div class="tvo-overlay"><div class="tvo-card">'+vlOnbCorpsHtml()+'</div></div>';
+  }
+
+  function majVlOnb(){
+    var root = document.getElementById('vlo-root');
+    if(!root) return;
+    if(!(state.vl.onb.actif && state.sim.open === 'vl')){ root.innerHTML = ''; return; }
+    var card = root.querySelector('.tvo-card');
+    if(!card){
+      root.innerHTML = '<div class="tvo-overlay"><div class="tvo-card"></div></div>';
+      card = root.querySelector('.tvo-card');
+    }
+    card.innerHTML = vlOnbCorpsHtml();
   }
 
   // --- Visualisation du barème progressif ---
@@ -4373,6 +4491,7 @@
     limites.push('Une seule catégorie d’activité à la fois : les activités mixtes ne sont pas encore gérées.');
 
     return '<div class="sim-wrap">'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       + '<div class="res-topbar">'
         + '<h2>Résultat de la comparaison</h2>'
         + '<div class="export-bar">'
@@ -5740,6 +5859,7 @@
       : '';
 
     return '<div class="sim-wrap">'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       // Bandeau haut : rappel du profil + action principale à droite
       + '<div class="sim-bar">'
         + profilBandeHtml(['activite','forme','regime','tva'])
@@ -5975,6 +6095,7 @@
     var items = r.depenses || [];
     var syn = r.synthese || {};
     return '<div class="sim-wrap">'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       + '<div class="res-topbar">'
         + '<h2>Compte-rendu de l’analyse</h2>'
         + '<div class="export-bar">'
@@ -6000,6 +6121,7 @@
 
   function simErrorHtml(){
     return '<div class="sim-wrap">'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       + '<div class="sim-error">'+esc(state.sim.error || 'Une erreur est survenue.')+'</div>'
       + '<div class="sim-actions">'
         + '<button class="btn-primary" data-action="sim-back">Revenir à mes dépenses</button>'
@@ -6759,7 +6881,8 @@
       + '<div id="modal-root"></div>'
       + '<div id="onb-root"></div>'
       + '<div id="tvo-root"></div>'
-      + '<div id="dgo-root"></div>';
+      + '<div id="dgo-root"></div>'
+      + '<div id="vlo-root"></div>';
   }
 
   // Si assets/freehub-logo.png est absent, on bascule sur le wordmark CSS.
@@ -6856,11 +6979,13 @@
     majOnboarding();
     majTvaOnb();
     majDepOnb();
+    majVlOnb();
 
     // Une pop-up ouverte fige le défilement de la page derrière.
     document.body.classList.toggle('pop-ouverte',
       !!document.querySelector('#modal-root .overlay, #onb-root .tvo-overlay,'
-                             + ' #tvo-root .tvo-overlay, #dgo-root .tvo-overlay'));
+                             + ' #tvo-root .tvo-overlay, #dgo-root .tvo-overlay,'
+                             + ' #vlo-root .tvo-overlay'));
   }
 
   // ---------------------------------------------------------------------------
@@ -7198,6 +7323,12 @@
           marquerFait('sim:depenses');
         }
         // Le simulateur TVA s'ouvre directement sur son parcours guidé.
+        if(quel === 'vl'){
+          state.vl.step = 'form';
+          var vuVl = false;
+          try { vuVl = !!localStorage.getItem('freehub_vl_onb'); } catch(err){}
+          if(!vuVl) state.vl.onb = { actif:true, etape:0 };
+        }
         if(quel === 'tva'){
           // Une fois le parcours mené à son terme, on arrive directement sur la
           // page du simulateur, avec les simulations déjà enregistrées.
@@ -7209,6 +7340,49 @@
         render();
         break;
       }
+      // ----- Parcours guidé du versement libératoire -----
+      case 'vl-onb-start':
+        state.vl.onb = { actif:true, etape:0 };
+        if(!state.vl.essai) appliquerProfil();
+        render();
+        break;
+      case 'vl-onb-next':
+        state.vl.onb.etape = 1;
+        majVlOnb();
+        break;
+      case 'vl-onb-prev':
+        state.vl.onb.etape = 0;
+        majVlOnb();
+        break;
+      case 'vl-onb-essai':
+        // Mode essai : on part de valeurs neutres, sans toucher au profil.
+        state.vl.essai = true;
+        state.vl.form = Object.assign({}, state.vl.form, {
+          categorie:'serviceBIC', ca:'', parts:'1', autresRevenus:'0', rfr:'' });
+        state.vl.onb.etape = 1;
+        majVlOnb();
+        break;
+      case 'vl-onb-quit-sims':
+        state.vl.onb.actif = false;
+        state.sim.open = null;
+        try { localStorage.setItem('freehub_vl_onb', '1'); } catch(err){}
+        render();
+        break;
+      case 'vl-onb-set':
+        state.vl.form[el.getAttribute('data-champ')] = el.getAttribute('data-v');
+        if(!state.vl.essai){
+          state.profil.categorieFiscale = el.getAttribute('data-v');
+          saveProfil(state.profil);
+        }
+        [].forEach.call(el.parentElement.querySelectorAll('.tvo-chip'), function(b){
+          b.classList.toggle('on', b === el);
+        });
+        break;
+      case 'vl-onb-lancer':
+        state.vl.onb.actif = false;
+        try { localStorage.setItem('freehub_vl_onb', '1'); } catch(err){}
+        lancerComparaisonVL();
+        break;
       // ----- Parcours guidé du simulateur TVA -----
       case 'tva-onb-start':
         state.tva.onb = { actif:true, etape:0 };
@@ -7712,6 +7886,7 @@
         lancerSimulationTVA();
         break;
       case 'tva-back':
+      case 'tva-hist':
         state.tva.step = 'form';
         render();
         break;
@@ -7747,36 +7922,9 @@
         state.vl.form.caMensuel = !state.vl.form.caMensuel;
         render();
         break;
-      case 'vl-compare': {
-        var vf = state.vl.form;
-        if(!vf.categorie || vf.categorie === 'inconnu'){
-          state.vl.formError = 'Choisis la catégorie fiscale de ton activité pour lancer la comparaison.';
-          render(); break;
-        }
-        if(!(parseFloat(vf.ca) > 0)){
-          state.vl.formError = 'Indique ton chiffre d’affaires.';
-          render(); break;
-        }
-        if(vf.autresRevenus === '' || isNaN(parseFloat(vf.autresRevenus))){
-          state.vl.formError = 'Indique les autres revenus imposables de ton foyer (0 si tu n’en as pas).';
-          render(); break;
-        }
-        marquerFait('sim:vl');
-        state.vl.formError = null;
-        // Le CA saisi au mois est ramené à l'année.
-        var calc = Object.assign({}, vf);
-        if(vf.caMensuel) calc.ca = String((parseFloat(vf.ca) || 0) * 12);
-        var r = comparerVL(calc);
-        state.vl.result = r;
-        state.vl.step = 'result';
-        state.vl.historique.unshift({
-          date: Date.now(), ca: r.ca, ecart: r.ecart, vl: r.vl,
-          coutClassique: r.coutClassique, form: Object.assign({}, vf),
-        });
-        saveHistVL(state.vl.historique);
-        render();
+      case 'vl-compare':
+        lancerComparaisonVL();
         break;
-      }
       case 'vl-back':
         state.vl.step = 'form';
         render();
@@ -7894,6 +8042,21 @@
     }
     var tb = e.target.closest('[data-tvo-brouillon]');
     if(tb){ state.tva.brouillon[tb.getAttribute('data-tvo-brouillon')] = tb.value; return; }
+    // Parcours VL : en mode essai, rien ne remonte au profil.
+    var vlo = e.target.closest('[data-vl-onb]');
+    if(vlo){
+      var champV = vlo.getAttribute('data-vl-onb');
+      state.vl.form[champV] = vlo.value;
+      if(!state.vl.essai){
+        var vers = { ca:'ca', parts:'parts', autresRevenus:'autresRevenus', rfr:'rfr' }[champV];
+        if(vers){
+          state.profil[vers] = vlo.value;
+          if(champV === 'ca') state.profil.periodeCa = 'annuel';
+          saveProfil(state.profil);
+        }
+      }
+      return;
+    }
     var imp = e.target.closest('[data-import-donnees]');
     if(imp){
       if(imp.files && imp.files[0]) importerDonnees(imp.files[0]);
