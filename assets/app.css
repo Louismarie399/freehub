@@ -284,7 +284,10 @@
   .step-hint{font-size:13.5px;color:var(--muted);line-height:1.5;margin-top:3px}
 
   /* ---------- Modal ---------- */
-  .overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,27,51,.55);backdrop-filter:blur(6px);animation:fhfade .25s ease}
+  /* Une pop-up ouverte fige la page derrière : sans ça, faire défiler une
+     carte trop haute entraîne aussi l'arrière-plan flouté. */
+  body.pop-ouverte{overflow:hidden}
+  .overlay{position:fixed;inset:0;z-index:100;overflow-y:auto;overscroll-behavior:contain;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,27,51,.55);backdrop-filter:blur(6px);animation:fhfade .25s ease}
   .modal{width:620px;max-width:100%;max-height:88vh;display:flex;flex-direction:column;background:#fff;border-radius:22px;box-shadow:0 50px 100px -30px rgba(15,27,51,.6);animation:fhpop .3s cubic-bezier(.2,.8,.2,1);overflow:hidden}
   .modal-head{padding:26px 30px 18px}
   .modal-title{font-size:22px;font-weight:800;letter-spacing:-.02em}
@@ -1089,8 +1092,7 @@
   .dj-l{font-size:10.5px;font-weight:800;margin-top:6px;letter-spacing:.01em}
   .dj.grand .dj-l{font-size:13px;margin-top:9px}
 
-  .dg-disclaimer{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.6;
-    font-weight:500;max-width:760px}
+  .dg-disclaimer{margin:0 0 16px;font-size:12px;color:var(--muted);line-height:1.6;font-weight:500}
 
   /* Fiche dépense (pop-up) */
   .dgf-head{display:flex;align-items:center;gap:14px;padding:20px 22px;

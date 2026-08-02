@@ -4859,329 +4859,329 @@
   var DEPENSES_GUIDE = [
     // ----- Outils & matériel -----
     { id:'logiciels', cat:'outils', e:'💻', n:'Logiciels & abonnements pro', score:95, pcat:'fonctionnement', ptva:'0.2', multi:true,
-      pitch:'SaaS, licences, IA… l’outillage numérique de ton activité.',
-      verdict:'La dépense pro par excellence : difficile de faire plus évident.',
-      detail:'Un outil que tu utilises pour produire, vendre ou gérer ton activité est dans l’intérêt direct de l’entreprise. Facture au nom de la société et le tour est joué.',
+      pitch:'SaaS, licences, IA… l’outillage numérique de ton activité',
+      verdict:'La dépense pro par excellence : difficile de faire plus évident',
+      detail:'Un outil que tu utilises pour produire, vendre ou gérer ton activité est dans l’intérêt direct de l’entreprise. Facture au nom de la société et le tour est joué',
       vigi:['Facture au nom de la société, pas en ton nom perso','Un abonnement à usage mixte (ex : streaming) ne passe pas'],
       mots:['logiciel','abonnement','saas','adobe','figma','notion','licence','chatgpt','claude'] },
     { id:'materiel-info', cat:'outils', e:'🖥️', n:'Matériel informatique', score:83, pcat:'investissement', ptva:'0.2', multi:true,
-      pitch:'Ordinateur, écran, clavier : tes machines de travail.',
-      verdict:'Passe très bien — au-delà d’un certain montant, on amortit au lieu de déduire d’un coup.',
-      detail:'L’outil de travail numéro un du freelance. Pour un matériel coûteux, il s’immobilise et s’amortit sur plusieurs années plutôt qu’en une seule charge — ton comptable arbitre.',
+      pitch:'Ordinateur, écran, clavier : tes machines de travail',
+      verdict:'Passe très bien, mais au-delà d’un certain montant on amortit au lieu de déduire d’un coup',
+      detail:'L’outil de travail numéro un du freelance. Pour un matériel coûteux, il s’immobilise et s’amortit sur plusieurs années plutôt qu’en une seule charge, ton comptable arbitre',
       vigi:['Usage principalement professionnel','Gros montant : penser amortissement','Garder la facture, pas juste le ticket'],
       mots:['ordinateur','mac','pc','écran','clavier','souris','imprimante','informatique','macbook'] },
     { id:'telephone', cat:'outils', e:'📱', n:'Téléphone & forfait', score:66, pcat:'fonctionnement', ptva:'0.2', multi:false,
-      pitch:'L’appareil et l’abonnement qui font tourner ton activité.',
-      verdict:'Courant et accepté — la part d’usage perso doit rester cohérente.',
-      detail:'Une ligne 100 % pro passe sans discussion. Un appareil mixte pro/perso se ventile : on ne déduit que la part professionnelle, estimée honnêtement.',
+      pitch:'L’appareil et l’abonnement qui font tourner ton activité',
+      verdict:'Courant et accepté, à condition que la part d’usage perso reste cohérente',
+      detail:'Une ligne 100 % pro passe sans discussion. Un appareil mixte pro/perso se ventile : on ne déduit que la part professionnelle, estimée honnêtement',
       vigi:['Ligne dédiée = plus simple à justifier','Usage mixte : ventiler la part pro'],
       mots:['téléphone','forfait','mobile','iphone','samsung','sfr','orange','bouygues','free'] },
     { id:'fournitures', cat:'outils', e:'🖇️', n:'Fournitures de bureau', score:89, pcat:'fonctionnement', ptva:'0.2', multi:false,
-      pitch:'Papier, encre, petit matériel du quotidien.',
-      verdict:'Aucun sujet : c’est le b.a.-ba de la charge déductible.',
-      detail:'Les petites fournitures consommées par l’activité passent en charge sans difficulté. Le seul vrai risque, c’est de perdre les justificatifs.',
+      pitch:'Papier, encre, petit matériel du quotidien',
+      verdict:'Aucun sujet : c’est le b.a.-ba de la charge déductible',
+      detail:'Les petites fournitures consommées par l’activité passent en charge sans difficulté. Le seul vrai risque, c’est de perdre les justificatifs',
       vigi:['Garder les factures, même petites'],
       mots:['fourniture','papier','encre','stylo','cartouche','bureau'] },
     { id:'mobilier', cat:'outils', e:'🪑', n:'Mobilier de bureau', score:71, pcat:'investissement', ptva:'0.2', multi:true,
-      pitch:'Bureau, fauteuil, rangements de ton espace de travail.',
-      verdict:'Passe bien pour un vrai poste de travail — moins pour meubler le salon.',
-      detail:'Un fauteuil ergonomique ou un bureau dédié à l’activité se justifient sans mal, même à domicile. Ce qui coince : le mobilier qui profite manifestement à toute la maison.',
+      pitch:'Bureau, fauteuil, rangements de ton espace de travail',
+      verdict:'Passe bien pour un vrai poste de travail, beaucoup moins pour meubler le salon',
+      detail:'Un fauteuil ergonomique ou un bureau dédié à l’activité se justifient sans mal, même à domicile. Ce qui coince : le mobilier qui profite manifestement à toute la maison',
       vigi:['Cohérent avec un espace de travail réel','Gros montant : amortissement possible'],
       mots:['bureau','fauteuil','chaise','mobilier','meuble'] },
     { id:'hebergement-web', cat:'outils', e:'🌐', n:'Site web, domaine, hébergement', score:93, pcat:'fonctionnement', ptva:'0.2', multi:true,
-      pitch:'Ta vitrine en ligne et tout ce qui la fait tourner.',
-      verdict:'Dépense évidente : c’est ton outil de visibilité professionnelle.',
-      detail:'Nom de domaine, hébergement, thème, prestation de création : tout ce qui construit ta présence en ligne professionnelle est une charge classique.',
+      pitch:'Ta vitrine en ligne et tout ce qui la fait tourner',
+      verdict:'Dépense évidente : c’est ton outil de visibilité professionnelle',
+      detail:'Nom de domaine, hébergement, thème, prestation de création : tout ce qui construit ta présence en ligne professionnelle est une charge classique',
       vigi:['Facture au nom de la société'],
       mots:['site','domaine','hébergement','ovh','wordpress','wix','webflow'] },
     { id:'materiel-metier', cat:'outils', e:'🎥', n:'Matériel spécifique métier', score:74, pcat:'investissement', ptva:'0.2', multi:true,
-      pitch:'Caméra, instruments, outillage : les outils de TON métier.',
-      verdict:'Très solide dès que le lien avec ton activité saute aux yeux.',
-      detail:'Une caméra pour un vidéaste, un micro pour un podcasteur, une ponceuse pour un artisan : le lien direct avec l’activité rend la dépense limpide. Le même achat sans lien métier devient personnel.',
+      pitch:'Caméra, instruments, outillage : les outils de TON métier',
+      verdict:'Très solide dès que le lien avec ton activité saute aux yeux',
+      detail:'Une caméra pour un vidéaste, un micro pour un podcasteur, une ponceuse pour un artisan : le lien direct avec l’activité rend la dépense limpide. Le même achat sans lien métier devient personnel',
       vigi:['Le lien avec l’activité doit être évident','Usage perso résiduel toléré, pas dominant'],
       mots:['caméra','objectif','micro','instrument','outillage','drone','appareil photo'] },
 
     // ----- Déplacements -----
     { id:'km', cat:'deplacement', e:'⛽', n:'Frais kilométriques', score:50, pcat:'vehicule', ptva:'0', multi:false,
-      pitch:'Ta voiture perso au service de l’activité, au barème officiel.',
-      verdict:'Très utilisé et parfaitement légal — à condition de tenir ses trajets au propre.',
-      detail:'Le barème kilométrique officiel indemnise l’usage pro de ton véhicule personnel. Tout repose sur la traçabilité : date, motif, destination, kilomètres de chaque trajet.',
+      pitch:'Ta voiture perso au service de l’activité, au barème officiel',
+      verdict:'Très utilisé et parfaitement légal, à condition de tenir ses trajets au propre',
+      detail:'Le barème kilométrique officiel indemnise l’usage pro de ton véhicule personnel. Tout repose sur la traçabilité : date, motif, destination, kilomètres de chaque trajet',
       vigi:['Tenir un relevé des trajets (date, motif, km)','Trajets domicile-bureau : règles particulières','Ne couvre que l’usage réellement pro'],
       mots:['kilométrique','essence','carburant','km','voiture','déplacement véhicule'],
       lien:IMPOTS, prio:6,
       sugg:function(p){ return estSociete(p) ? 'Tu utilises ta voiture perso pour l’activité ? Le barème kilométrique officiel est fait pour ça.' : null; } },
     { id:'transport', cat:'deplacement', e:'🚆', n:'Train, avion, transports', score:73, pcat:'deplacement', ptva:'0.1', multi:true,
-      pitch:'Rejoindre un client, un salon, une mission.',
-      verdict:'Passe bien dès que le motif professionnel du déplacement est clair.',
-      detail:'Un billet pour aller voir un client ou un événement pro est une charge évidente. Garde le motif du déplacement avec le billet : c’est lui qui fait la différence.',
+      pitch:'Rejoindre un client, un salon, une mission',
+      verdict:'Passe bien dès que le motif professionnel du déplacement est clair',
+      detail:'Un billet pour aller voir un client ou un événement pro est une charge évidente. Garde le motif du déplacement avec le billet : c’est lui qui fait la différence',
       vigi:['Noter le motif pro du déplacement','Classe confort : rester raisonnable'],
       mots:['train','avion','sncf','billet','métro','taxi','uber','vol'] },
     { id:'hotel', cat:'deplacement', e:'🏨', n:'Hôtel & hébergement', score:61, pcat:'deplacement', ptva:'0.1', multi:true,
-      pitch:'Dormir sur place quand la mission l’exige.',
-      verdict:'Accepté en déplacement pro réel — le standing doit rester cohérent.',
-      detail:'Une nuit d’hôtel pour une mission loin de chez toi se justifie naturellement. Les ennuis commencent quand la durée ou le standing dépassent ce que la mission explique.',
+      pitch:'Dormir sur place quand la mission l’exige',
+      verdict:'Accepté en déplacement pro réel, avec un standing qui reste cohérent',
+      detail:'Une nuit d’hôtel pour une mission loin de chez toi se justifie naturellement. Les ennuis commencent quand la durée ou le standing dépassent ce que la mission explique',
       vigi:['Lié à un déplacement pro daté et motivé','Standing raisonnable par rapport à l’activité'],
       mots:['hôtel','airbnb','hébergement','nuit'] },
     { id:'peage-parking', cat:'deplacement', e:'🅿️', n:'Péages & parking', score:69, pcat:'vehicule', ptva:'0.2', multi:false,
-      pitch:'Les à-côtés des trajets professionnels.',
-      verdict:'Suit le sort du déplacement : pro si le trajet l’est.',
-      detail:'Péages et stationnement d’un déplacement professionnel passent avec lui. Pense juste à récupérer les reçus, souvent oubliés.',
+      pitch:'Les à-côtés des trajets professionnels',
+      verdict:'Suit le sort du déplacement : pro si le trajet l’est',
+      detail:'Péages et stationnement d’un déplacement professionnel passent avec lui. Pense juste à récupérer les reçus, souvent oubliés',
       vigi:['Récupérer les justificatifs','Lié à un trajet pro identifiable'],
       mots:['péage','parking','stationnement'] },
     { id:'vehicule-societe', cat:'deplacement', e:'🚙', n:'Voiture de société', score:30, pcat:'vehicule', ptva:'0.2', multi:false,
-      pitch:'Acheter ou louer un véhicule au nom de la société.',
-      verdict:'Possible mais lourdement encadré : à ne jamais décider sans ton comptable.',
-      detail:'Amortissement plafonné, taxes spécifiques, avantage en nature si usage perso : la voiture de société est un vrai dossier, pas une simple charge. Parfois pertinente, souvent moins avantageuse que le barème kilométrique.',
+      pitch:'Acheter ou louer un véhicule au nom de la société',
+      verdict:'Possible mais lourdement encadré : à ne jamais décider sans ton comptable',
+      detail:'Amortissement plafonné, taxes spécifiques, avantage en nature si usage perso : la voiture de société est un vrai dossier, pas une simple charge. Parfois pertinente, souvent moins avantageuse que le barème kilométrique',
       vigi:['Comparer avec les frais kilométriques avant de décider','Usage perso = avantage en nature à déclarer','Décision à valider avec un expert-comptable'],
       mots:['véhicule société','leasing','lld','loa'], lien:IMPOTS },
     { id:'voyage-mixte', cat:'deplacement', e:'🏝️', n:'Voyage mixte pro/perso', score:15, pcat:'deplacement', ptva:'0.1', multi:true,
       pitch:'Prolonger une mission par quelques jours de vacances…',
-      verdict:'La part vacances ne passera jamais — seule la part strictement pro se défend.',
-      detail:'Coupler un déplacement pro et des vacances n’est pas interdit, mais seule la fraction professionnelle (transport aller pour la mission, nuits de mission) peut se justifier. Le reste est personnel, point.',
+      verdict:'La part vacances ne passera jamais, seule la part strictement pro se défend',
+      detail:'Coupler un déplacement pro et des vacances n’est pas interdit, mais seule la fraction professionnelle (transport aller pour la mission, nuits de mission) peut se justifier. Le reste est personnel, point',
       vigi:['Séparer clairement les jours pro des jours perso','En cas de doute : ne pas passer la dépense'],
       mots:['voyage','vacances'] },
 
     // ----- Repas & relations -----
     { id:'resto-affaires', cat:'repas', e:'🍽️', n:'Restaurant d’affaires', score:47, pcat:'deplacement', ptva:'0.1', multi:true,
-      pitch:'Inviter un client, un prospect, un partenaire.',
-      verdict:'Classique et admis — si tu notes avec qui et pourquoi, à chaque fois.',
-      detail:'Le repas d’affaires est une charge reconnue quand il sert l’activité. La règle d’or tient en deux questions : avec qui ? pour parler de quoi ? Note-le sur la facture.',
+      pitch:'Inviter un client, un prospect, un partenaire',
+      verdict:'Classique et admis, si tu notes avec qui et pourquoi à chaque fois',
+      detail:'Le repas d’affaires est une charge reconnue quand il sert l’activité. La règle d’or tient en deux questions : avec qui ? pour parler de quoi ? Note-le sur la facture',
       vigi:['Noter l’invité et le motif sur le justificatif','Fréquence et montants raisonnables','Un repas seul n’est pas un repas d’affaires'],
       mots:['restaurant','repas client','déjeuner'] },
     { id:'repas-deplacement', cat:'repas', e:'🥪', n:'Repas en déplacement', score:45, pcat:'deplacement', ptva:'0.1', multi:false,
-      pitch:'Manger sur la route, loin de sa cuisine.',
-      verdict:'Admis en déplacement réel, dans la limite du surcoût raisonnable.',
-      detail:'En mission loin de chez toi, ton repas devient une charge — l’idée étant qu’on t’indemnise le surcoût par rapport à un repas à la maison, pas le repas gastronomique.',
+      pitch:'Manger sur la route, loin de sa cuisine',
+      verdict:'Admis en déplacement réel, dans la limite du surcoût raisonnable',
+      detail:'En mission loin de chez toi, ton repas devient une charge : l’idée est qu’on t’indemnise le surcoût par rapport à un repas à la maison, pas le repas gastronomique',
       vigi:['Lié à un déplacement pro identifiable','Montants raisonnables'],
       mots:['repas déplacement'] },
     { id:'repas-quotidien', cat:'repas', e:'🍱', n:'Repas du quotidien', score:19, pcat:'deplacement', ptva:'0.1', multi:false,
-      pitch:'Le déjeuner de tous les jours, près de chez toi.',
-      verdict:'Dépense personnelle par nature : manger, tu le ferais de toute façon.',
-      detail:'Le repas quotidien sans déplacement ni invité est l’exemple type de la dépense personnelle. Le passer en charge, c’est le redressement facile en cas de contrôle.',
+      pitch:'Le déjeuner de tous les jours, près de chez toi',
+      verdict:'Dépense personnelle par nature : manger, tu le ferais de toute façon',
+      detail:'Le repas quotidien sans déplacement ni invité est l’exemple type de la dépense personnelle. Le passer en charge, c’est le redressement facile en cas de contrôle',
       vigi:['Ne passe pas, sauf déplacement ou invitation pro'],
       mots:['déjeuner quotidien','cantine'] },
     { id:'cadeaux', cat:'repas', e:'🎁', n:'Cadeaux clients', score:42, pcat:'communication', ptva:'0.2', multi:true,
-      pitch:'Remercier un client, soigner une relation d’affaires.',
-      verdict:'Admis avec modération — bénéficiaire identifiable et montant raisonnable.',
-      detail:'Offrir un cadeau à un client dans l’intérêt de la relation commerciale est prévu par les règles fiscales, avec des limites de bon sens sur les montants et une traçabilité du bénéficiaire.',
-      vigi:['Noter le bénéficiaire','Montant proportionné à la relation','Au-delà de certains seuils : relevé spécial — voir ton comptable'],
+      pitch:'Remercier un client, soigner une relation d’affaires',
+      verdict:'Admis avec modération, bénéficiaire identifiable et montant raisonnable',
+      detail:'Offrir un cadeau à un client dans l’intérêt de la relation commerciale est prévu par les règles fiscales, avec des limites de bon sens sur les montants et une traçabilité du bénéficiaire',
+      vigi:['Noter le bénéficiaire','Montant proportionné à la relation','Au-delà de certains seuils, un relevé spécial est demandé : vois ton comptable'],
       mots:['cadeau'], lien:IMPOTS },
     { id:'invitations', cat:'repas', e:'🎟️', n:'Invitations & événements', score:38, pcat:'communication', ptva:'0.2', multi:true,
-      pitch:'Un match, un concert, un salon avec un client.',
-      verdict:'Défendable dans une vraie logique commerciale — glissant au-delà.',
-      detail:'Inviter un client à un événement peut relever des relations publiques de l’entreprise. Plus l’événement ressemble à un loisir perso, plus la justification devient acrobatique.',
+      pitch:'Un match, un concert, un salon avec un client',
+      verdict:'Défendable dans une vraie logique commerciale, glissant au-delà',
+      detail:'Inviter un client à un événement peut relever des relations publiques de l’entreprise. Plus l’événement ressemble à un loisir perso, plus la justification devient acrobatique',
       vigi:['Invité et objectif commercial notés','Fréquence contenue'],
       mots:['invitation','événement','place','billet concert'] },
 
     // ----- Local & domicile -----
     { id:'coworking', cat:'local', e:'🏢', n:'Coworking & location de bureau', score:88, pcat:'local', ptva:'0.2', multi:false,
-      pitch:'Un vrai lieu de travail, une charge évidente.',
-      verdict:'Aucune ambiguïté : c’est le loyer professionnel du freelance.',
-      detail:'Abonnement coworking ou location d’un bureau : usage 100 % professionnel, facture au nom de la société, rien à redire.',
+      pitch:'Un vrai lieu de travail, une charge évidente',
+      verdict:'Aucune ambiguïté : c’est le loyer professionnel du freelance',
+      detail:'Abonnement coworking ou location d’un bureau : usage 100 % professionnel, facture au nom de la société, rien à redire',
       vigi:['Facture au nom de la société'],
       mots:['coworking','bureau location','wework'] },
     { id:'quote-part-domicile', cat:'local', e:'🏠', n:'Quote-part du domicile', score:52, pcat:'local', ptva:'0', multi:false,
-      pitch:'Travailler de chez soi peut se valoriser — proprement.',
-      verdict:'Légitime avec un calcul sérieux : surface dédiée, part cohérente, trace écrite.',
-      detail:'Si ton activité occupe une pièce ou un coin dédié de ton logement, une fraction du loyer et des charges peut passer sur l’entreprise. La clé : un calcul de surface documenté et constant — pas un pourcentage sorti du chapeau.',
+      pitch:'Travailler de chez soi peut se valoriser, proprement',
+      verdict:'Légitime avec un calcul sérieux : surface dédiée, part cohérente, trace écrite',
+      detail:'Si ton activité occupe une pièce ou un coin dédié de ton logement, une fraction du loyer et des charges peut passer sur l’entreprise. La clé : un calcul de surface documenté et constant, pas un pourcentage sorti du chapeau',
       vigi:['Calcul de surface écrit et conservé','Cohérence dans le temps','Propriétaire : d’autres règles, voir comptable'],
       mots:['loyer','domicile','quote-part'], prio:4,
       sugg:function(p){ return estSociete(p) ? 'Tu travailles de chez toi ? Une partie de ton loyer et de tes factures peut passer sur la société.' : null; } },
     { id:'internet', cat:'local', e:'📶', n:'Internet du domicile', score:54, pcat:'local', ptva:'0.2', multi:false,
-      pitch:'La box qui fait tourner ton activité… et Netflix.',
-      verdict:'Se ventile comme le loyer : part pro raisonnable, pas la facture entière.',
-      detail:'Ta connexion sert l’activité, mais aussi le foyer. On déduit une quote-part cohérente avec ton usage professionnel, pas 100 %.',
+      pitch:'La box qui fait tourner ton activité… et Netflix',
+      verdict:'Se ventile comme le loyer : part pro raisonnable, pas la facture entière',
+      detail:'Ta connexion sert l’activité, mais aussi le foyer. On déduit une quote-part cohérente avec ton usage professionnel, pas 100 %',
       vigi:['Quote-part raisonnable et constante'],
       mots:['internet','box','fibre'] },
     { id:'energie-domicile', cat:'local', e:'💡', n:'Électricité & chauffage (part pro)', score:48, pcat:'local', ptva:'0.2', multi:false,
-      pitch:'Les charges du logement, au prorata de ton espace de travail.',
-      verdict:'Suit la quote-part du domicile : même logique, même rigueur.',
-      detail:'Si tu valorises un espace de travail à domicile, les fluides suivent le même prorata de surface. Sans calcul documenté, ça ne tient pas.',
+      pitch:'Les charges du logement, au prorata de ton espace de travail',
+      verdict:'Suit la quote-part du domicile : même logique, même rigueur',
+      detail:'Si tu valorises un espace de travail à domicile, les fluides suivent le même prorata de surface. Sans calcul documenté, ça ne tient pas',
       vigi:['Même prorata que la quote-part logement','Justificatifs des factures'],
       mots:['électricité','edf','chauffage','énergie'] },
 
     // ----- Assurances & protection -----
     { id:'rc-pro', cat:'protection', e:'🛡️', n:'Assurance RC pro', score:91, pcat:'assurance', ptva:'0', multi:false,
-      pitch:'La protection de base de ton activité.',
-      verdict:'Charge évidente — et une protection que tout indépendant devrait avoir.',
-      detail:'La responsabilité civile professionnelle couvre les dégâts que ton activité pourrait causer. Assurance strictement professionnelle : déduction sans débat.',
+      pitch:'La protection de base de ton activité',
+      verdict:'Charge évidente, et une protection que tout indépendant devrait avoir',
+      detail:'La responsabilité civile professionnelle couvre les dégâts que ton activité pourrait causer. Assurance strictement professionnelle : déduction sans débat',
       vigi:['Contrat au nom de l’activité/société'],
       mots:['rc pro','responsabilité civile','assurance pro','axa','maif','hiscox'], prio:5,
       sugg:function(p){ return estSociete(p) ? 'Peu chère, entièrement déductible, et elle protège ton activité : la RC pro coche toutes les cases.' : null; } },
     { id:'mutuelle', cat:'protection', e:'🩺', n:'Mutuelle santé (Madelin)', score:56, pcat:'assurance', ptva:'0', multi:false,
-      pitch:'Ta complémentaire santé, déductible sous conditions de statut.',
-      verdict:'Déductible pour les indépendants TNS via un contrat Madelin — pas en micro.',
-      detail:'Gérant d’EURL ou de SARL (statut TNS) : un contrat de mutuelle « loi Madelin » se déduit de ton revenu. En micro-entreprise, rien ne se déduit ; en SASU, tu relèves d’un autre cadre (assimilé salarié).',
+      pitch:'Ta complémentaire santé, déductible sous conditions de statut',
+      verdict:'Déductible pour les indépendants TNS via un contrat Madelin, mais pas en micro',
+      detail:'Gérant d’EURL ou de SARL (statut TNS) : un contrat de mutuelle « loi Madelin » se déduit de ton revenu. En micro-entreprise, rien ne se déduit ; en SASU, tu relèves d’un autre cadre (assimilé salarié)',
       vigi:['Contrat estampillé « Madelin » requis','Dépend de ton statut : TNS uniquement','Être à jour de ses cotisations sociales'],
       mots:['mutuelle','complémentaire santé','madelin'], lien:SPUBLIC, prio:1,
-      sugg:function(p){ return /eurl|sarl/i.test(p.forme||'') ? 'Avec ton statut de gérant TNS, ta mutuelle peut se déduire via un contrat Madelin — beaucoup passent à côté.' : null; } },
+      sugg:function(p){ return /eurl|sarl/i.test(p.forme||'') ? 'Avec ton statut de gérant TNS, ta mutuelle peut se déduire via un contrat Madelin, beaucoup passent à côté' : null; } },
     { id:'prevoyance', cat:'protection', e:'🧯', n:'Prévoyance & retraite (Madelin)', score:58, pcat:'assurance', ptva:'0', multi:false,
-      pitch:'Préparer les coups durs et la suite, en déduisant.',
-      verdict:'Même logique Madelin que la mutuelle : réservé aux TNS, et souvent très pertinent.',
-      detail:'Arrêt de travail, invalidité, retraite complémentaire : les contrats Madelin permettent aux TNS de se construire une protection en déduisant les cotisations, dans des plafonds officiels.',
+      pitch:'Préparer les coups durs et la suite, en déduisant',
+      verdict:'Même logique Madelin que la mutuelle : réservé aux TNS, et souvent très pertinent',
+      detail:'Arrêt de travail, invalidité, retraite complémentaire : les contrats Madelin permettent aux TNS de se construire une protection en déduisant les cotisations, dans des plafonds officiels',
       vigi:['Contrat Madelin, plafonds officiels','TNS uniquement (EURL, SARL…)'],
       mots:['prévoyance','retraite','per','madelin'], lien:SPUBLIC, prio:2,
       sugg:function(p){ return /eurl|sarl/i.test(p.forme||'') ? 'Prévoyance et retraite complémentaire profitent aussi du dispositif Madelin pour les TNS.' : null; } },
     { id:'frais-bancaires', cat:'protection', e:'🏦', n:'Frais bancaires pro', score:87, pcat:'fonctionnement', ptva:'0.2', multi:false,
-      pitch:'Le compte pro et ses frais de tenue.',
-      verdict:'Charge banale et incontestée du compte professionnel.',
-      detail:'Frais de tenue de compte, cartes, virements du compte pro : des charges d’exploitation ordinaires.',
+      pitch:'Le compte pro et ses frais de tenue',
+      verdict:'Charge banale et incontestée du compte professionnel',
+      detail:'Frais de tenue de compte, cartes, virements du compte pro : des charges d’exploitation ordinaires',
       vigi:['Compte professionnel, pas le compte perso'],
       mots:['banque','frais bancaires','qonto','shine','compte pro'] },
 
     // ----- Services & compétences -----
     { id:'comptable', cat:'services', e:'🧮', n:'Expert-comptable', score:92, pcat:'fonctionnement', ptva:'0.2', multi:false,
-      pitch:'Celui qui sécurise tout le reste de cette page.',
-      verdict:'Charge évidente — et probablement la plus rentable de la liste.',
-      detail:'Honoraires de comptabilité, de bilan, de conseil fiscal : intégralement professionnels. C’est aussi lui qui tranchera les cas orange et rouges de ce guide pour TON dossier.',
+      pitch:'Celui qui sécurise tout le reste de cette page',
+      verdict:'Charge évidente, et probablement la plus rentable de la liste',
+      detail:'Honoraires de comptabilité, de bilan, de conseil fiscal : intégralement professionnels. C’est aussi lui qui tranchera les cas orange et rouges de ce guide pour TON dossier',
       vigi:['Aucune vigilance particulière'],
       mots:['comptable','compta','expert-comptable','indy','dougs','pennylane'], prio:3,
-      sugg:function(p){ return estSociete(p) ? 'En société, l’expert-comptable est quasi incontournable — et entièrement déductible.' : null; } },
+      sugg:function(p){ return estSociete(p) ? 'En société, l’expert-comptable est quasi incontournable, et entièrement déductible' : null; } },
     { id:'sous-traitance', cat:'services', e:'🤝', n:'Sous-traitance & freelances', score:79, pcat:'fonctionnement', ptva:'0.2', multi:true,
-      pitch:'Déléguer une partie de la production ou des tâches.',
-      verdict:'Passe très bien avec de vraies factures et une vraie prestation.',
-      detail:'Faire appel à un autre indépendant pour une mission est une charge classique. Les contrôles regardent la réalité de la prestation : devis, livrables, factures.',
+      pitch:'Déléguer une partie de la production ou des tâches',
+      verdict:'Passe très bien avec de vraies factures et une vraie prestation',
+      detail:'Faire appel à un autre indépendant pour une mission est une charge classique. Les contrôles regardent la réalité de la prestation : devis, livrables, factures',
       vigi:['Factures en bonne et due forme','Prestation réelle et documentée','Attention au salariat déguisé sur les missions longues'],
       mots:['sous-traitance','freelance','prestataire'] },
     { id:'formation', cat:'services', e:'🎓', n:'Formation professionnelle', score:77, pcat:'fonctionnement', ptva:'0.2', multi:true,
-      pitch:'Monter en compétence dans ton domaine.',
-      verdict:'Très bien vue quand elle sert l’activité actuelle ou son développement direct.',
-      detail:'Une formation liée à ton métier ou à son évolution logique passe sans mal. Une reconversion totale vers un autre domaine se discute davantage.',
+      pitch:'Monter en compétence dans ton domaine',
+      verdict:'Très bien vue quand elle sert l’activité actuelle ou son développement direct',
+      detail:'Une formation liée à ton métier ou à son évolution logique passe sans mal. Une reconversion totale vers un autre domaine se discute davantage',
       vigi:['Lien avec l’activité (actuelle ou développement)','Garder programme et facture'],
       mots:['formation','cours','certification','udemy'] },
     { id:'livres', cat:'services', e:'📚', n:'Livres & documentation pro', score:76, pcat:'fonctionnement', ptva:'0.055', multi:true,
-      pitch:'La veille et la doc de ton métier.',
-      verdict:'Passe bien dès que le sujet parle à ton activité.',
-      detail:'Livres métier, presse spécialisée, abonnements de veille : des charges modestes et cohérentes. Le roman de plage, non.',
+      pitch:'La veille et la doc de ton métier',
+      verdict:'Passe bien dès que le sujet parle à ton activité',
+      detail:'Livres métier, presse spécialisée, abonnements de veille : des charges modestes et cohérentes. Le roman de plage, non',
       vigi:['Thème en lien avec l’activité'],
       mots:['livre','documentation','presse','magazine','veille'] },
     { id:'pub', cat:'services', e:'📣', n:'Publicité & marketing', score:86, pcat:'communication', ptva:'0.2', multi:true,
-      pitch:'Faire connaître ton activité : ads, flyers, branding.',
-      verdict:'Dépense de développement classique, très bien acceptée.',
-      detail:'Campagnes en ligne, création de logo, cartes de visite, salons : tout ce qui sert à vendre est une charge d’exploitation naturelle.',
+      pitch:'Faire connaître ton activité : ads, flyers, branding',
+      verdict:'Dépense de développement classique, très bien acceptée',
+      detail:'Campagnes en ligne, création de logo, cartes de visite, salons : tout ce qui sert à vendre est une charge d’exploitation naturelle',
       vigi:['Factures au nom de la société'],
       mots:['publicité','ads','google ads','meta','marketing','flyer','logo'] },
     { id:'cotisations-pro', cat:'services', e:'🏛️', n:'Cotisations pro (ordre, syndicat)', score:81, pcat:'fonctionnement', ptva:'0', multi:false,
-      pitch:'Adhésions professionnelles et organismes de ton secteur.',
-      verdict:'Charge normale de la vie professionnelle organisée.',
-      detail:'Cotisation à un ordre, un syndicat professionnel, une fédération de ton secteur : lien direct avec l’exercice du métier.',
+      pitch:'Adhésions professionnelles et organismes de ton secteur',
+      verdict:'Charge normale de la vie professionnelle organisée',
+      detail:'Cotisation à un ordre, un syndicat professionnel, une fédération de ton secteur : lien direct avec l’exercice du métier',
       vigi:['Organisme en lien avec ton activité'],
       mots:['cotisation','ordre','syndicat','fédération','adhésion'] },
     { id:'juridique', cat:'services', e:'⚖️', n:'Frais juridiques & administratifs', score:84, pcat:'fonctionnement', ptva:'0.2', multi:true,
-      pitch:'Avocat, formalités, protection de ta marque.',
-      verdict:'Les frais de structuration de l’entreprise passent naturellement.',
-      detail:'Conseil juridique, dépôt de marque, formalités de société : des dépenses au service direct de l’entreprise et de sa protection.',
+      pitch:'Avocat, formalités, protection de ta marque',
+      verdict:'Les frais de structuration de l’entreprise passent naturellement',
+      detail:'Conseil juridique, dépôt de marque, formalités de société : des dépenses au service direct de l’entreprise et de sa protection',
       vigi:['Conserver les actes avec les factures'],
       mots:['avocat','juridique','marque','inpi','formalités'] },
 
     // ----- Zone grise perso -----
     { id:'vetements', cat:'perso', e:'👔', n:'Vêtements', score:24, pcat:'fonctionnement', ptva:'0.2', multi:true,
-      pitch:'S’habiller pour travailler… comme pour tout le reste.',
-      verdict:'Refusé sauf tenue spécifique au métier — le costume « pour faire pro » ne passe pas.',
-      detail:'La règle est constante : un vêtement portable dans la vie courante est personnel, même acheté « pour les clients ». Passent : les tenues techniques ou imposées (EPI, blouse, costume de scène).',
+      pitch:'S’habiller pour travailler… comme pour tout le reste',
+      verdict:'Refusé sauf tenue spécifique au métier : le costume « pour faire pro » ne passe pas',
+      detail:'La règle est constante : un vêtement portable dans la vie courante est personnel, même acheté « pour les clients ». Passent : les tenues techniques ou imposées (EPI, blouse, costume de scène)',
       vigi:['Seules les tenues spécifiques au métier passent','Le vêtement de ville ne passe jamais, même élégant'],
       mots:['vêtement','costume','chaussure'] },
     { id:'lunettes', cat:'perso', e:'👓', n:'Lunettes de vue', score:12, pcat:'fonctionnement', ptva:'0.2', multi:false,
-      pitch:'Tu en as besoin pour l’écran… et pour conduire, lire, vivre.',
-      verdict:'Dépense de santé personnelle — passe par ta mutuelle, pas par la société.',
-      detail:'Les lunettes corrigent ta vue dans toute ta vie, pas seulement au travail : c’est une dépense personnelle de santé. Le bon canal, c’est la complémentaire santé.',
+      pitch:'Tu en as besoin pour l’écran… et pour conduire, lire, vivre',
+      verdict:'Dépense de santé personnelle : passe par ta mutuelle, pas par la société',
+      detail:'Les lunettes corrigent ta vue dans toute ta vie, pas seulement au travail : c’est une dépense personnelle de santé. Le bon canal, c’est la complémentaire santé',
       vigi:['Ne passe pas en charge, même « pour l’écran »'],
       mots:['lunettes','optique'] },
     // ----- Rémunérations & équipe -----
     { id:'salaires', cat:'equipe', e:'👥', n:'Salaires & cotisations', score:96, pcat:'fonctionnement', ptva:'0', multi:false,
-      pitch:'La paie de tes salariés et les charges qui vont avec.',
-      verdict:'Charge d’exploitation par excellence : aucune discussion possible.',
-      detail:'Salaires bruts et cotisations patronales se déduisent du résultat. C’est souvent le premier poste de dépense d’une société qui embauche.',
+      pitch:'La paie de tes salariés et les charges qui vont avec',
+      verdict:'Charge d’exploitation par excellence : aucune discussion possible',
+      detail:'Salaires bruts et cotisations patronales se déduisent du résultat. C’est souvent le premier poste de dépense d’une société qui embauche',
       vigi:['Contrat de travail et bulletins de paie en règle','Déclarations sociales à jour'],
       mots:['salaire','paie','cotisation','employé','salarié'] },
     { id:'remuneration-dirigeant', cat:'equipe', e:'💼', n:'Rémunération du dirigeant', score:88, pcat:'fonctionnement', ptva:'0', multi:false,
-      pitch:'Ce que tu te verses, et son coût pour la société.',
-      verdict:'Déductible du résultat de la société — mais imposable chez toi.',
-      detail:'Ta rémunération réduit le bénéfice imposable de la société. En contrepartie, elle devient un revenu imposable et cotisé de ton côté : l’arbitrage rémunération / dividendes est un vrai levier d’optimisation.',
+      pitch:'Ce que tu te verses, et son coût pour la société',
+      verdict:'Déductible du résultat de la société, mais imposable chez toi',
+      detail:'Ta rémunération réduit le bénéfice imposable de la société. En contrepartie, elle devient un revenu imposable et cotisé de ton côté : l’arbitrage rémunération / dividendes est un vrai levier d’optimisation',
       vigi:['Doit correspondre à un travail effectif','L’arbitrage avec les dividendes se calcule, il ne s’improvise pas'],
       mots:['rémunération','dirigeant','gérant'], prio:7,
-      sugg:function(p){ return estSociete(p) ? 'Le dosage rémunération / dividendes change beaucoup ce qu’il te reste — le cockpit « Optimiser ma société » le calcule.' : null; } },
+      sugg:function(p){ return estSociete(p) ? 'Le dosage rémunération / dividendes change beaucoup ce qu’il te reste, le cockpit « Optimiser ma société » le calcule' : null; } },
     { id:'alternant', cat:'equipe', e:'🎓', n:'Stagiaire ou alternant', score:85, pcat:'fonctionnement', ptva:'0', multi:false,
-      pitch:'Gratification de stage, salaire d’apprenti.',
-      verdict:'Déductible, et souvent accompagnée d’aides à l’embauche.',
-      detail:'Gratifications et rémunérations d’alternants sont des charges classiques. Des aides existent selon le type de contrat — elles se demandent, elles ne tombent pas toutes seules.',
+      pitch:'Gratification de stage, salaire d’apprenti',
+      verdict:'Déductible, et souvent accompagnée d’aides à l’embauche',
+      detail:'Gratifications et rémunérations d’alternants sont des charges classiques. Des aides existent selon le type de contrat : elles se demandent, elles ne tombent pas toutes seules',
       vigi:['Convention de stage ou contrat d’alternance obligatoire','Vérifier les aides auxquelles tu as droit'],
       mots:['stagiaire','alternant','apprenti','stage'], lien:SPUBLIC },
 
     // ----- Finance -----
     { id:'interets-emprunt', cat:'finance', e:'🏛️', n:'Intérêts d’emprunt pro', score:87, pcat:'fonctionnement', ptva:'0', multi:false,
-      pitch:'Le coût du crédit contracté pour l’activité.',
-      verdict:'Les intérêts se déduisent — le remboursement du capital, non.',
-      detail:'C’est la confusion la plus fréquente : seule la part d’intérêts de tes échéances est une charge. Le capital remboursé n’en est pas une, il éteint une dette.',
+      pitch:'Le coût du crédit contracté pour l’activité',
+      verdict:'Les intérêts se déduisent, le remboursement du capital non',
+      detail:'C’est la confusion la plus fréquente : seule la part d’intérêts de tes échéances est une charge. Le capital remboursé n’en est pas une, il éteint une dette',
       vigi:['Distinguer intérêts (charge) et capital (pas une charge)','Emprunt réellement affecté à l’activité'],
       mots:['emprunt','crédit','intérêt','prêt'] },
     { id:'commissions', cat:'finance', e:'💳', n:'Commissions d’encaissement', score:90, pcat:'fonctionnement', ptva:'0.2', multi:true,
-      pitch:'Stripe, PayPal, terminal de carte bancaire.',
-      verdict:'Frais directement liés à tes ventes : charge évidente.',
-      detail:'Les commissions prélevées sur tes encaissements accompagnent chaque vente. Elles se déduisent intégralement.',
+      pitch:'Stripe, PayPal, terminal de carte bancaire',
+      verdict:'Frais directement liés à tes ventes : charge évidente',
+      detail:'Les commissions prélevées sur tes encaissements accompagnent chaque vente. Elles se déduisent intégralement',
       vigi:['Récupérer les relevés de commission'],
       mots:['commission','stripe','paypal','sumup','terminal'] },
     { id:'impayes', cat:'finance', e:'📉', n:'Factures impayées', score:64, pcat:'fonctionnement', ptva:'0', multi:false,
-      pitch:'Un client qui ne paiera jamais.',
-      verdict:'Déductible en créance irrécouvrable — après avoir vraiment tenté de recouvrer.',
-      detail:'Une facture définitivement perdue peut être passée en perte et réduire ton bénéfice imposable. Encore faut-il prouver que tu as tenté de récupérer la somme : relances, mise en demeure, procédure.',
+      pitch:'Un client qui ne paiera jamais',
+      verdict:'Déductible en créance irrécouvrable, après avoir vraiment tenté de recouvrer',
+      detail:'Une facture définitivement perdue peut être passée en perte et réduire ton bénéfice imposable. Encore faut-il prouver que tu as tenté de récupérer la somme : relances, mise en demeure, procédure',
       vigi:['Conserver les preuves de relance et de recouvrement','Le caractère irrécouvrable doit être établi','La TVA déjà déclarée peut parfois être récupérée'],
       mots:['impayé','créance','irrécouvrable'] },
 
     // ----- Outils & matériel (compléments) -----
     { id:'outillage', cat:'outils', e:'🔧', n:'Petit outillage & consommables', score:88, pcat:'fonctionnement', ptva:'0.2', multi:true,
-      pitch:'L’outillage du quotidien des métiers manuels.',
-      verdict:'Charge courante : le lien avec l’activité est immédiat.',
-      detail:'Perceuse, clés, consommables d’atelier ou de chantier : le petit matériel passe en charge. Au-delà d’un certain montant unitaire, on bascule sur l’amortissement.',
+      pitch:'L’outillage du quotidien des métiers manuels',
+      verdict:'Charge courante : le lien avec l’activité est immédiat',
+      detail:'Perceuse, clés, consommables d’atelier ou de chantier : le petit matériel passe en charge. Au-delà d’un certain montant unitaire, on bascule sur l’amortissement',
       vigi:['Gros montant unitaire : amortissement plutôt que charge'],
       mots:['outillage','outil','perceuse','consommable','chantier'] },
     { id:'epi', cat:'outils', e:'🦺', n:'Équipements de protection', score:93, pcat:'fonctionnement', ptva:'0.2', multi:true,
-      pitch:'Casque, gants, chaussures de sécurité, blouse.',
-      verdict:'La seule famille de vêtements qui passe sans discussion.',
-      detail:'Contrairement aux vêtements de ville, les équipements de protection et les tenues imposées par le métier sont déductibles : ils ne sont pas portables dans la vie courante.',
+      pitch:'Casque, gants, chaussures de sécurité, blouse',
+      verdict:'La seule famille de vêtements qui passe sans discussion',
+      detail:'Contrairement aux vêtements de ville, les équipements de protection et les tenues imposées par le métier sont déductibles : ils ne sont pas portables dans la vie courante',
       vigi:['Tenue réellement spécifique au métier'],
       mots:['epi','protection','casque','gants','sécurité','blouse'] },
     { id:'stock', cat:'outils', e:'📦', n:'Stock & matières premières', score:94, pcat:'fonctionnement', ptva:'0.2', multi:true,
-      pitch:'Ce que tu achètes pour produire ou revendre.',
-      verdict:'Le cœur du métier dès que tu vends des biens.',
-      detail:'Marchandises et matières premières entrent dans le résultat via la variation de stock. Leur suivi devient une obligation comptable.',
+      pitch:'Ce que tu achètes pour produire ou revendre',
+      verdict:'Le cœur du métier dès que tu vends des biens',
+      detail:'Marchandises et matières premières entrent dans le résultat via la variation de stock. Leur suivi devient une obligation comptable',
       vigi:['Inventaire de fin d’exercice à tenir','Suivi des entrées et sorties'],
       mots:['stock','marchandise','matière première'] },
 
     // ----- Local (compléments) -----
     { id:'loyer-local', cat:'local', e:'🏬', n:'Loyer d’un local pro', score:94, pcat:'local', ptva:'0.2', multi:false,
-      pitch:'Un local dédié à l’activité, hors domicile.',
-      verdict:'Loyer professionnel : charge nette, sans ambiguïté.',
-      detail:'Le loyer d’un local commercial ou professionnel se déduit intégralement, charges locatives comprises.',
+      pitch:'Un local dédié à l’activité, hors domicile',
+      verdict:'Loyer professionnel : charge nette, sans ambiguïté',
+      detail:'Le loyer d’un local commercial ou professionnel se déduit intégralement, charges locatives comprises',
       vigi:['Bail au nom de l’entreprise','Conserver bail et quittances'],
       mots:['loyer','local','bail','boutique','atelier'] },
     { id:'entretien-local', cat:'local', e:'🧹', n:'Entretien & ménage du local', score:86, pcat:'local', ptva:'0.2', multi:false,
-      pitch:'Nettoyage, petites réparations, maintenance.',
-      verdict:'Charge d’exploitation courante d’un local professionnel.',
-      detail:'Prestation de ménage, réparations locatives, maintenance des équipements : tout ce qui entretient l’outil de travail est déductible.',
+      pitch:'Nettoyage, petites réparations, maintenance',
+      verdict:'Charge d’exploitation courante d’un local professionnel',
+      detail:'Prestation de ménage, réparations locatives, maintenance des équipements : tout ce qui entretient l’outil de travail est déductible',
       vigi:['Distinguer entretien (charge) et gros travaux (amortissables)'],
       mots:['ménage','entretien','nettoyage','réparation'] },
 
     // ----- Déplacements (complément) -----
     { id:'entretien-vehicule', cat:'deplacement', e:'🔩', n:'Entretien & assurance du véhicule', score:44, pcat:'vehicule', ptva:'0.2', multi:false,
-      pitch:'Révision, pneus, assurance auto.',
-      verdict:'Piège du doublon : le barème kilométrique les couvre déjà.',
-      detail:'Si tu utilises le barème kilométrique, il inclut déjà entretien, assurance et dépréciation : les déduire en plus reviendrait à compter deux fois. Ces frais ne se déduisent séparément qu’au régime des frais réels, sur un véhicule inscrit à l’actif.',
+      pitch:'Révision, pneus, assurance auto',
+      verdict:'Piège du doublon : le barème kilométrique les couvre déjà',
+      detail:'Si tu utilises le barème kilométrique, il inclut déjà entretien, assurance et dépréciation : les déduire en plus reviendrait à compter deux fois. Ces frais ne se déduisent séparément qu’au régime des frais réels, sur un véhicule inscrit à l’actif',
       vigi:['Ne jamais cumuler avec le barème kilométrique','Choisir un régime et s’y tenir sur l’année'],
       mots:['entretien véhicule','pneus','révision','assurance auto','garage'], lien:IMPOTS },
 
     // ----- Zone grise (complément) -----
     { id:'amendes', cat:'perso', e:'🚨', n:'Amendes & pénalités', score:5, pcat:'fonctionnement', ptva:'0', multi:false,
-      pitch:'PV de stationnement, excès de vitesse, pénalités fiscales.',
-      verdict:'Jamais déductibles — la loi les exclut explicitement.',
-      detail:'Les sanctions pécuniaires ne se déduisent pas du résultat, même quand l’infraction survient pendant un déplacement professionnel. Payées par la société, elles sont réintégrées.',
+      pitch:'PV de stationnement, excès de vitesse, pénalités fiscales',
+      verdict:'Jamais déductibles, la loi les exclut explicitement',
+      detail:'Les sanctions pécuniaires ne se déduisent pas du résultat, même quand l’infraction survient pendant un déplacement professionnel. Payées par la société, elles sont réintégrées',
       vigi:['Aucune exception : ne pas les passer en charge'],
       mots:['amende','pv','contravention','pénalité'] },
 
     { id:'sport', cat:'perso', e:'💪', n:'Sport & bien-être', score:10, pcat:'fonctionnement', ptva:'0.2', multi:false,
-      pitch:'La salle de sport « pour tenir le rythme ».',
-      verdict:'Bien-être personnel : aucun lien direct admis avec l’activité.',
-      detail:'Aussi vrai que le sport aide à travailler mieux, le fisc y voit une dépense d’hygiène de vie personnelle. Exceptions rarissimes liées à des métiers du corps.',
+      pitch:'La salle de sport « pour tenir le rythme »',
+      verdict:'Bien-être personnel : aucun lien direct admis avec l’activité',
+      detail:'Aussi vrai que le sport aide à travailler mieux, le fisc y voit une dépense d’hygiène de vie personnelle. Exceptions rarissimes liées à des métiers du corps',
       vigi:['Ne passe pas, hors métiers très spécifiques (sportif, cascadeur…)'],
       mots:['sport','salle','fitness','yoga'] },
   ];
@@ -5326,7 +5326,7 @@
       return '<div class="tvo-emoji">🧾</div>'
         + '<div class="tvo-q">Voyons ce que tu peux passer</div>'
         + '<div class="tvo-sub">D’après ton profil, voici ce que j’ai retenu de ton activité. '
-          + 'C’est là-dessus que je vais te suggérer des dépenses.</div>'
+          + 'C’est là-dessus que je vais te suggérer des dépenses</div>'
         + '<div class="tvo-recap">'
           + ligne('Activité', p.activite || 'à compléter')
           + ligne('Statut', p.forme || 'à compléter')
@@ -5350,12 +5350,12 @@
             + '<span class="dgo-sg-fl">→</span></button>';
         }).join('') + '</div>'
       : '<div class="tvo-vide">Complète ton statut dans ton profil et je te ferai des suggestions '
-        + 'sur mesure. En attendant, le guide complet t’attend.</div>';
+        + 'sur mesure. En attendant, le guide complet t’attend</div>';
 
     return '<div class="tvo-emoji">💡</div>'
       + '<div class="tvo-q">Des pistes pour toi</div>'
       + '<div class="tvo-sub">Des dépenses auxquelles ton profil correspond, et auxquelles tu n’as '
-        + 'peut-être pas pensé. Clique pour ouvrir la fiche.</div>'
+        + 'peut-être pas pensé. Clique pour ouvrir la fiche</div>'
       + liste
       + '<div class="tvo-actions">'
         + '<button class="tvo-next" data-action="dep-onb-fin">Explorer le guide complet →</button>'
@@ -5385,13 +5385,13 @@
       bandeau = '<div class="dg-micro">'
         + '<div class="dg-micro-t">⚠️ En micro-entreprise, tes dépenses ne se déduisent pas</div>'
         + '<div class="dg-micro-s">Ton abattement forfaitaire les remplace : l’administration considère '
-          + 'tes frais couverts d’office. Ce guide reste utile pour te projeter — si tes dépenses '
-          + 'réelles dépassent cet abattement, la société devient intéressante.</div>'
+          + 'tes frais couverts d’office. Ce guide reste utile pour te projeter : si tes dépenses '
+          + 'réelles dépassent cet abattement, la société devient intéressante</div>'
         + '<button class="dg-micro-cta" data-action="sim-open" data-sim="statut">Quand passer en société ? →</button>'
         + '</div>';
     } else if(!estSociete(p)){
-      bandeau = '<div class="dg-note">💡 Renseigne ton statut dans ton profil : ce guide s’adaptera '
-        + 'et te suggérera des dépenses selon ta situation.</div>';
+      bandeau = '<div class="dg-note">💡 Renseigne ton statut dans ton profil : le guide s’adaptera '
+        + 'et te suggérera des dépenses selon ta situation</div>';
     }
 
     var suggestions = depSuggestions();
@@ -5420,12 +5420,8 @@
       + '<div class="dg-intro">'
         + '<div class="dg-intro-txt">'
           + '<div class="dg-intro-t">Qu’est-ce qui peut passer sur ta société&nbsp;?</div>'
-          + '<div class="dg-intro-s">Explore les dépenses que les indépendants passent vraiment sur '
-            + 'leur société, repère celles qui collent à ton activité et garde ta sélection sous la '
-            + 'main. Chaque fiche te dit à quelles conditions ça tient, ce qu’il faut garder comme '
-            + 'justificatif, et où sont les pièges. La jauge situe la dépense sur une échelle : '
-            + 'plus elle va vers la droite, plus c’est courant et simple à justifier ; plus elle '
-            + 'reste à gauche, plus c’est encadré et scruté en cas de contrôle.</div>'
+          + '<div class="dg-intro-s">Explore les dépenses que les indépendants peuvent passer sur '
+            + 'leur société, repère celles qui collent à ton activité et garde ta sélection sous la main</div>'
         + '</div>'
         + '<div class="dg-legende">'
           + '<div class="dg-leg-track"></div>'
@@ -5449,9 +5445,9 @@
         + '<p class="dg-disclaimer">Des repères généraux pour une société au réel — <strong>pas un '
           + 'avis fiscal</strong>. Chaque situation a ses nuances : ton activité, ton statut, l’usage '
           + 'réel que tu fais de la dépense. Avant d’engager un montant important, mieux vaut faire '
-          + 'valider ton cas précis par un professionnel.</p>'
+          + 'valider ton cas précis par un professionnel</p>'
         + simPartenaireHtml(3, 'Un doute sur ce que tu peux vraiment passer ? Icon Invest regarde ta '
-            + 'situation en détail et sécurise tes arbitrages, du premier euro à la clôture.')
+            + 'situation en détail et sécurise tes arbitrages, du premier euro à la clôture')
       + '</div>'
       + '</div>';
   }
@@ -5461,8 +5457,8 @@
     if(!liste.length){
       return '<div class="obj-vide" id="dg-grid">'
         + (state.depFiltre === 'favoris' && !state.depRecherche
-            ? 'Ta sélection est vide. Parcours le guide et clique sur l’étoile des dépenses qui parlent à ton activité.'
-            : 'Aucune dépense ne correspond à ta recherche.')
+            ? 'Ta sélection est vide : parcours le guide et clique sur l’étoile des dépenses qui parlent à ton activité'
+            : 'Aucune dépense ne correspond à ta recherche')
         + '</div>';
     }
     return '<div class="dg-grid" id="dg-grid">' + liste.map(depCarteHtml).join('') + '</div>';
@@ -5487,7 +5483,7 @@
       return '<div class="dga dga-ok">'
         + '<div class="dga-ok-t">✓ Ajouté à tes charges</div>'
         + '<div class="dga-ok-s">'+esc(a.dernier)+' apparaît maintenant dans ton profil et '
-          + 'dans tes simulateurs.</div>'
+          + 'dans tes simulateurs</div>'
         + (d.multi
             ? '<div class="dga-btns">'
               + '<button class="dgf-btn sec" data-action="dep-ajout-encore" data-id="'+d.id+'">'
@@ -5509,7 +5505,7 @@
       + '<input class="dga-in" data-dga="nom" value="'+esc(a.nom)+'" placeholder="'
         + esc(d.multi ? 'Ex : ' + (d.mots[0] || d.n) : d.n)+'">'
       + (d.multi ? '<div class="dga-aide">Tu en as peut-être plusieurs : donne un nom précis, '
-                 + 'tu pourras en ajouter d’autres juste après.</div>' : '')
+                 + 'tu pourras en ajouter d’autres juste après</div>' : '')
       + '<label class="dga-l">C’est une dépense…</label>'
       + seg('frequence', [{v:'mensuelle',l:'Par mois'},{v:'annuelle',l:'Par an'}])
       + '<label class="dga-l">Montant TTC</label>'
@@ -5551,10 +5547,8 @@
         // tu en as déjà une : personne n'a un seul abonnement.
         + (dans && !d.multi
             ? '<span class="dgf-dans">✓ Déjà dans tes charges</span>'
-            : '<button class="dgf-btn sec" data-action="dep-ajout-ouvrir" data-id="'+d.id+'">'
+            : '<button class="dgf-btn" data-action="dep-ajout-ouvrir" data-id="'+d.id+'">'
               + (dans ? '＋ En ajouter un autre' : '＋ Ajouter à mes charges')+'</button>')
-        + '<button class="dgf-btn" data-action="dep-analyser" data-id="'+d.id+'">'
-          + 'Analyser mon cas précis →</button>'
         + '</div>';
 
     return '<div class="overlay" data-action="dep-close">'
@@ -6796,6 +6790,11 @@
     majOnboarding();
     majTvaOnb();
     majDepOnb();
+
+    // Une pop-up ouverte fige le défilement de la page derrière.
+    document.body.classList.toggle('pop-ouverte',
+      !!document.querySelector('#modal-root .overlay, #onb-root .tvo-overlay,'
+                             + ' #tvo-root .tvo-overlay, #dgo-root .tvo-overlay'));
   }
 
   // ---------------------------------------------------------------------------
@@ -7221,15 +7220,26 @@
         e.stopPropagation();   // l'étoile vit sur une carte cliquable : ne pas ouvrir la fiche
         var idF = el.getAttribute('data-id');
         var pos = state.depFavoris.indexOf(idF);
+        var actif = pos < 0;
         if(pos >= 0) state.depFavoris.splice(pos, 1);
         else state.depFavoris.push(idF);
         saveDepFavoris();
-        render();
+        // Bascule en place : l'étoile et le compteur suffisent, pas besoin de
+        // reconstruire la grille (sauf si on filtre justement sur la sélection).
+        [].forEach.call(document.querySelectorAll('[data-action="dep-fav"][data-id="'+idF+'"]'),
+          function(b){ b.classList.toggle('on', actif); b.textContent = actif ? '★' : '☆'; });
+        var pill = document.querySelector('.dg-pill[data-f="favoris"]');
+        if(pill) pill.textContent = '★ Ma sélection'
+          + (state.depFavoris.length ? ' (' + state.depFavoris.length + ')' : '');
+        if(state.depFiltre === 'favoris') majGuideDep();
         break;
       }
       case 'dep-filtre':
         state.depFiltre = el.getAttribute('data-f');
-        render();
+        [].forEach.call(document.querySelectorAll('.dg-pill'), function(p){
+          p.classList.toggle('on', p === el);
+        });
+        majGuideDep();
         break;
       case 'dep-ajout-ouvrir': {
         var dO = depGuide(el.getAttribute('data-id'));
@@ -7240,14 +7250,23 @@
         break;
       }
       case 'dep-ajout-set':
+        // Bascule visuelle immédiate, sans reconstruire la page : c'est ce qui
+        // provoquait le micro-clignotement à chaque clic.
         state.depAjout[el.getAttribute('data-champ')] = el.getAttribute('data-v');
-        render();
+        [].forEach.call(el.parentElement.querySelectorAll('.dga-seg-b'), function(b){
+          b.classList.toggle('on', b === el);
+        });
         break;
       case 'dep-ajout-annule':
-      case 'dep-ajout-fin':
         state.depAjout = { id:null, nom:'', frequence:'mensuelle', montant:'',
                            erreur:'', fait:false, dernier:'' };
         render();
+        break;
+      case 'dep-ajout-fin':
+        // La fiche a déjà été lue : on renvoie directement au guide.
+        state.depAjout = { id:null, nom:'', frequence:'mensuelle', montant:'',
+                           erreur:'', fait:false, dernier:'' };
+        setState({ depOuvert: null });
         break;
       case 'dep-ajout-encore': {
         var dE = depGuide(el.getAttribute('data-id'));
@@ -7262,7 +7281,7 @@
         if(!dV) break;
         var nomV = (aj.nom || '').trim() || dV.n;
         if(!(parseFloat(aj.montant) > 0)){
-          aj.erreur = 'Indique un montant.'; render(); break;
+          aj.erreur = 'Indique un montant'; render(); break;
         }
         // Les champs techniques (catégorie, TVA, déductibilité) sont déduits de
         // la fiche : l'utilisateur n'a que le nom, la période et le montant à donner.
@@ -7274,17 +7293,6 @@
         saveProfil(state.profil);
         appliquerProfil();
         aj.erreur = ''; aj.fait = true; aj.dernier = nomV;
-        render();
-        break;
-      }
-      case 'dep-analyser': {
-        var dI = depGuide(el.getAttribute('data-id'));
-        state.depOuvert = null;
-        state.sim.open = 'depenses-ia';
-        state.sim.step = 'form';
-        appliquerProfil();
-        // La fiche pré-remplit l'analyse : il ne reste que le montant et le contexte.
-        state.sim.depenses = [{ nom: dI ? dI.n : '', montant:'', motif:'' }];
         render();
         break;
       }
