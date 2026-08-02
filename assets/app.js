@@ -781,7 +781,7 @@
   var titles = {
     accueil:    ['Ton hub', 'Accueil',       'Où tu en es, et ce qui vient ensuite.'],
     objectifs:  ['Parcours','Mes objectifs', 'Choisis un cap, avance étape par étape.'],
-    simulateur: ['Analyse', 'Simulateur',    'Vérifie si une dépense peut être prise en charge par ta société.'],
+    simulateur: ['Analyse', 'Simulateur',    'Cinq outils pour y voir clair sur tes chiffres.'],
     lexique:    ['Comprendre','Lexique',        'Les mots de l’administratif, expliqués simplement. Épingle ceux à retenir.'],
     calendrier: ['Anticiper','Calendrier',      'Tes échéances de l’année, réunies au même endroit.'],
     partenaires:['Écosystème','Nos partenaires','Les outils et les gens qu’on recommande pour bien t’entourer.'],
@@ -1863,6 +1863,8 @@
       result: null,
       formError: null,
       historique: loadHistVL(),
+      onb: { actif:false, etape:0 },
+      essai: false,            // société : on teste sans écrire dans le profil
     },
     // Simulateur « Optimiser ma société » — cockpit temps réel
     optim: {
@@ -1874,6 +1876,8 @@
       leviers: { mutuelle:0, prevoyance:0, rcpro:0, per:0, ticketsResto:0, ik:0, bureau:0 },
       projection: null,
       scenarios: loadScenarios(),
+      onb: { actif:false, etape:0 },
+      essai: false,   // profil en micro : on teste le cockpit sans rien écrire
       importInfo: null,        // message après un import
     },
     // Simulateur « Quand passer en société ? » — recalcul en temps réel
@@ -1886,6 +1890,8 @@
       charges: [ { nom:'Logiciels et abonnements', montant:'150', frequence:'mensuelle' } ],
       avance: false,           // panneau des paramètres fiscaux
       projection: null,        // CA du curseur (null = CA réel saisi)
+      onb: { actif:false, etape:0 },
+      essai: false,            // profil déjà en société : on teste sans rien écrire
     },
     // Simulateur de passage à la TVA (calcul déterministe, sans IA)
     tva: {
@@ -4322,6 +4328,132 @@
     }
     card.innerHTML = vlOnbCorpsHtml();
   }
+
+  // ---------------------------------------------------------------------------
+  // Parcours guidés de « Passer en société ? » et « Optimiser ma société »
+  //
+  // Même principe que la TVA et le versement libératoire : on met en contexte,
+  // on montre ce qu'on a compris du profil, on laisse corriger sur place.
+  // Chacun garde un contrôle de cohérence : le comparateur de statuts n'a pas
+  // de sens si tu es déjà en société, le cockpit n'en a pas si tu es en micro.
+  // ---------------------------------------------------------------------------
+  function simOnbChamp(champ, label, valeur, unite, action){
+    return '<label class="tvo-lab">'+esc(label)+'</label>'
+      + '<div class="tvo-champ"><input data-'+action+'="'+champ+'" type="number" min="0" '
+      + 'step="any" value="'+esc(valeur || '')+'"><span>'+unite+'</span></div>';
+  }
+
+  function statutOnbCorpsHtml(){
+    var p = state.profil, f = state.statut.form, e = state.statut.onb.etape;
+    if(e === 0){
+      if(estSociete(p)){
+        return '<div class="tvo-emoji">🏛️</div>'
+          + '<div class="tvo-q">Tu es déjà en société</div>'
+          + '<div class="tvo-sub">Ce comparateur sert à décider quand quitter l’auto-entreprise. '
+            + 'Avec ton '+esc(p.forme || 'statut')+', la question est derrière toi</div>'
+          + '<div class="tvo-alerte">Tu peux quand même l’ouvrir pour comparer les trois statuts. '
+            + 'Les valeurs que tu saisiras ne toucheront pas à ton profil</div>'
+          + '<div class="tvo-actions">'
+            + '<button class="tvo-next" data-action="statut-onb-essai">Comparer quand même →</button>'
+            + '<button class="tvo-ghost" data-action="statut-onb-quit">Retour aux simulateurs</button>'
+          + '</div>';
+      }
+      return '<div class="tvo-emoji">🏛️</div>'
+        + '<div class="tvo-q">Faut-il passer en société ?</div>'
+        + '<div class="tvo-sub">On compare ton auto-entreprise à une EURL et une SASU, et on cherche '
+          + 'le chiffre d’affaires à partir duquel la société te rapporte plus</div>'
+        + '<div class="tvo-actions">'
+          + '<button class="tvo-next" data-action="statut-onb-next">C’est parti →</button>'
+        + '</div>'
+        + '<button class="tvo-skip" data-action="statut-onb-quit">Retour aux simulateurs</button>';
+    }
+    var essai = state.statut.essai;
+    var cats = [{v:'venteBIC',l:'Vente'},{v:'serviceBIC',l:'Services'},{v:'bnc',l:'Libéral'}];
+    var chips = cats.map(function(c){
+      return '<button class="tvo-chip'+(f.categorie === c.v ? ' on' : '')+'" '
+        + 'data-action="statut-onb-cat" data-v="'+c.v+'">'+esc(c.l)+'</button>';
+    }).join('');
+    var nbCh = (p.charges || []).length;
+    return '<div class="tvo-dots"><span class="on"></span><span class="on"></span></div>'
+      + '<div class="tvo-q">'+(essai ? 'Saisis des valeurs pour comparer' : 'D’après ton profil')+'</div>'
+      + (essai ? '<div class="tvo-sub">Rien ne sera enregistré dans ton profil</div>' : '')
+      + '<div class="tvo-edit">'
+        + '<label class="tvo-lab">Catégorie de ton activité</label>'
+        + '<div class="tvo-chips">'+chips+'</div>'
+        + simOnbChamp('caAnnuel', 'Chiffre d’affaires annuel', f.caAnnuel, '€', 'statut-onb')
+        + simOnbChamp('remMensuelle', 'Rémunération nette que tu veux te verser', f.remMensuelle, '€ / mois', 'statut-onb')
+        + simOnbChamp('parts', 'Parts fiscales du foyer', f.parts, 'parts', 'statut-onb')
+        + '<div class="tvo-aide">'+nbCh+(nbCh > 1 ? ' charges reprises' : ' charge reprise')
+          + ' de ton profil. En société elles se déduisent, en auto-entreprise jamais : '
+          + 'c’est souvent ce qui fait basculer le calcul</div>'
+      + '</div>'
+      + '<div class="tvo-nav">'
+        + '<button class="tvo-back" data-action="statut-onb-prev">← Retour</button>'
+        + '<button class="tvo-next" data-action="statut-onb-lancer">Voir la comparaison →</button>'
+      + '</div>';
+  }
+
+  function optimOnbCorpsHtml(){
+    var p = state.profil, f = state.optim.form, e = state.optim.onb.etape;
+    if(e === 0){
+      if(estMicro(p)){
+        return '<div class="tvo-emoji">🎛️</div>'
+          + '<div class="tvo-q">Ce cockpit s’adresse aux sociétés</div>'
+          + '<div class="tvo-sub">Rémunération, dividendes, trésorerie : ces leviers n’existent pas '
+            + 'en auto-entreprise, où ton revenu suit directement ton chiffre d’affaires</div>'
+          + '<div class="tvo-alerte">Tu peux l’ouvrir pour voir à quoi ressemble le pilotage d’une '
+            + 'société. Rien ne sera enregistré dans ton profil</div>'
+          + '<div class="tvo-actions">'
+            + '<button class="tvo-next" data-action="optim-onb-essai">Jeter un œil →</button>'
+            + '<button class="tvo-ghost" data-action="optim-onb-quit">Retour aux simulateurs</button>'
+          + '</div>';
+      }
+      return '<div class="tvo-emoji">🎛️</div>'
+        + '<div class="tvo-q">Optimiser ta société</div>'
+        + '<div class="tvo-sub">On regarde ce que tu te verses, ce que tu distribues et ce que tu '
+          + 'laisses dans la société, puis ce qu’il te reste vraiment</div>'
+        + '<div class="tvo-actions">'
+          + '<button class="tvo-next" data-action="optim-onb-next">C’est parti →</button>'
+        + '</div>'
+        + '<button class="tvo-skip" data-action="optim-onb-quit">Retour aux simulateurs</button>';
+    }
+    var essai = state.optim.essai;
+    var statuts = [{v:'eurl',l:'EURL / SARL'},{v:'sasu',l:'SASU / SAS'}];
+    var chips = statuts.map(function(c){
+      return '<button class="tvo-chip'+(state.optim.statut === c.v ? ' on' : '')+'" '
+        + 'data-action="optim-onb-statut" data-v="'+c.v+'">'+esc(c.l)+'</button>';
+    }).join('');
+    return '<div class="tvo-dots"><span class="on"></span><span class="on"></span></div>'
+      + '<div class="tvo-q">'+(essai ? 'Saisis des valeurs pour essayer' : 'D’après ton profil')+'</div>'
+      + (essai ? '<div class="tvo-sub">Rien ne sera enregistré dans ton profil</div>' : '')
+      + '<div class="tvo-edit">'
+        + '<label class="tvo-lab">Forme de ta société</label>'
+        + '<div class="tvo-chips">'+chips+'</div>'
+        + simOnbChamp('caAnnuel', 'Chiffre d’affaires annuel', f.caAnnuel, '€', 'optim-onb')
+        + simOnbChamp('remMensuelle', 'Rémunération nette mensuelle', f.remMensuelle, '€ / mois', 'optim-onb')
+        + simOnbChamp('dividendes', 'Part du bénéfice distribuée en dividendes', f.dividendes, '%', 'optim-onb')
+        + '<div class="tvo-aide">Tu pourras tout ajuster en direct ensuite, avec les leviers '
+          + 'd’optimisation et le curseur de chiffre d’affaires</div>'
+      + '</div>'
+      + '<div class="tvo-nav">'
+        + '<button class="tvo-back" data-action="optim-onb-prev">← Retour</button>'
+        + '<button class="tvo-next" data-action="optim-onb-lancer">Ouvrir le cockpit →</button>'
+      + '</div>';
+  }
+
+  function majSimOnb(cle, corps){
+    var root = document.getElementById(cle + 'o-root');
+    if(!root) return;
+    if(!(state[cle].onb.actif && state.sim.open === cle)){ root.innerHTML = ''; return; }
+    var card = root.querySelector('.tvo-card');
+    if(!card){
+      root.innerHTML = '<div class="tvo-overlay"><div class="tvo-card"></div></div>';
+      card = root.querySelector('.tvo-card');
+    }
+    card.innerHTML = corps();
+  }
+  function majStatutOnb(){ majSimOnb('statut', statutOnbCorpsHtml); }
+  function majOptimOnb(){ majSimOnb('optim', optimOnbCorpsHtml); }
 
   // --- Visualisation du barème progressif ---
   var TRANCHE_COULEURS = ['#e8edf5', '#c7dcff', '#8fb4ff', '#f7c9a0', '#f2a3a3'];
@@ -6853,6 +6985,20 @@
   // La coquille (sidebar + en-tête) est construite une seule fois : seuls les
   // textes, les classes actives et le contenu sont mis à jour ensuite. C'est ce
   // qui évite l'effet de « clignotement » à chaque clic.
+  // En-tête de l'onglet Simulateur : il suit le simulateur réellement ouvert.
+  var TITRES_SIM = {
+    depenses: ['Analyse', 'Guide des dépenses',
+               'Ce que les indépendants peuvent passer sur leur société, et à quelles conditions.'],
+    vl:       ['Analyse', 'Versement libératoire',
+               'Compare les deux modes d’imposition de ta micro-entreprise.'],
+    tva:      ['Analyse', 'Passage à la TVA',
+               'Ce que tu récupérerais, ce que ça coûte à gérer, et le risque côté clients.'],
+    statut:   ['Analyse', 'Passer en société ?',
+               'À partir de quel chiffre d’affaires une société te rapporte plus.'],
+    optim:    ['Analyse', 'Optimiser ma société',
+               'Teste ta rémunération, tes dividendes et tes leviers, et vois ce qu’il te reste.'],
+  };
+
   function shellHtml(){
     return '<div class="app">'
       + '<aside class="sidebar">'
@@ -6882,7 +7028,9 @@
       + '<div id="onb-root"></div>'
       + '<div id="tvo-root"></div>'
       + '<div id="dgo-root"></div>'
-      + '<div id="vlo-root"></div>';
+      + '<div id="vlo-root"></div>'
+      + '<div id="statuto-root"></div>'
+      + '<div id="optimo-root"></div>';
   }
 
   // Si assets/freehub-logo.png est absent, on bascule sur le wordmark CSS.
@@ -6940,8 +7088,9 @@
         : '🙂';
     }
 
-    // En-tête.
-    var t = titles[state.tab];
+    // En-tête : sur l'onglet Simulateur, il reflète le simulateur ouvert.
+    var t = (state.tab === 'simulateur' && TITRES_SIM[state.sim.open])
+          ? TITRES_SIM[state.sim.open] : titles[state.tab];
     app.querySelector('.kicker').textContent = t[0];
     app.querySelector('.title').textContent = t[1];
     app.querySelector('.subtitle').textContent = t[2];
@@ -6980,12 +7129,15 @@
     majTvaOnb();
     majDepOnb();
     majVlOnb();
+    majStatutOnb();
+    majOptimOnb();
 
     // Une pop-up ouverte fige le défilement de la page derrière.
     document.body.classList.toggle('pop-ouverte',
       !!document.querySelector('#modal-root .overlay, #onb-root .tvo-overlay,'
                              + ' #tvo-root .tvo-overlay, #dgo-root .tvo-overlay,'
-                             + ' #vlo-root .tvo-overlay'));
+                             + ' #vlo-root .tvo-overlay, #statuto-root .tvo-overlay,'
+                             + ' #optimo-root .tvo-overlay'));
   }
 
   // ---------------------------------------------------------------------------
@@ -7323,6 +7475,16 @@
           marquerFait('sim:depenses');
         }
         // Le simulateur TVA s'ouvre directement sur son parcours guidé.
+        if(quel === 'statut'){
+          var vuSt = false;
+          try { vuSt = !!localStorage.getItem('freehub_statut_onb'); } catch(err){}
+          if(!vuSt) state.statut.onb = { actif:true, etape:0 };
+        }
+        if(quel === 'optim'){
+          var vuOp = false;
+          try { vuOp = !!localStorage.getItem('freehub_optim_onb'); } catch(err){}
+          if(!vuOp) state.optim.onb = { actif:true, etape:0 };
+        }
         if(quel === 'vl'){
           state.vl.step = 'form';
           var vuVl = false;
@@ -7340,6 +7502,56 @@
         render();
         break;
       }
+      // ----- Parcours de « Passer en société ? » -----
+      case 'statut-onb-next':
+        state.statut.onb.etape = 1; majStatutOnb(); break;
+      case 'statut-onb-prev':
+        state.statut.onb.etape = 0; majStatutOnb(); break;
+      case 'statut-onb-essai':
+        state.statut.essai = true;
+        state.statut.onb.etape = 1; majStatutOnb(); break;
+      case 'statut-onb-quit':
+        state.statut.onb.actif = false;
+        try { localStorage.setItem('freehub_statut_onb','1'); } catch(err){}
+        state.sim.open = null; render(); break;
+      case 'statut-onb-cat':
+        state.statut.form.categorie = el.getAttribute('data-v');
+        if(!state.statut.essai){
+          state.profil.categorieFiscale = el.getAttribute('data-v');
+          saveProfil(state.profil);
+        }
+        [].forEach.call(el.parentElement.querySelectorAll('.tvo-chip'), function(b){
+          b.classList.toggle('on', b === el); });
+        break;
+      case 'statut-onb-lancer':
+        state.statut.onb.actif = false;
+        try { localStorage.setItem('freehub_statut_onb','1'); } catch(err){}
+        marquerFait('sim:statut');
+        render(); break;
+
+      // ----- Parcours d'« Optimiser ma société » -----
+      case 'optim-onb-next':
+        state.optim.onb.etape = 1; majOptimOnb(); break;
+      case 'optim-onb-prev':
+        state.optim.onb.etape = 0; majOptimOnb(); break;
+      case 'optim-onb-essai':
+        state.optim.essai = true;
+        state.optim.onb.etape = 1; majOptimOnb(); break;
+      case 'optim-onb-quit':
+        state.optim.onb.actif = false;
+        try { localStorage.setItem('freehub_optim_onb','1'); } catch(err){}
+        state.sim.open = null; render(); break;
+      case 'optim-onb-statut':
+        state.optim.statut = el.getAttribute('data-v');
+        [].forEach.call(el.parentElement.querySelectorAll('.tvo-chip'), function(b){
+          b.classList.toggle('on', b === el); });
+        break;
+      case 'optim-onb-lancer':
+        state.optim.onb.actif = false;
+        try { localStorage.setItem('freehub_optim_onb','1'); } catch(err){}
+        marquerFait('sim:optim');
+        render(); break;
+
       // ----- Parcours guidé du versement libératoire -----
       case 'vl-onb-start':
         state.vl.onb = { actif:true, etape:0 };
@@ -8042,6 +8254,35 @@
     }
     var tb = e.target.closest('[data-tvo-brouillon]');
     if(tb){ state.tva.brouillon[tb.getAttribute('data-tvo-brouillon')] = tb.value; return; }
+    // Parcours « société » et « cockpit » : en mode essai, rien ne remonte au profil.
+    var sto = e.target.closest('[data-statut-onb]');
+    if(sto){
+      var cS = sto.getAttribute('data-statut-onb');
+      state.statut.form[cS] = sto.value;
+      if(!state.statut.essai){
+        var vS = { caAnnuel:'ca', remMensuelle:'remMensuelle', parts:'parts' }[cS];
+        if(vS){
+          state.profil[vS] = sto.value;
+          if(cS === 'caAnnuel') state.profil.periodeCa = 'annuel';
+          saveProfil(state.profil);
+        }
+      }
+      return;
+    }
+    var opo = e.target.closest('[data-optim-onb]');
+    if(opo){
+      var cO = opo.getAttribute('data-optim-onb');
+      state.optim.form[cO] = opo.value;
+      if(!state.optim.essai){
+        var vO = { caAnnuel:'ca', remMensuelle:'remMensuelle', dividendes:'dividendes' }[cO];
+        if(vO){
+          state.profil[vO] = opo.value;
+          if(cO === 'caAnnuel') state.profil.periodeCa = 'annuel';
+          saveProfil(state.profil);
+        }
+      }
+      return;
+    }
     // Parcours VL : en mode essai, rien ne remonte au profil.
     var vlo = e.target.closest('[data-vl-onb]');
     if(vlo){

@@ -505,7 +505,9 @@
   .export-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   /* Boutons de même gabarit : ils se lisent comme un groupe, pas comme une liste.
      Largeur fixe plutôt que min-width, sinon le libellé le plus long l'emporte. */
-  .export-bar .egal{width:196px;padding-left:12px;padding-right:12px;
+  /* Hauteur fixée aussi : .btn-primary et .btn-ghost n'ont ni le même
+     rembourrage, ni la même bordure, ni la même taille de police. */
+  .export-bar .egal{width:196px;height:48px;padding:0 12px;line-height:1;
     display:inline-flex;align-items:center;justify-content:center;text-align:center}
   @media (max-width:720px){ .export-bar .egal{width:100%} }
 
