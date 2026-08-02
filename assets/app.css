@@ -907,6 +907,122 @@
   .cal-evt-tag{margin-top:3px;align-self:flex-start;background:#fff;border:1px solid var(--border);
     border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;color:var(--muted)}
 
+  /* ---------- Guide des dépenses pro ---------- */
+  .dg-intro{display:flex;align-items:center;justify-content:space-between;gap:26px;flex-wrap:wrap;
+    padding:22px 26px;border-radius:16px;margin-bottom:16px;color:#fff;
+    background:linear-gradient(135deg,#0f1b33 0%,#1e46b8 130%)}
+  .dg-intro-txt{flex:1;min-width:260px}
+  .dg-intro-t{font-size:18px;font-weight:800;letter-spacing:-.015em}
+  .dg-intro-s{font-size:13px;color:rgba(255,255,255,.75);font-weight:500;margin-top:6px;
+    line-height:1.5;max-width:560px}
+  .dg-legende{flex:none;width:190px}
+  .dg-leg-track{height:9px;border-radius:100px;
+    background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e)}
+  .dg-leg-labels{display:flex;justify-content:space-between;margin-top:6px;
+    font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    color:rgba(255,255,255,.65)}
+
+  .dg-micro{background:#fdf6e7;border:1.5px solid #ecd9a8;border-radius:14px;
+    padding:16px 20px;margin-bottom:16px}
+  .dg-micro-t{font-size:14.5px;font-weight:800;color:#7a5b12}
+  .dg-micro-s{font-size:13px;color:#8a6d25;font-weight:500;line-height:1.5;margin-top:5px}
+  .dg-micro-cta{margin-top:11px;padding:8px 15px;border:none;border-radius:9px;cursor:pointer;
+    font-family:inherit;font-size:12.5px;font-weight:700;color:#fff;background:#e0803b}
+  .dg-note{background:#eef4ff;border-radius:12px;padding:12px 16px;margin-bottom:16px;
+    font-size:13px;color:#3f5f9e;font-weight:600}
+
+  .dg-sugg-titre{font-size:13px;font-weight:800;color:var(--ink);margin:2px 0 9px;
+    display:flex;align-items:baseline;gap:9px}
+  .dg-sugg-pourquoi{font-size:11px;font-weight:600;color:var(--muted)}
+  .dg-sugg{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:11px;
+    margin-bottom:20px}
+  .dg-sg{display:flex;align-items:center;gap:12px;background:#fff;cursor:pointer;
+    border:1.5px dashed color-mix(in srgb, var(--c) 45%, #dfe5ee);border-radius:13px;
+    padding:12px 14px;transition:transform .15s,border-color .15s,box-shadow .15s}
+  .dg-sg:hover{transform:translateY(-2px);border-style:solid;border-color:var(--c);
+    box-shadow:0 14px 26px -20px rgba(15,27,51,.5)}
+  .dg-sg-e{font-size:21px;flex:none}
+  .dg-sg-n{font-size:13px;font-weight:800;color:var(--ink)}
+  .dg-sg-r{font-size:11.5px;color:var(--muted2);font-weight:500;line-height:1.4;margin-top:2px}
+  .dg-sg-fl{margin-left:auto;color:var(--c);font-weight:800;flex:none}
+
+  .dg-pills{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+  .dg-pill{padding:7px 13px;border:1px solid var(--border);border-radius:100px;background:#fff;
+    font-family:inherit;font-size:12px;font-weight:700;color:var(--muted2);cursor:pointer;
+    transition:all .15s;white-space:nowrap}
+  .dg-pill:hover{border-color:#b9c6dc;color:var(--ink)}
+  .dg-pill.on{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  .dg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:13px}
+  .dg{position:relative;text-align:left;cursor:pointer;background:#fff;
+    border:1px solid var(--border);border-radius:15px;padding:15px 16px 13px;
+    transition:transform .18s,box-shadow .18s,border-color .18s;display:flex;
+    flex-direction:column;gap:7px}
+  .dg:hover{transform:translateY(-3px);border-color:color-mix(in srgb, var(--c) 40%, #dfe5ee);
+    box-shadow:0 18px 34px -26px rgba(15,27,51,.55)}
+  .dg-pin{position:absolute;top:9px;right:9px;width:28px;height:28px;border:none;cursor:pointer;
+    border-radius:9px;background:transparent;font-size:15px;color:#c3cddd;line-height:1;
+    transition:background .15s,color .15s}
+  .dg-pin:hover{background:#f0f3f9;color:var(--ink)}
+  .dg-pin.on{color:#f0a020}
+  .dg-cat{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+    padding-right:26px}
+  .dg-tete{display:flex;align-items:center;gap:9px}
+  .dg-e{width:34px;height:34px;border-radius:10px;background:var(--s);flex:none;
+    display:flex;align-items:center;justify-content:center;font-size:17px}
+  .dg-n{font-size:14px;font-weight:800;letter-spacing:-.01em;color:var(--ink);line-height:1.25}
+  .dg-p{font-size:12px;color:var(--muted2);font-weight:500;line-height:1.45;flex:1}
+  .dg-dans{align-self:flex-start;font-size:10px;font-weight:800;color:#0f7040;
+    background:#e6f6ee;border-radius:100px;padding:2px 9px}
+
+  /* Jauge de facilité */
+  .dj{margin-top:2px}
+  .dj-track{height:7px;border-radius:100px;background:#edf0f6;overflow:hidden}
+  .dj-fill{display:block;height:100%;border-radius:100px}
+  .dj-fill.vert{background:linear-gradient(90deg,#7ddaa5,#22c55e)}
+  .dj-fill.orange{background:linear-gradient(90deg,#f8cd7c,#f59e0b)}
+  .dj-fill.rouge{background:linear-gradient(90deg,#f49d9d,#ef4444)}
+  .dj-l{font-size:10.5px;font-weight:700;margin-top:5px}
+
+  .dg-disclaimer{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.6;
+    font-weight:500;max-width:760px}
+
+  /* Fiche dépense (pop-up) */
+  .dgf-head{display:flex;align-items:center;gap:14px;padding:20px 22px;
+    background:linear-gradient(135deg,var(--s) 0%,#fff 140%);
+    border-bottom:1px solid var(--border)}
+  .dgf-e{width:46px;height:46px;border-radius:13px;background:#fff;flex:none;
+    display:flex;align-items:center;justify-content:center;font-size:23px;
+    box-shadow:0 6px 14px -8px rgba(15,27,51,.3)}
+  .dgf-id{flex:1;min-width:0}
+  .dgf-cat{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--c)}
+  .dgf-n{font-size:17.5px;font-weight:800;letter-spacing:-.015em;color:var(--ink);line-height:1.2}
+  .dgf-fav{flex:none;width:36px;height:36px;border:1px solid var(--border);border-radius:11px;
+    background:#fff;font-size:17px;color:#c3cddd;cursor:pointer;transition:color .15s}
+  .dgf-fav:hover{color:var(--ink)}
+  .dgf-fav.on{color:#f0a020}
+  .dgf-jauge .dj-track{height:10px}
+  .dgf-jauge .dj-l{font-size:12px}
+  .dgf-verdict{font-size:14.5px;font-weight:800;line-height:1.35;margin-top:13px}
+  .dgf-detail{font-size:13.5px;color:var(--muted2);font-weight:500;line-height:1.6;margin:9px 0 0}
+  .dgf-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);margin:17px 0 9px}
+  .dgf-vigi{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .dgf-vigi li{display:flex;gap:10px;align-items:flex-start;font-size:13px;font-weight:600;
+    color:var(--ink);line-height:1.45}
+  .dgf-tiret{width:7px;height:7px;border-radius:50%;flex:none;margin-top:6px}
+  .dgf-lien{display:inline-block;margin-top:15px;font-size:12.5px;font-weight:700}
+  .dgf-foot{display:flex;gap:10px;flex-wrap:wrap}
+  .dgf-btn{flex:1;min-width:170px;padding:11px 16px;border:none;border-radius:11px;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:700;color:#fff;background:var(--blue);
+    transition:background .15s}
+  .dgf-btn:hover{background:var(--blue-dark)}
+  .dgf-btn.sec{background:#fff;color:var(--ink);border:1.5px solid #dfe5ee}
+  .dgf-btn.sec:hover{background:#f6f8fc}
+  .dgf-dans{flex:1;min-width:170px;display:flex;align-items:center;justify-content:center;
+    font-size:12.5px;font-weight:800;color:#0f7040;background:#e6f6ee;border-radius:11px;
+    padding:11px 16px}
+
   /* ---------- Lexique ---------- */
   .lx-bar{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
   .lx-search{position:relative;flex:1;min-width:260px}
