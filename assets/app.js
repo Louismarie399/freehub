@@ -1878,6 +1878,7 @@
       scenarios: loadScenarios(),
       onb: { actif:false, etape:0 },
       essai: false,   // profil en micro : on teste le cockpit sans rien écrire
+      lance: false,            // false = écran de lancement, true = tableau de bord
       importInfo: null,        // message après un import
     },
     // Simulateur « Quand passer en société ? » — recalcul en temps réel
@@ -1892,6 +1893,7 @@
       projection: null,        // CA du curseur (null = CA réel saisi)
       onb: { actif:false, etape:0 },
       essai: false,            // profil déjà en société : on teste sans rien écrire
+      lance: false,            // false = écran de lancement, true = tableau de bord
     },
     // Simulateur de passage à la TVA (calcul déterministe, sans IA)
     tva: {
@@ -2146,10 +2148,12 @@
     // Ce qui manque pour que CE simulateur soit fiable.
     var besoins = BESOINS_SIM[state.sim.open] || [];
     var secs = sectionsProfil();
-    var manque = secs.filter(function(s){ return besoins.indexOf(s.id) >= 0 && !s.ok; });
-    var alerte = manque.length
+    var manque = secs.filter(function(s){ return besoins.indexOf(s.id) >= 0 && !s.fiable; });
+    var champsManquants = [];
+    manque.forEach(function(s){ champsManquants = champsManquants.concat(s.bloquants); });
+    var alerte = champsManquants.length
       ? '<div class="pb-manque">⚠ À compléter pour un résultat fiable : <strong>'
-        + manque.map(function(s){ return esc(s.titre); }).join(', ') + '</strong></div>'
+        + champsManquants.map(esc).join(', ') + '</strong></div>'
       : '';
 
     return '<div class="pbande'+(manque.length?' incomplet':'')+'">'
@@ -3080,10 +3084,49 @@
           + 'société à tes côtés, avec une équipe qui parle ton langage.');
   }
 
+  // Écran de lancement du cockpit, dans le jaune de sa carte.
+  function optimLancerHtml(){
+    var sc = state.optim.scenarios || [];
+    var liste = sc.length
+      ? '<div class="tva-sims-t">'+(sc.length > 1 ? 'Mes scénarios' : 'Mon scénario')+'</div>'
+        + '<div class="tva-sims">' + sc.map(scenCarteHtml).join('') + '</div>'
+      : '';
+    return '<div class="sim-wrap">'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
+      + '<div class="sim-lancer optim">'
+        + '<div class="sim-lancer-e">🎛️</div>'
+        + '<div class="sim-lancer-t">Optimiser ta société</div>'
+        + '<div class="sim-lancer-s">Rémunération, dividendes, trésorerie, leviers : on regarde ce '
+          + 'que tu te verses vraiment et comment en garder davantage</div>'
+        + '<button class="btn-primary" data-action="optim-onb-start">Ouvrir le cockpit</button>'
+      + '</div>'
+      + liste
+      + '</div>';
+  }
+
+  // Carte d'un scénario enregistré, sur l'écran de lancement.
+  function scenCarteHtml(sc, i){
+    var d = new Date(sc.date);
+    var jour = d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+    return '<div class="tva-sim" style="--c:#ca8a04">'
+      + '<button class="tva-sim-x" data-action="scen-delete" data-i="'+i+'" title="Supprimer">✕</button>'
+      + '<div class="tva-sim-date">'+esc(jour)+'</div>'
+      + '<div class="tva-sim-g" style="color:#a16207">'+fmtEur(sc.argentPerso)+'<span> / an</span></div>'
+      + '<div class="tva-sim-l">'+esc(STATUT_LABELS[sc.statut] || sc.statut)+'</div>'
+      + '<div class="tva-sim-meta">CA '+fmtEur(sc.ca)+'</div>'
+      + '<button class="tva-sim-btn" data-action="scen-load" data-i="'+i+'">Reprendre ce scénario →</button>'
+      + '</div>';
+  }
+
   function optimHtml(){
+    if(!state.optim.lance) return optimLancerHtml();
     var ca = caOptimReel();
     var maxCurseur = Math.max(250000, Math.round(ca * 2 / 10000) * 10000);
     var proj = state.optim.projection;
+    // « Enregistrer ce scénario » n'a de sens qu'une fois qu'on a bougé quelque
+    // chose : avant, il n'y a rien à mémoriser.
+    var modifie = proj !== null || Object.keys(state.optim.leviers || {}).some(function(k){
+      return (parseFloat(state.optim.leviers[k]) || 0) > 0; });
     return '<div class="sim-wrap">'
       + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       + '<div class="statut-bar">'
@@ -3095,7 +3138,9 @@
             + 'value="'+(proj !== null ? proj : ca)+'">'
           + '<div class="proj-v" id="optim-proj-value">'+fmtEur(proj !== null ? proj : ca)+'</div>'
         + '</div>'
-        + '<button class="btn-primary" data-action="scen-save">Enregistrer ce scénario</button>'
+        + (modifie
+            ? '<button class="btn-primary" data-action="scen-save">Enregistrer ce scénario</button>'
+            : '<div class="scen-hint">Bouge un levier ou le curseur pour comparer des scénarios</div>')
       + '</div>'
       + '<div class="statut-layout">'
         + optimFormHtml()
@@ -3113,6 +3158,20 @@
   function renderOptimResults(){
     var zone = document.getElementById('optim-results');
     if(zone) zone.innerHTML = optimResultsHtml();
+  }
+
+  // Écran de lancement du comparateur, dans l'orange de sa carte.
+  function statutLancerHtml(){
+    return '<div class="sim-wrap">'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
+      + '<div class="sim-lancer societe">'
+        + '<div class="sim-lancer-e">🏛️</div>'
+        + '<div class="sim-lancer-t">Faut-il passer en société ?</div>'
+        + '<div class="sim-lancer-s">On compare ton auto-entreprise à une EURL et une SASU, et on '
+          + 'cherche le chiffre d’affaires à partir duquel la société te rapporte plus</div>'
+        + '<button class="btn-primary" data-action="statut-onb-start">Lancer la comparaison</button>'
+      + '</div>'
+      + '</div>';
   }
 
   // ===========================================================================
@@ -3380,7 +3439,8 @@
             return '<td'+(c?' style="color:'+c+';font-weight:800"':'')+'>'+fmtEur(valeurs[k])+'</td>';
           }).join('') + '</tr>';
     };
-    var tableau = '<div class="card"><div class="card-title">Comparaison détaillée</div>'
+    var tableau = '<details class="card pliable"><summary class="card-title">Comparaison détaillée'
+      + '<span class="pliable-i">▾</span></summary>'
       + '<div class="recap-scroll"><table class="recap-t" style="min-width:0"><thead><tr><th>Élément</th>'
       + cles.map(function(k){ return '<th>'+esc(STATUT_LABELS[k])+'</th>'; }).join('')
       + '</tr></thead><tbody>'
@@ -3402,7 +3462,7 @@
               }).join('');
             })()
         + '</tr>'
-      + '</tbody></table></div></div>';
+      + '</tbody></table></div></details>';
 
     // --- Analyse automatique ---
     var analyses = {
@@ -3552,6 +3612,7 @@
         + esc(l)+'</button>';
     };
 
+    if(!state.statut.lance) return statutLancerHtml();
     return '<div class="sim-wrap">'
       + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       + '<div class="statut-bar">'
@@ -3573,16 +3634,16 @@
         + statutFormHtml()
         + '<div id="statut-results">' + statutResultsHtml() + '</div>'
       + '</div>'
-      + '<div class="card tinted" style="margin-top:16px">'
-        + '<div class="card-title">Pour comprendre</div>'
+      + '<details class="card tinted pliable" style="margin-top:16px">'
+        + '<summary class="card-title">Pour comprendre<span class="pliable-i">▾</span></summary>'
         + '<ul class="res-list">'
-          + '<li><strong>Les charges déductibles changent tout</strong> : en auto-entreprise, ton abattement est forfaitaire — tes vraies dépenses ne réduisent jamais ton impôt.</li>'
+          + '<li><strong>Les charges déductibles changent tout</strong> : en auto-entreprise, ton abattement est forfaitaire, tes vraies dépenses ne réduisent jamais ton impôt.</li>'
           + '<li><strong>L’IS devient intéressant</strong> quand ton taux marginal d’impôt sur le revenu dépasse le taux d’IS sur les bénéfices laissés dans la société.</li>'
           + '<li><strong>La SASU coûte plus cher en cotisations</strong> mais ouvre une meilleure protection sociale ; l’EURL est souvent choisie pour l’inverse.</li>'
           + '<li><strong>Les dividendes</strong> échappent aux cotisations sociales en SASU, mais subissent le PFU. L’arbitrage salaire / dividendes est déterminant.</li>'
           + '<li><strong>Un investissement important</strong> est déductible en société et ne l’est pas en micro : il peut à lui seul faire basculer le résultat.</li>'
         + '</ul>'
-      + '</div>'
+      + '</details>'
       + '<div class="final-note">Estimation fondée sur les informations renseignées et sur des paramètres '
         + 'fiscaux <strong>à valider</strong>. Elle ne constitue ni un conseil juridique, ni fiscal, ni '
         + 'comptable. Le résultat réel dépend de ton foyer fiscal, de tes choix de rémunération, de ton '
@@ -4895,7 +4956,7 @@
     ],
     activite: [
       { k:'activite', l:'Activité' },
-      { k:'description', l:'Description' },
+      { k:'description', l:'Description', opt:true },
       { k:'categorieFiscale', l:'Catégorie fiscale',
         ok:function(p){ return p.categorieFiscale && p.categorieFiscale !== 'inconnu'; } },
     ],
@@ -4921,9 +4982,9 @@
     ],
     remuneration: [
       { k:'remMensuelle', l:'Rémunération', ok:function(p){ return parseFloat(p.remMensuelle) > 0; } },
-      { k:'dividendes', l:'Dividendes' },
-      { k:'tresorerie', l:'Trésorerie gardée' },
-      { k:'cfe', l:'Montant de ta CFE' },
+      { k:'dividendes', l:'Dividendes', opt:true },
+      { k:'tresorerie', l:'Trésorerie gardée', opt:true },
+      { k:'cfe', l:'Montant de ta CFE', opt:true },
     ],
     charges: [
       { k:'charges', l:'Au moins une charge', ok:function(p){
@@ -4939,9 +5000,14 @@
       return !(c.ok ? c.ok(p) : rempli(p[c.k]));
     });
     var faits = champs.length - manquants.length;
+    // Les champs marqués `opt` ont un repli fonctionnel (valeur par défaut ou
+    // secondaire) : ils comptent dans le taux de remplissage, mais ils ne
+    // rendent pas un résultat douteux. On ne les signale donc pas en alerte.
+    var bloquants = manquants.filter(function(c){ return !c.opt; });
     return { faits:faits, total:champs.length,
              pct: champs.length ? Math.round(faits / champs.length * 100) : 100,
-             manquants: manquants.map(function(c){ return c.l; }) };
+             manquants: manquants.map(function(c){ return c.l; }),
+             bloquants: bloquants.map(function(c){ return c.l; }) };
   }
 
   function sectionsProfil(){
@@ -4952,7 +5018,8 @@
     return liste.map(function(s){
       var e = etatSection(s.id);
       s.pct = e.pct; s.faits = e.faits; s.total = e.total;
-      s.manquants = e.manquants; s.ok = e.pct === 100;
+      s.manquants = e.manquants; s.bloquants = e.bloquants;
+      s.ok = e.pct === 100; s.fiable = e.bloquants.length === 0;
       return s;
     });
   }
@@ -7475,16 +7542,9 @@
           marquerFait('sim:depenses');
         }
         // Le simulateur TVA s'ouvre directement sur son parcours guidé.
-        if(quel === 'statut'){
-          var vuSt = false;
-          try { vuSt = !!localStorage.getItem('freehub_statut_onb'); } catch(err){}
-          if(!vuSt) state.statut.onb = { actif:true, etape:0 };
-        }
-        if(quel === 'optim'){
-          var vuOp = false;
-          try { vuOp = !!localStorage.getItem('freehub_optim_onb'); } catch(err){}
-          if(!vuOp) state.optim.onb = { actif:true, etape:0 };
-        }
+        // Comparateur et cockpit repartent de leur écran de lancement.
+        if(quel === 'statut') state.statut.lance = false;
+        if(quel === 'optim') state.optim.lance = false;
         if(quel === 'vl'){
           state.vl.step = 'form';
           var vuVl = false;
@@ -7503,6 +7563,15 @@
         break;
       }
       // ----- Parcours de « Passer en société ? » -----
+      case 'statut-onb-start': {
+        var vuSt = false;
+        try { vuSt = !!localStorage.getItem('freehub_statut_onb'); } catch(err){}
+        if(!state.statut.essai) appliquerProfil();
+        if(vuSt){ state.statut.lance = true; marquerFait('sim:statut'); }
+        else state.statut.onb = { actif:true, etape:0 };
+        render();
+        break;
+      }
       case 'statut-onb-next':
         state.statut.onb.etape = 1; majStatutOnb(); break;
       case 'statut-onb-prev':
@@ -7512,7 +7581,6 @@
         state.statut.onb.etape = 1; majStatutOnb(); break;
       case 'statut-onb-quit':
         state.statut.onb.actif = false;
-        try { localStorage.setItem('freehub_statut_onb','1'); } catch(err){}
         state.sim.open = null; render(); break;
       case 'statut-onb-cat':
         state.statut.form.categorie = el.getAttribute('data-v');
@@ -7525,11 +7593,21 @@
         break;
       case 'statut-onb-lancer':
         state.statut.onb.actif = false;
+        state.statut.lance = true;
         try { localStorage.setItem('freehub_statut_onb','1'); } catch(err){}
         marquerFait('sim:statut');
         render(); break;
 
       // ----- Parcours d'« Optimiser ma société » -----
+      case 'optim-onb-start': {
+        var vuOp = false;
+        try { vuOp = !!localStorage.getItem('freehub_optim_onb'); } catch(err){}
+        if(!state.optim.essai) appliquerProfil();
+        if(vuOp){ state.optim.lance = true; marquerFait('sim:optim'); }
+        else state.optim.onb = { actif:true, etape:0 };
+        render();
+        break;
+      }
       case 'optim-onb-next':
         state.optim.onb.etape = 1; majOptimOnb(); break;
       case 'optim-onb-prev':
@@ -7539,7 +7617,6 @@
         state.optim.onb.etape = 1; majOptimOnb(); break;
       case 'optim-onb-quit':
         state.optim.onb.actif = false;
-        try { localStorage.setItem('freehub_optim_onb','1'); } catch(err){}
         state.sim.open = null; render(); break;
       case 'optim-onb-statut':
         state.optim.statut = el.getAttribute('data-v');
@@ -7548,6 +7625,7 @@
         break;
       case 'optim-onb-lancer':
         state.optim.onb.actif = false;
+        state.optim.lance = true;
         try { localStorage.setItem('freehub_optim_onb','1'); } catch(err){}
         marquerFait('sim:optim');
         render(); break;
@@ -8042,6 +8120,7 @@
           state.optim.charges = (sc.charges || []).map(function(c){ return Object.assign({}, c); });
           state.optim.leviers = Object.assign({}, sc.leviers);
           state.optim.projection = null;
+          state.optim.lance = true;   // reprendre un scénario ouvre le cockpit
           render();
         }
         break;

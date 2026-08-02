@@ -1023,6 +1023,25 @@
     background:#fff;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink);cursor:pointer}
   .tva-sim-btn:hover{background:#f6f8fc;border-color:var(--blue);color:var(--blue)}
 
+  /* Sections repliables : on referme ce qui est dense pour laisser respirer
+     le verdict. Rien n'est caché, tout est à un clic. */
+  .card.pliable{padding:0}
+  .card.pliable > summary{list-style:none;cursor:pointer;padding:20px 24px;margin:0;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    transition:color .15s}
+  .card.pliable > summary::-webkit-details-marker{display:none}
+  .card.pliable > summary:hover{color:var(--ink)}
+  .pliable-i{font-size:13px;color:var(--muted);transition:transform .2s}
+  .card.pliable[open] > summary{border-bottom:1px solid var(--border)}
+  .card.pliable[open] .pliable-i{transform:rotate(180deg)}
+  .card.pliable > *:not(summary){padding:0 24px 22px}
+  .card.pliable[open] > *:not(summary){padding-top:18px}
+  .card.pliable .recap-scroll{padding-bottom:22px}
+
+  /* Cockpit : rappel tant qu'aucun scénario n'est modifiable */
+  .scen-hint{font-size:12.5px;color:var(--muted);font-weight:600;text-align:right;
+    max-width:230px;line-height:1.45}
+
   /* Parcours TVA : alerte seuil, édition en place, charges */
   .tvo-alerte{background:#fef2f2;border:1.5px solid #f4c7c7;border-radius:12px;padding:14px 16px;
     margin-top:16px;font-size:12.5px;color:#8a3d3d;font-weight:600;line-height:1.55;text-align:left}
