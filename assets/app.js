@@ -1953,6 +1953,7 @@
       var lundi = new Date(n.getFullYear(), n.getMonth(), n.getDate() - ((n.getDay() + 6) % 7));
       return { vue:'annee', annee:n.getFullYear(), mois:n.getMonth(), semaine:lundi.getTime() };
     })(),
+    retourVers: null,       // onglet d'où l'objectif a été ouvert
     objFiltre: null,        // filtre du catalogue (pop-up)
     objFiltrePage: null,    // filtre de la page « Mes objectifs », indépendant
     objVoirFinis: false,    // afficher les objectifs déjà maîtrisés
@@ -2060,7 +2061,33 @@
     },
   };
 
-  function setState(patch){ Object.assign(state, patch); render(); }
+  function setState(patch){ Object.assign(state, patch); render(); majHistorique(); }
+
+  // Historique du navigateur : on n'y pousse qu'une chose, l'ouverture d'un
+  // objectif. C'est le seul endroit où l'utilisateur s'attend à ce que la
+  // flèche « retour » le ramène à l'écran précédent plutôt que de sortir.
+  var histObjectif = false;
+  function majHistorique(){
+    var ouvert = state.tab === 'objectifs' && !!state.objectifOuvert;
+    if(ouvert && !histObjectif){
+      try { history.pushState({ fh:'objectif' }, ''); } catch(e){}
+      histObjectif = true;
+    } else if(!ouvert && histObjectif){
+      // Fermé par l'interface : on retire l'entrée qu'on avait ajoutée, sinon
+      // il faudrait deux « retour » pour sortir vraiment.
+      histObjectif = false;
+      try { if(history.state && history.state.fh === 'objectif') history.back(); } catch(e){}
+    }
+  }
+  window.addEventListener('popstate', function(){
+    if(!histObjectif) return;
+    histObjectif = false;
+    if(state.objectifOuvert){
+      Object.assign(state, { objectifOuvert:null, stepOuvert:null,
+                             tab: state.retourVers || 'objectifs', retourVers:null });
+      render();
+    }
+  });
 
   // ---------------------------------------------------------------------------
   // Compte & synchronisation (optionnels — l'app marche sans)
@@ -2669,10 +2696,21 @@
     var sous = etat === 'fait' ? 'Parcours terminé'
       : (etat === 'encours' ? 'Prochaine : ' + o.steps[pr.done].t : o.desc);
 
+    var epingle = state.avant.indexOf(id) >= 0;
+    var pleinAvant = state.avant.length >= MAX_AVANT && !epingle;
     var coin = dispo
       ? '<span class="tui-add" data-action="obj-add" data-id="'+id+'" title="Ajouter à mes objectifs">+</span>'
       : (etat === 'fait' ? '<span class="tui-ok">✓</span>'
-          : '<span class="tui-x" data-action="obj-remove" data-id="'+id+'" title="Retirer de mes objectifs">×</span>');
+          : '<span class="tui-actions">'
+            // L'épingle est le moyen sûr de mettre en avant : le glisser-déposer
+            // reste possible, mais il n'est pas fiable sur tous les navigateurs.
+            + '<span class="tui-pin'+(epingle ? ' on' : '')+(pleinAvant ? ' plein' : '')+'"'
+              + ' data-action="obj-epingle" data-id="'+id+'" role="button" tabindex="0"'
+              + ' title="'+(epingle ? 'Retirer de la mise en avant'
+                  : (pleinAvant ? 'Trois objectifs déjà en avant' : 'Mettre en avant'))+'">'
+              + (epingle ? '★' : '☆')+'</span>'
+            + '<span class="tui-x" data-action="obj-remove" data-id="'+id+'" title="Retirer de mes objectifs">×</span>'
+          + '</span>');
 
     return '<button class="tui '+etat+(dispo?' dispo':'')+(pertinent&&dispo?' reco':'')+'"'
       + ' draggable="false"'
@@ -3111,7 +3149,9 @@
       }
     }
 
-    return '<button class="retour" data-action="obj-close">← Tous mes objectifs</button>'
+    var retour = state.retourVers && titles[state.retourVers]
+      ? titles[state.retourVers][0] : 'Tous mes objectifs';
+    return '<button class="retour" data-action="obj-close">← '+esc(retour)+'</button>'
       + '<div class="detail" data-key="'+curId+'" style="--c:'+dd.c+';border-top:4px solid '+dd.c+'">'
       + '<div class="detail-head">'
         + '<div class="detail-head-l">'
@@ -7140,7 +7180,7 @@
           + '<div class="cal-hero-l">Prochaine échéance</div>'
           + '<div class="cal-hero-t">'+esc(prochaine.quoi)+', '+quand+'</div>'
           + '<div class="cal-hero-d">'
-            + '<span class="cal-hero-pt" style="background:'+prochaine.dom.c+'"></span>'
+            + '<span class="cal-hero-pt"></span>'
             + prochaine.date.toLocaleDateString('fr-FR',
                 { weekday:'long', day:'numeric', month:'long', year:'numeric' })
             + ' · '+esc(prochaine.dom.l)+'</div>'
@@ -7895,11 +7935,15 @@
           saveObjectifs();
         }
         setState({ tab:'objectifs', objectifOuvert: vid, stepOuvert: null,
-                   catOpen: false, objVoirFinis: false });
+                   catOpen: false, objVoirFinis: false,
+                   retourVers: state.tab === 'objectifs' ? null : state.tab });
         break;
       }
       case 'obj-close':
-        setState({ objectifOuvert: null, stepOuvert: null });
+        // Retour à l'écran d'origine quand on venait d'ailleurs (calendrier,
+        // accueil), sinon à la liste des objectifs.
+        setState({ objectifOuvert: null, stepOuvert: null,
+                   tab: state.retourVers || 'objectifs', retourVers: null });
         break;
       // Raccourcis depuis une étape d'objectif : c'est ce qui relie les trois
       // onglets entre eux plutôt que d'en faire des îlots.
@@ -7951,6 +7995,19 @@
       case 'suite-rester':
         setState({ suiteAjout: null });
         break;
+      case 'obj-epingle': {
+        e.stopPropagation();
+        var pid = el.getAttribute('data-id');
+        if(state.avant.indexOf(pid) >= 0){
+          state.avant = state.avant.filter(function(x){ return x !== pid; });
+        } else {
+          if(state.avant.length >= MAX_AVANT) break;   // trois au maximum
+          state.avant = state.avant.concat([pid]);
+        }
+        saveObjectifs();
+        render();
+        break;
+      }
       case 'obj-remove': {
         e.stopPropagation();
         var rid = el.getAttribute('data-id');
