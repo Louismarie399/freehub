@@ -195,7 +195,68 @@
       check:function(){ return state.lexEpingles.length >= 8; } },
     { id:'compte', ico:'☁️', t:'À l’abri', d:'Un compte créé pour tout sauvegarder.',
       check:function(){ return !!state.compte; } },
+
+    // --- Paliers d'objectifs : de quoi viser loin ---
+    { id:'palier-5', ico:'🌱', t:'Le pied à l’étrier', d:'Cinq objectifs bouclés.',
+      rang:'bronze',
+      check:function(){ return nbObjectifsFinis() >= 5; } },
+    { id:'palier-10', ico:'⚙️', t:'Rouage bien huilé', d:'Dix objectifs bouclés.',
+      rang:'argent',
+      check:function(){ return nbObjectifsFinis() >= 10; } },
+    { id:'palier-15', ico:'💎', t:'Bête de paperasse', d:'Quinze objectifs bouclés.',
+      rang:'or',
+      check:function(){ return nbObjectifsFinis() >= 15; } },
+    { id:'palier-tout', ico:'👑', t:'Souverain de l’administratif',
+      d:'Tous les parcours bouclés, sans exception.',
+      rang:'royal',
+      check:function(){ return nbObjectifsFinis() >= catalog.length; } },
+
+    // --- Quelques autres, sur des gestes qu'on veut encourager ---
+    { id:'priorites', ico:'📌', t:'Sens des priorités', d:'Trois objectifs mis en avant.',
+      check:function(){ return (state.avant || []).length >= MAX_AVANT; } },
+    { id:'lex-20', ico:'🧠', t:'Dictionnaire vivant', d:'Vingt termes épinglés.',
+      check:function(){ return state.lexEpingles.length >= 20; } },
+    { id:'anticipe', ico:'🔭', t:'Vue à long terme', d:'Le calendrier consulté sur une autre année.',
+      check:function(){ return !!state.faits['cal:autre-annee']; } },
+    { id:'curieux', ico:'🤝', t:'Bien entouré', d:'Une fiche partenaire ouverte.',
+      check:function(){ return !!state.faits['part:vu']; } },
+    { id:'assidu', ico:'🔥', t:'Sur la lancée', d:'Dix étapes franchies, tous objectifs confondus.',
+      check:function(){ return etapesFranchies() >= 10; } },
+    { id:'marathonien', ico:'🏃', t:'Souffle long', d:'Cinquante étapes franchies.',
+      check:function(){ return etapesFranchies() >= 50; } },
   ];
+
+  // Nombre total d'étapes cochées, tous objectifs confondus.
+  function etapesFranchies(){
+    return catalog.reduce(function(n, o){ return n + pctOf(o.id).done; }, 0);
+  }
+
+  // Indices affichés sur un badge encore verrouillé : on dit assez pour donner
+  // envie, pas assez pour que ça ressemble à une case à cocher.
+  var BADGE_INDICES = {
+    'cap':          'Il suffit d’un premier pas dans un parcours.',
+    'premier-fini': 'Un parcours mené jusqu’au bout, quel qu’il soit.',
+    'tous-azimuts': 'Ne reste pas dans un seul domaine.',
+    'habitue':      'Quand boucler un parcours devient une habitude.',
+    'identite':     'Dis-nous qui tu es, au moins l’essentiel.',
+    'profil-plein': 'Quand il ne manque plus une seule information.',
+    'sim-1':        'Les simulateurs n’attendent que tes chiffres.',
+    'sim-tous':     'Aucun des cinq outils ne t’aura échappé.',
+    'depenses':     'Va voir ce qui passe vraiment en charge.',
+    'lex-1':        'Un mot que tu veux retenir, une étoile.',
+    'lex-8':        'Ton propre lexique commence à ressembler à quelque chose.',
+    'lex-20':       'À ce stade, l’administratif ne te fait plus peur.',
+    'compte':       'Pour que rien ne se perde en changeant d’ordinateur.',
+    'palier-5':     'Cinq parcours au compteur. Ça commence à compter.',
+    'palier-10':    'La barre des dix. Peu de gens y arrivent.',
+    'palier-15':    'À ce niveau-là, tu pourrais conseiller les autres.',
+    'palier-tout':  'Le dernier. Celui que personne n’a encore.',
+    'priorites':    'Choisir, c’est renoncer. Trois, pas plus.',
+    'anticipe':     'Et l’an prochain, il se passe quoi ?',
+    'curieux':      'On a sélectionné quelques outils, va voir.',
+    'assidu':       'Les étapes s’accumulent sans qu’on s’en rende compte.',
+    'marathonien':  'Un chiffre qu’on n’atteint pas par hasard.',
+  };
 
   function loadBadges(){
     try { var r = localStorage.getItem('freehub_badges'); if(r) return JSON.parse(r) || []; } catch(e){}
@@ -255,6 +316,62 @@
                 + esc(depuis.title)+' » d’abord</button>'
               : '<button class="sa-rester" data-action="suite-rester">Plus tard</button>')
         + '</div>'
+      + '</div></div>';
+  }
+
+  // Le mur complet : on y va quand on veut voir ce qu'il reste à décrocher.
+  function badgesMurHtml(){
+    if(!state.badgesTous) return '';
+    var n = state.badges.length;
+    return '<div class="overlay" data-action="badges-tous-close">'
+      + '<div class="modal cat-modal bm-modal" data-action="stop">'
+        + '<div class="cat-head">'
+          + '<div><div class="cat-t">Tes hauts faits</div>'
+            + '<div class="cat-s">'+n+' débloqué'+(n>1?'s':'')+' sur '+BADGES.length
+              + ' · clique sur un badge pour en savoir plus</div></div>'
+          + '<button class="cat-x" data-action="badges-tous-close" aria-label="Fermer">✕</button>'
+        + '</div>'
+        + '<div class="cat-body"><div class="acc-badges bm-grid">'
+          + BADGES.map(function(b){
+              var on = state.badges.indexOf(b.id) >= 0;
+              var porte = state.badgePorte === b.id;
+              return '<button class="acc-badge'+(on?' on':'')+(porte?' porte':'')
+                + (b.rang ? ' rang-'+b.rang : '')+'" data-action="badge-fiche" data-id="'+b.id+'">'
+                + '<span class="acc-badge-i">'+(on ? b.ico : '🔒')+'</span>'
+                + '<span class="acc-badge-t">'+(on ? esc(b.t) : '???')+'</span>'
+                + (porte ? '<span class="acc-badge-p">porté</span>' : '')
+              + '</button>';
+            }).join('')
+        + '</div></div>'
+      + '</div></div>';
+  }
+
+  function badgeFicheHtml(){
+    var b = badge(state.badgeOuvert);
+    if(!b) return '';
+    var acquis = state.badges.indexOf(b.id) >= 0;
+    var porte = state.badgePorte === b.id;
+    var rang = b.rang ? ' rang-'+b.rang : '';
+    return '<div class="overlay" data-action="badge-fiche-close">'
+      + '<div class="modal bf-modal'+rang+'" data-action="stop">'
+        + '<div class="bf-haut">'
+          + '<div class="bf-ico'+(acquis?'':' verrou')+'">'+(acquis ? b.ico : '🔒')+'</div>'
+          + '<div class="bf-l">'+(acquis ? 'Débloqué' : 'À débloquer')+'</div>'
+          + '<div class="bf-t">'+(acquis ? esc(b.t) : '???')+'</div>'
+        + '</div>'
+        + '<div class="bf-corps">'
+          + (acquis
+              ? '<p class="bf-d">'+esc(b.d)+'</p>'
+              : '<p class="bf-indice"><span class="bf-indice-i">✨</span>'
+                + esc(BADGE_INDICES[b.id] || 'À toi de trouver.')+'</p>')
+          + (acquis
+              ? '<button class="bf-porter'+(porte?' on':'')+'" data-action="badge-porter"'
+                + ' data-id="'+b.id+'">'
+                + (porte ? '✓ Affiché à côté de ton nom' : 'L’afficher à côté de mon nom')
+                + '</button>'
+              : '')
+        + '</div>'
+        + '<button class="cat-x bf-x" data-action="badge-fiche-close" aria-label="Fermer">✕</button>'
       + '</div></div>';
   }
 
@@ -1954,6 +2071,11 @@
       return { vue:'annee', annee:n.getFullYear(), mois:n.getMonth(), semaine:lundi.getTime() };
     })(),
     retourVers: null,       // onglet d'où l'objectif a été ouvert
+    badgeOuvert: null,      // badge dont la fiche est ouverte
+    badgesTous: false,      // pop-up du mur des hauts faits
+    badgePorte: (function(){
+      try { return localStorage.getItem('freehub_badge_porte') || null; } catch(e){ return null; }
+    })(),
     objFiltre: null,        // filtre du catalogue (pop-up)
     objFiltrePage: null,    // filtre de la page « Mes objectifs », indépendant
     objVoirFinis: false,    // afficher les objectifs déjà maîtrisés
@@ -1968,7 +2090,9 @@
     // Formulaire d'ajout aux charges, à l'intérieur de la fiche
     depAjout: { id:null, nom:'', frequence:'mensuelle', montant:'', erreur:'', fait:false, dernier:'' },
     depOnb: { actif:false, etape:0 },   // parcours d'accueil du guide (1re visite)
-    lexMonLexique: false,   // n'afficher que mes termes épinglés
+    lexFiltre: null,        // domaine filtré sur la page Lexique
+    lexFiltreModal: null,   // domaine filtré dans la pop-up « Tous les mots »
+    lexTousOuvert: false,   // pop-up du dictionnaire complet
     lexOuvert: null,        // id du terme dont la fiche est ouverte (pop-up)
     stepOuvert: null,       // index de l'étape dépliée (null = l'étape en cours)
     suiteAjout: null,       // {id, retour} : objectif suggéré qu'on vient d'ajouter
@@ -2486,6 +2610,92 @@
     if(badge) badge.style.display = proj ? 'inline-flex' : 'none';
   }
 
+  // L'étape précise où l'on s'est arrêté : c'est ce qu'on veut voir en arrivant,
+  // plus qu'un résumé de progression.
+  function repriseHtml(){
+    var candidats = state.added.filter(function(id){
+      return obj(id) && etatObjectif(id) !== 'fait';
+    });
+    // On privilégie ce qui est mis en avant, puis ce qui est déjà entamé.
+    candidats.sort(function(a, b){
+      var pa = (state.avant.indexOf(a) >= 0 ? 0 : 2) + (pctOf(a).done ? 0 : 1);
+      var pb = (state.avant.indexOf(b) >= 0 ? 0 : 2) + (pctOf(b).done ? 0 : 1);
+      return pa - pb;
+    });
+    var id = candidats[0];
+    if(!id) return '';
+    var o = obj(id), pr = pctOf(id), d = dom(o);
+    var st = o.steps[pr.done];
+    if(!st) return '';
+    return '<button class="acc-reprise" style="--c:'+d.c+';--s:'+d.soft+'"'
+      + ' data-action="view" data-id="'+id+'">'
+      + '<span class="acc-reprise-illu">'+illustrationHtml(st.illu)+'</span>'
+      + '<span class="acc-reprise-x">'
+        + '<span class="acc-reprise-l">'+(pr.done ? 'Tu en étais là' : 'On commence par là')
+          + ' · '+esc(o.title)+'</span>'
+        + '<span class="acc-reprise-t">'+esc(st.t)+'</span>'
+        + '<span class="acc-reprise-d">'+esc(st.h)
+          + (st.duree ? ' · '+esc(st.duree) : '')+'</span>'
+      + '</span>'
+      + '<span class="acc-reprise-cta">Reprendre →</span>'
+    + '</button>';
+  }
+
+  // Portes d'entrée choisies selon l'état réel du compte, pas une liste figée.
+  function portesHtml(){
+    var p = state.profil, portes = [];
+    var pctP = (function(){
+      var secs = sectionsProfil();
+      var f = secs.reduce(function(a, s){ return a + s.faits; }, 0);
+      var t = secs.reduce(function(a, s){ return a + s.total; }, 0);
+      return t ? Math.round(f / t * 100) : 100;
+    })();
+
+    if(pctP < 100) portes.push({ ico:'👤', c:'#7c3aed', t:'Compléter mon profil',
+      d:'Il manque '+(100 - pctP)+' % d’informations pour que les simulateurs soient justes',
+      action:'open-profil' });
+
+    if(!state.faits['sim:depenses']) portes.push({ ico:'🧾', c:'#0f9d6e',
+      t:'Ce qui passe en charge', d:'49 dépenses passées en revue, avec un avis pour chacune',
+      action:'goto-sim', sim:'depenses' });
+
+    if(estMicro(p) && !state.faits['sim:vl']) portes.push({ ico:'📊', c:'#b45309',
+      t:'Versement libératoire ou pas', d:'La comparaison sur tes vrais chiffres, en deux minutes',
+      action:'goto-sim', sim:'vl' });
+
+    if(estSociete(p) && !state.faits['sim:optim']) portes.push({ ico:'🎛', c:'#0f9d6e',
+      t:'Rémunération et dividendes', d:'Trouver l’équilibre entre ton net et ta société',
+      action:'goto-sim', sim:'optim' });
+
+    if(state.lexEpingles.length < 3) portes.push({ ico:'📖', c:'#0891b2',
+      t:'Les mots qui bloquent', d:'Abattement, PFU, Kbis : expliqués sans jargon',
+      action:'tab', tab:'lexique' });
+
+    var nbDispo = catalog.filter(function(o){ return state.added.indexOf(o.id) < 0; }).length;
+    if(nbDispo) portes.push({ ico:'🎯', c:'#2f6bff', t:'Choisir un nouvel objectif',
+      d:nbDispo+' parcours guidés, on avance étape par étape',
+      action:'tab', tab:'objectifs' });
+
+    if(!state.compte) portes.push({ ico:'☁️', c:'#4a6180', t:'Mettre tout à l’abri',
+      d:'Un compte, et tes données te suivent d’un ordinateur à l’autre',
+      action:'auth-open' });
+
+    if(!portes.length) return '';
+    return '<div class="acc-bloc">'
+      + '<div class="acc-bloc-h">De quoi tu as besoin, là, maintenant</div>'
+      + '<div class="acc-portes">'+portes.slice(0, 4).map(function(x){
+          return '<button class="acc-porte" style="--c:'+x.c+'" data-action="'+x.action+'"'
+            + (x.sim ? ' data-sim="'+x.sim+'"' : '')
+            + (x.tab ? ' data-tab="'+x.tab+'"' : '')+'>'
+            + '<span class="acc-porte-i">'+x.ico+'</span>'
+            + '<span class="acc-porte-t">'+esc(x.t)+'</span>'
+            + '<span class="acc-porte-d">'+esc(x.d)+'</span>'
+            + '<span class="acc-porte-f">→</span>'
+          + '</button>';
+        }).join('')+'</div>'
+    + '</div>';
+  }
+
   function accueilHtml(){
     var p = state.profil;
     var prenom = (p.prenom || '').trim();
@@ -2578,25 +2788,46 @@
     var nbDebloques = state.badges.length;
     var pastilles = BADGES.map(function(b){
       var on = state.badges.indexOf(b.id) >= 0;
-      return '<div class="acc-badge'+(on?' on':'')+'" title="'+esc(b.t)+' — '+esc(b.d)+'">'
-        + '<span class="acc-badge-i">'+(on?b.ico:'🔒')+'</span>'
-        + '<span class="acc-badge-t">'+esc(b.t)+'</span>'
-      + '</div>';
+      var porte = state.badgePorte === b.id;
+      return '<button class="acc-badge'+(on?' on':'')+(porte?' porte':'')
+        + (b.rang ? ' rang-'+b.rang : '')+'" data-action="badge-fiche" data-id="'+b.id+'">'
+        + '<span class="acc-badge-i">'+(on ? b.ico : '🔒')+'</span>'
+        + '<span class="acc-badge-t">'+(on ? esc(b.t) : '???')+'</span>'
+        + (porte ? '<span class="acc-badge-p">porté</span>' : '')
+      + '</button>';
+    }).join('');
+    // On montre les derniers obtenus et le prochain à portée, pas les 22 d'un coup.
+    var obtenus = BADGES.filter(function(b){ return state.badges.indexOf(b.id) >= 0; }).slice(-4);
+    var aVenir = BADGES.filter(function(b){ return state.badges.indexOf(b.id) < 0; }).slice(0, 8 - obtenus.length);
+    var vitrine = obtenus.concat(aVenir).map(function(b){
+      var on = state.badges.indexOf(b.id) >= 0;
+      var porte = state.badgePorte === b.id;
+      return '<button class="acc-badge'+(on?' on':'')+(porte?' porte':'')
+        + (b.rang ? ' rang-'+b.rang : '')+'" data-action="badge-fiche" data-id="'+b.id+'">'
+        + '<span class="acc-badge-i">'+(on ? b.ico : '🔒')+'</span>'
+        + '<span class="acc-badge-t">'+(on ? esc(b.t) : '???')+'</span>'
+        + (porte ? '<span class="acc-badge-p">porté</span>' : '')
+      + '</button>';
     }).join('');
     var blocBadges = '<div class="acc-bloc">'
       + '<div class="acc-bloc-h">Tes hauts faits'
-        + '<span class="acc-badge-compte">'+nbDebloques+' / '+BADGES.length+'</span></div>'
-      + '<div class="acc-badges">'+pastilles+'</div>'
+        + '<span class="acc-badge-compte">'+nbDebloques+' / '+BADGES.length+'</span>'
+        + '<button class="btn-link" data-action="badges-tous">Tout voir →</button></div>'
+      + '<div class="acc-badges">'+vitrine+'</div>'
     + '</div>';
 
     return '<div class="view">'
       + hero
-      + '<div class="acc-cards">'+carteEch+carteAct+carteProfil+'</div>'
-      + '<div class="acc-bloc">'
-        + '<div class="acc-bloc-h">Tes objectifs'
-          + '<button class="btn-link" data-action="tab" data-tab="objectifs">Tout voir →</button></div>'
-        + '<div class="acc-objs">'+enCours+'</div>'
-      + '</div>'
+      + repriseHtml()
+      + (carteEch ? '<div class="acc-cards une">'+carteEch+'</div>' : '')
+      + portesHtml()
+      + (enCours
+          ? '<div class="acc-bloc">'
+            + '<div class="acc-bloc-h">Tes objectifs'
+              + '<button class="btn-link" data-action="tab" data-tab="objectifs">Tout voir →</button></div>'
+            + '<div class="acc-objs">'+enCours+'</div>'
+          + '</div>'
+          : '')
       + blocBadges
       + '</div>';
   }
@@ -7263,52 +7494,147 @@
       + '</div>';
   }
 
-  function lexiqueHtml(){
-    var q = (state.lexRecherche || '').trim().toLowerCase();
-    var liste = LEXIQUE.filter(function(x){
-      if(state.lexMonLexique && !estEpingle(x.id)) return false;
-      if(!q) return true;
-      return (x.t + ' ' + x.court + ' ' + x.def).toLowerCase().indexOf(q) >= 0;
+  // Termes suggérés : ceux qui touchent aux domaines des objectifs pris, et au
+  // statut déclaré. On propose au lieu de tout déverser.
+  function lexSuggestions(n){
+    var doms = {};
+    state.added.forEach(function(id){ var o = obj(id); if(o) doms[o.dom] = 1; });
+    if(estMicro(state.profil)) doms.statut = 1;
+    if(/franchise/i.test(state.profil.tva || '')) doms.tva = 1;
+    var pertinents = LEXIQUE.filter(function(x){ return doms[x.cat] && !estEpingle(x.id); });
+    var reste = LEXIQUE.filter(function(x){ return !doms[x.cat] && !estEpingle(x.id); });
+    return pertinents.concat(reste).slice(0, n || 6);
+  }
+
+  function lexPastillesHtml(actif, action){
+    var cats = ORDRE_DOMAINES.filter(function(k){
+      return LEXIQUE.some(function(x){ return x.cat === k; });
     });
-    var nbEp = state.lexEpingles.length;
+    return '<div class="fpills">'
+      + '<button class="fpill'+(actif?'':' on')+'" data-action="'+action+'" data-dom="">Tous</button>'
+      + cats.map(function(k){
+          var d = DOMAINES[k], on = actif === k;
+          var n = LEXIQUE.filter(function(x){ return x.cat === k; }).length;
+          return '<button class="fpill'+(on?' on':'')+'" style="--c:'+d.c+'"'
+            + ' data-action="'+action+'" data-dom="'+k+'">'+d.ico+' '+esc(d.l)
+            + '<span class="fpill-n">'+n+'</span></button>';
+        }).join('')
+    + '</div>';
+  }
 
-    var cartes = liste.length
-      ? '<div class="lx-grid">' + liste.map(lexCarteHtml).join('') + '</div>'
-      : '<div class="obj-vide">'
-          + (state.lexMonLexique
-              ? 'Ton lexique est vide. Ouvre un terme et clique sur l’étoile pour l’épingler ici.'
-              : 'Aucun terme ne correspond à ta recherche.') + '</div>';
+  function lexiqueHtml(){
+    var epingles = LEXIQUE.filter(function(x){
+      return estEpingle(x.id)
+        && (!state.lexFiltre || x.cat === state.lexFiltre);
+    });
+    var sugg = lexSuggestions(6).filter(function(x){
+      return !state.lexFiltre || x.cat === state.lexFiltre;
+    });
+    var total = LEXIQUE.length, nbEp = state.lexEpingles.length;
 
-    return '<div class="view">'
-      + '<div class="lx-bar">'
-        + '<div class="lx-search"><span class="lx-search-i">🔎</span>'
-          + '<input type="text" data-lex-search placeholder="Chercher un mot… (abattement, PFU, Kbis…)" '
-            + 'value="'+esc(state.lexRecherche)+'"></div>'
-        + '<div class="lx-toggle">'
-          + '<button class="lx-tg'+(state.lexMonLexique?'':' on')+'" data-action="lex-tous">Tous les mots</button>'
-          + '<button class="lx-tg'+(state.lexMonLexique?' on':'')+'" data-action="lex-mien">'
-            + '★ Mon lexique'+(nbEp?' ('+nbEp+')':'')+'</button>'
+    // Bandeau, dans la même famille que celui des objectifs.
+    var entete = '<div class="lx-tete">'
+      + '<div class="lx-tete-r">'+anneauSection(
+          total ? Math.round(nbEp / total * 100) : 0, '#0891b2', 72)+'</div>'
+      + '<div class="lx-tete-x">'
+        + '<div class="lx-tete-t">'
+          + (nbEp ? 'Ton lexique, '+nbEp+' mot'+(nbEp>1?'s':'')+' de côté'
+                  : 'Ton lexique est encore vide')+'</div>'
+        + '<div class="lx-tete-s">'
+          + (nbEp ? 'Les mots que tu as mis de côté te suivent partout dans l’app'
+                  : 'Mets de côté les mots que tu veux retenir, ils te suivront partout')+'</div>'
+        + '<div class="lx-tete-c">'
+          + '<button class="ochip on" data-action="lex-tous-open">'
+            + '<b>'+total+'</b> mots au total</button>'
+          + '<span class="ochip"><b>'+(total - nbEp)+'</b> à découvrir</span>'
         + '</div>'
       + '</div>'
-      + cartes
+    + '</div>';
+
+    var blocEp = epingles.length
+      ? '<div class="lx-sec"><div class="lx-sec-t">Mes mots</div>'
+        + '<div class="lx-grid">'+epingles.map(lexCarteHtml).join('')+'</div></div>'
+      : (state.lexFiltre ? ''
+          : '<div class="obj-vide illu">'
+            + '<img src="assets/illus/rien-en-cours.svg" alt="" class="illu-img">'
+            + '<div class="obj-vide-t">Aucun mot de côté</div>'
+            + '<div class="obj-vide-d">Ouvre un terme et clique sur l’étoile pour le garder ici</div>'
+          + '</div>');
+
+    var blocSugg = sugg.length
+      ? '<div class="lx-sec"><div class="lx-sec-t">Sans doute utiles pour toi'
+          + '<span class="lx-sec-h">d’après ton statut et tes objectifs</span></div>'
+        + '<div class="lx-grid">'+sugg.map(lexCarteHtml).join('')+'</div></div>'
+      : '';
+
+    return '<div class="view">'
+      + entete
+      + lexPastillesHtml(state.lexFiltre, 'lex-filtre')
+      + blocEp
+      + blocSugg
+      + '<button class="obj-plus" data-action="lex-tous-open">'
+        + '<span class="obj-plus-c">🔎</span>'
+        + '<span class="obj-plus-txt"><span class="obj-plus-t">Tous les mots</span>'
+          + '<span class="obj-plus-d">'+total+' termes, avec la recherche et les filtres</span>'
+        + '</span></button>'
       + '</div>';
   }
 
-  // Recherche : on remplace seulement la grille, pour ne pas perdre le focus.
-  function majLexique(){
+  // Le dictionnaire complet vit dans une pop-up : la page reste courte.
+  function lexTousHtml(){
     var q = (state.lexRecherche || '').trim().toLowerCase();
     var liste = LEXIQUE.filter(function(x){
-      if(state.lexMonLexique && !estEpingle(x.id)) return false;
+      if(state.lexFiltreModal && x.cat !== state.lexFiltreModal) return false;
       if(!q) return true;
       return (x.t + ' ' + x.court + ' ' + x.def).toLowerCase().indexOf(q) >= 0;
     });
-    var grille = document.querySelector('.lx-grid') || document.querySelector('.view .obj-vide');
-    if(!grille) return;
-    var neuf = document.createElement('div');
-    neuf.innerHTML = liste.length
-      ? '<div class="lx-grid">' + liste.map(lexCarteHtml).join('') + '</div>'
-      : '<div class="obj-vide">Aucun terme ne correspond à ta recherche.</div>';
-    grille.replaceWith(neuf.firstChild);
+    return '<div class="cat-head">'
+        + '<div><div class="cat-t">Tous les mots</div>'
+          + '<div class="cat-s">Cherche un terme, ou parcours par domaine</div></div>'
+        + '<button class="cat-x" data-action="lex-tous-close" aria-label="Fermer">✕</button>'
+      + '</div>'
+      + '<div class="cat-filtres">'
+        + '<div class="lx-search"><span class="lx-search-i">🔎</span>'
+          + '<input type="text" data-lex-search placeholder="abattement, PFU, Kbis…" '
+            + 'value="'+esc(state.lexRecherche)+'"></div>'
+        + lexPastillesHtml(state.lexFiltreModal, 'lex-filtre-modal')
+      + '</div>'
+      + '<div class="cat-body lx-tous-body">'
+        + (liste.length
+            ? '<div class="lx-grid">'+liste.map(lexCarteHtml).join('')+'</div>'
+            : '<div class="obj-vide">Aucun terme ne correspond</div>')
+      + '</div>';
+  }
+
+  // Root persistant : taper dans la recherche ne doit pas recréer la pop-up,
+  // sinon on perd le focus à chaque lettre.
+  function majLexTous(){
+    var root = document.getElementById('lex-root');
+    if(!root) return;
+    if(!state.lexTousOuvert){ root.innerHTML = ''; return; }
+    var card = root.querySelector('.cat-modal');
+    if(!card){
+      root.innerHTML = '<div class="overlay" data-action="lex-tous-close">'
+        + '<div class="modal cat-modal" data-action="stop"></div></div>';
+      card = root.querySelector('.cat-modal');
+    }
+    var champ = card.querySelector('[data-lex-search]');
+    var focus = champ === document.activeElement;
+    var pos = focus ? champ.selectionStart : 0;
+    var corps = card.querySelector('.cat-body');
+    var y = corps ? corps.scrollTop : 0;
+    card.innerHTML = lexTousHtml();
+    var neuf = card.querySelector('.cat-body');
+    if(neuf) neuf.scrollTop = y;
+    if(focus){
+      var c2 = card.querySelector('[data-lex-search]');
+      if(c2){ c2.focus(); try { c2.setSelectionRange(pos, pos); } catch(e){} }
+    }
+  }
+
+  // La recherche ne remplace que la grille : le champ garde son focus.
+  function majLexique(){
+    if(state.lexTousOuvert) majLexTous();
   }
 
   function lexModalHtml(){
@@ -7672,6 +7998,7 @@
       + '</div>'
       + '<div id="modal-root"></div>'
       + '<div id="cat-root"></div>'
+      + '<div id="lex-root"></div>'
       + '<div id="onb-root"></div>'
       + '<div id="tvo-root"></div>'
       + '<div id="dgo-root"></div>'
@@ -7721,6 +8048,10 @@
     // Insignes de rôle : ils viennent du compte (serveur), jamais du profil local,
     // pour qu'on ne puisse pas s'auto-attribuer « admin » en bidouillant le stockage.
     var roles = '';
+    var bp = state.badgePorte && state.badges.indexOf(state.badgePorte) >= 0
+           ? badge(state.badgePorte) : null;
+    if(bp) roles += '<span class="rbadge porte'+(bp.rang ? ' rang-'+bp.rang : '')+'"'
+      + ' title="'+esc(bp.t)+'">'+bp.ico+' '+esc(bp.t)+'</span>';
     if(state.compte && state.compte.isAdmin) roles += '<span class="rbadge admin">★ Admin</span>';
     if(state.compte && state.compte.beta)    roles += '<span class="rbadge beta">Bêta testeur</span>';
     app.querySelector('.user-roles').innerHTML = roles;
@@ -7766,12 +8097,14 @@
     document.getElementById('modal-root').innerHTML =
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
       + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml()
-      + finisModalHtml() + suiteAjoutHtml() + badgeCelebreHtml();
+      + finisModalHtml() + suiteAjoutHtml() + badgesMurHtml() + badgeFicheHtml()
+      + badgeCelebreHtml();
 
     // L'onboarding et le catalogue vivent dans leur propre root persistant : on
     // ne remplace que le contenu de leur carte, sans recréer l'overlay ni
     // rejouer leur animation.
     majCatalogue();
+    majLexTous();
     majOnboarding();
     majTvaOnb();
     majDepOnb();
@@ -7779,7 +8112,8 @@
 
     // Une pop-up ouverte fige le défilement de la page derrière.
     document.body.classList.toggle('pop-ouverte',
-      !!document.querySelector('#modal-root .overlay, #cat-root .overlay, #onb-root .tvo-overlay,'
+      !!document.querySelector('#modal-root .overlay, #cat-root .overlay, #lex-root .overlay,'
+                             + ' #onb-root .tvo-overlay,'
                              + ' #tvo-root .tvo-overlay, #dgo-root .tvo-overlay,'
                              + ' #vlo-root .tvo-overlay'));
   }
@@ -7956,6 +8290,7 @@
         break;
       case 'goto-part':
         e.stopPropagation();
+        marquerFait('part:vu');
         setState({ tab:'partenaires', partOpen: parseInt(el.getAttribute('data-i'), 10) });
         break;
       case 'obj-add': {
@@ -7995,6 +8330,26 @@
       case 'suite-rester':
         setState({ suiteAjout: null });
         break;
+      case 'badges-tous':
+        setState({ badgesTous: true });
+        break;
+      case 'badges-tous-close':
+        setState({ badgesTous: false });
+        break;
+      case 'badge-fiche':
+        setState({ badgeOuvert: el.getAttribute('data-id') });
+        break;
+      case 'badge-fiche-close':
+        setState({ badgeOuvert: null });
+        break;
+      case 'badge-porter': {
+        var bid = el.getAttribute('data-id');
+        var neuf = state.badgePorte === bid ? null : bid;
+        try { neuf ? localStorage.setItem('freehub_badge_porte', neuf)
+                   : localStorage.removeItem('freehub_badge_porte'); } catch(err){}
+        setState({ badgePorte: neuf });
+        break;
+      }
       case 'obj-epingle': {
         e.stopPropagation();
         var pid = el.getAttribute('data-id');
@@ -8029,10 +8384,12 @@
       case 'cal-vue':
         setState({ cal: Object.assign({}, state.cal, { vue: el.getAttribute('data-v') }) });
         break;
-      case 'cal-annee':
-        setState({ cal: Object.assign({}, state.cal,
-          { annee: parseInt(el.getAttribute('data-a'), 10) }) });
+      case 'cal-annee': {
+        var an = parseInt(el.getAttribute('data-a'), 10);
+        if(an !== new Date().getFullYear()) marquerFait('cal:autre-annee');
+        setState({ cal: Object.assign({}, state.cal, { annee: an }) });
         break;
+      }
       case 'cal-mois':
         // Depuis la vue année, cliquer un mois l'ouvre en grand.
         setState({ cal: Object.assign({}, state.cal,
@@ -8074,6 +8431,7 @@
         e.stopPropagation();
         break;
       case 'part-open':
+        marquerFait('part:vu');
         setState({ partOpen: parseInt(el.getAttribute('data-i'), 10) });
         break;
       case 'part-close':
@@ -8241,11 +8599,17 @@
         render();
         break;
       }
-      case 'lex-tous':
-        setState({ lexMonLexique: false });
+      case 'lex-tous-open':
+        setState({ lexTousOuvert: true, lexRecherche: '', lexFiltreModal: null });
         break;
-      case 'lex-mien':
-        setState({ lexMonLexique: true });
+      case 'lex-tous-close':
+        setState({ lexTousOuvert: false });
+        break;
+      case 'lex-filtre':
+        setState({ lexFiltre: el.getAttribute('data-dom') || null });
+        break;
+      case 'lex-filtre-modal':
+        setState({ lexFiltreModal: el.getAttribute('data-dom') || null });
         break;
       case 'part-copy': {
         var box = el, code = el.getAttribute('data-code');

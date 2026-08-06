@@ -171,6 +171,84 @@
     -webkit-user-drag:element;transition:transform .16s var(--ease)}
   .tui-slot > .tui{width:100%}
   .tui-slot:active{cursor:grabbing}
+  /* Reprise : l'étape exacte où l'on s'est arrêté, en tête d'accueil */
+  .acc-reprise{display:flex;align-items:center;gap:16px;width:100%;text-align:left;
+    font-family:inherit;cursor:pointer;margin-bottom:16px;padding:16px 20px;border-radius:18px;
+    background:var(--s);border:1.5px solid color-mix(in srgb,var(--c) 28%,#fff);
+    transition:.2s var(--ease)}
+  .acc-reprise:hover{transform:translateY(-2px);
+    box-shadow:0 18px 40px -26px color-mix(in srgb,var(--c) 80%,transparent)}
+  .acc-reprise-illu{flex:none;width:48px;height:48px;border-radius:15px;color:var(--c);
+    background:#fff;display:flex;align-items:center;justify-content:center}
+  .acc-reprise-illu .et-illu{width:24px;height:24px}
+  .acc-reprise-x{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .acc-reprise-l{font-size:12px;font-weight:800;color:var(--c)}
+  .acc-reprise-t{font-size:17px;font-weight:800;letter-spacing:-.016em;color:var(--ink);line-height:1.25}
+  .acc-reprise-d{font-size:13px;color:var(--muted);line-height:1.4}
+  .acc-reprise-cta{flex:none;padding:11px 16px;border-radius:11px;background:var(--c);color:#fff;
+    font-size:13px;font-weight:800}
+
+  /* Portes d'entrée : choisies selon l'état du compte */
+  .acc-portes{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .acc-porte{position:relative;display:flex;flex-direction:column;gap:4px;text-align:left;
+    font-family:inherit;cursor:pointer;padding:15px 17px;border-radius:15px;background:#fff;
+    border:1px solid var(--border);border-left:3px solid var(--c);transition:.2s var(--ease)}
+  .acc-porte:hover{transform:translateY(-2px);box-shadow:0 14px 30px -22px rgba(15,27,51,.5)}
+  .acc-porte-i{font-size:20px;line-height:1;margin-bottom:3px}
+  .acc-porte-t{font-size:14.5px;font-weight:800;color:var(--ink);letter-spacing:-.014em}
+  .acc-porte-d{font-size:12.5px;color:var(--muted);line-height:1.45}
+  .acc-porte-f{position:absolute;top:15px;right:16px;color:var(--c);font-weight:800;
+    opacity:0;transition:opacity .18s var(--ease),transform .18s var(--ease)}
+  .acc-porte:hover .acc-porte-f{opacity:1;transform:translateX(2px)}
+
+  /* Une seule carte : elle prend la largeur d'une porte, pas du tiers d'écran. */
+  .acc-cards.une{grid-template-columns:minmax(0,1fr)}
+  .acc-cards.une .acc-card{max-width:none}
+
+  .acc-badge{cursor:pointer;font-family:inherit;position:relative}
+  .acc-badge.porte{border-color:var(--rg,var(--blue))}
+  .acc-badge-p{position:absolute;top:6px;right:7px;padding:1px 6px;border-radius:999px;
+    background:var(--rg,var(--blue));color:#fff;font-size:9px;font-weight:800}
+  .bm-modal{width:760px}
+  .bm-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+
+  /* ---------- Badges ---------- */
+  /* Un rang par palier : le doré se voit de loin, le royal encore plus. */
+  .rang-bronze{--rg:#b45309;--rgs:#fef3e2}
+  .rang-argent{--rg:#64748b;--rgs:#f1f5f9}
+  .rang-or{--rg:#ca8a04;--rgs:#fefce8}
+  .rang-royal{--rg:#7c3aed;--rgs:#f5f0ff}
+
+  .bf-modal{width:400px;overflow:hidden;position:relative}
+  .bf-x{position:absolute;top:14px;right:14px}
+  .bf-haut{padding:34px 30px 24px;text-align:center;
+    background:linear-gradient(160deg,var(--rgs,#f4f7fc) 0%,#fff 100%)}
+  .bf-modal.rang-royal .bf-haut{background:linear-gradient(160deg,#efe6ff 0%,#fff 100%)}
+  .bf-ico{width:78px;height:78px;margin:0 auto 14px;border-radius:26px;
+    display:flex;align-items:center;justify-content:center;font-size:38px;
+    background:var(--rgs,#eef2f9);box-shadow:0 12px 28px -14px var(--rg,#94a3b8)}
+  .bf-ico.verrou{font-size:28px;background:#f1f4f9;box-shadow:none;opacity:.7}
+  .bf-l{font-size:11.5px;font-weight:800;color:var(--rg,var(--muted2))}
+  .bf-t{font-size:21px;font-weight:800;letter-spacing:-.02em;margin-top:4px}
+  .bf-corps{padding:0 30px 28px}
+  .bf-d{font-size:14px;line-height:1.55;color:var(--muted2);text-align:center;margin:0}
+  .bf-indice{display:flex;gap:10px;align-items:flex-start;margin:0;padding:14px 16px;
+    background:#f6f8fc;border-radius:14px;font-size:13.5px;line-height:1.5;
+    color:#3f4b60;font-style:italic}
+  .bf-indice-i{flex:none;font-style:normal}
+  .bf-porter{width:100%;margin-top:18px;padding:13px;border:1.5px solid var(--border);
+    border-radius:12px;background:#fff;font-family:inherit;font-size:13.5px;font-weight:800;
+    color:var(--muted2);cursor:pointer;transition:.18s var(--ease)}
+  .bf-porter:hover{border-color:var(--rg,var(--blue));color:var(--rg,var(--blue))}
+  .bf-porter.on{background:var(--rg,var(--blue));border-color:transparent;color:#fff}
+
+  /* Le badge porté, à côté du nom dans la barre latérale */
+  .rbadge.porte{background:rgba(255,255,255,.14);color:#fff;
+    border:1px solid rgba(255,255,255,.22);max-width:100%;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .rbadge.porte.rang-or{background:rgba(202,138,4,.28);border-color:rgba(250,204,21,.5)}
+  .rbadge.porte.rang-royal{background:rgba(124,58,237,.32);border-color:rgba(167,139,250,.55)}
+
   /* Épingle : le moyen fiable de mettre en avant, sur tous les navigateurs. */
   .tui-actions{margin-left:auto;display:flex;align-items:center;gap:5px}
   .tui-pin{width:22px;height:22px;border-radius:7px;display:flex;align-items:center;
@@ -1688,16 +1766,30 @@
     padding:11px 16px}
 
   /* ---------- Lexique ---------- */
+  /* Bandeau du lexique : même famille que celui des objectifs, couleur propre. */
+  .lx-tete{position:relative;overflow:hidden;display:flex;align-items:center;gap:20px;
+    border-radius:18px;padding:18px 24px;margin-bottom:16px;
+    background:linear-gradient(135deg,#0b3b47 0%,#0e7490 58%,#22b8cf 135%)}
+  .lx-tete::after{content:"";position:absolute;right:-60px;top:-90px;width:230px;height:230px;
+    border-radius:50%;background:rgba(255,255,255,.06)}
+  .lx-tete-r{position:relative;z-index:1;flex:none;line-height:0}
+  .lx-tete-x{position:relative;z-index:1;flex:1;min-width:0}
+  .lx-tete-t{font-size:17px;font-weight:800;letter-spacing:-.02em;color:#fff}
+  .lx-tete-s{font-size:12.5px;font-weight:500;color:rgba(255,255,255,.66);margin-top:3px}
+  .lx-tete-c{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:11px}
+  .lx-sec{margin-bottom:20px}
+  .lx-sec-t{display:flex;align-items:baseline;gap:9px;margin:0 2px 11px;
+    font-size:13.5px;font-weight:800;color:var(--ink);letter-spacing:-.012em}
+  .lx-sec-h{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:0}
+  .lx-tous-body{padding-top:6px}
+  .cat-filtres .lx-search{margin-bottom:14px}
+
   .lx-bar{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
   .lx-search{position:relative;flex:1;min-width:260px}
   .lx-search-i{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.6}
   .lx-search input{width:100%;padding:12px 16px 12px 40px;border:1px solid var(--border);border-radius:12px;
     font-size:14px;background:#fff;color:var(--ink);font-weight:500}
   .lx-search input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,107,255,.14)}
-  .lx-toggle{display:flex;gap:4px;background:#eef1f6;border-radius:11px;padding:3px}
-  .lx-tg{background:none;border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;
-    color:var(--muted2);cursor:pointer;font-family:inherit;transition:.18s var(--ease)}
-  .lx-tg.on{background:#fff;color:var(--ink);box-shadow:0 2px 6px -2px rgba(15,27,51,.2)}
 
   .lx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
   .lx{position:relative;text-align:left;cursor:pointer;background:#fff;border:1px solid var(--border);
