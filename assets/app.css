@@ -352,6 +352,32 @@
     100%{background-position:-60% 0}}
   @media (prefers-reduced-motion: reduce){
     .med.on.rang-or .med-coin::after,.med.on.rang-royal .med-coin::after{animation:none}}
+  /* La forme suit le rang : cercle, hexagone, écusson, couronne. On voit la
+     silhouette même verrouillée : c'est elle qui donne envie de monter. */
+  .med.rang-argent .med-coin{border-radius:0;border:none;box-shadow:none;
+    clip-path:polygon(50% 0%,96% 25%,96% 75%,50% 100%,4% 75%,4% 25%);
+    filter:drop-shadow(0 7px 9px rgba(15,27,51,.3))}
+  .med.rang-or .med-coin{border-radius:0;border:none;box-shadow:none;
+    clip-path:polygon(50% 0%,100% 14%,96% 60%,50% 100%,4% 60%,0% 14%);
+    filter:drop-shadow(0 8px 12px rgba(202,138,4,.45))}
+  .med.rang-royal .med-coin{border-radius:0;border:none;box-shadow:none;
+    clip-path:polygon(8% 95%,0% 30%,25% 48%,50% 8%,75% 48%,100% 30%,92% 95%);
+    filter:drop-shadow(0 8px 14px rgba(124,58,237,.5))}
+  .med.rang-argent .med-coin::before,.med.rang-or .med-coin::before,
+  .med.rang-royal .med-coin::before{content:none}
+  .med.rang-or .med-coin::after,.med.rang-royal .med-coin::after{border-radius:0}
+  .med.rang-royal .med-ico{transform:translateY(16%)}
+
+  /* Et la taille grimpe avec le rang : chaque palier domine le précédent */
+  .med.grand.rang-bronze .med-coin{width:84px;height:84px}
+  .med.grand.rang-argent .med-coin{width:94px;height:94px}
+  .med.grand.rang-or .med-coin{width:106px;height:106px}
+  .med.grand.rang-royal .med-coin{width:118px;height:118px}
+  .med.grand.rang-bronze .med-ico{font-size:36px}
+  .med.grand.rang-argent .med-ico{font-size:41px}
+  .med.grand.rang-or .med-ico{font-size:47px}
+  .med.grand.rang-royal .med-ico{font-size:52px}
+
   /* Le nom prend la teinte du métal */
   .med.on.rang-bronze .med-n{color:#92400e}
   .med.on.rang-argent .med-n{color:#475569}
@@ -359,14 +385,30 @@
   .med.on.rang-royal .med-n{background:linear-gradient(90deg,#7c3aed,#c026d3);
     -webkit-background-clip:text;background-clip:text;color:transparent}
 
-  /* Écrire sans compte : l'invitation remplace le champ */
-  .ch-connexion{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:12px;
-    padding:14px 18px;border-radius:14px;background:#fff;border:1.5px dashed var(--border)}
-  .ch-connexion-t{flex:1;min-width:200px;font-size:13px;font-weight:600;color:var(--muted2)}
-  .ch-connexion-b{flex:none;background:#e11d48;color:#fff;border:none;border-radius:11px;
-    padding:11px 16px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;
-    transition:transform .18s var(--ease)}
-  .ch-connexion-b:hover{transform:translateY(-1px)}
+  /* Une erreur d'envoi s'affiche sans effacer le fil */
+  .ch-alerte{margin-top:12px;padding:11px 15px;border-radius:12px;background:#fee2e2;
+    color:#991b1b;font-size:13px;font-weight:600}
+
+  /* Charte d'accueil de l'Entraide, montrée une seule fois */
+  .charte-modal{width:430px}
+  .charte-haut{padding:30px 30px 8px;text-align:center}
+  .charte-ico{width:58px;height:58px;margin:0 auto 12px;border-radius:19px;background:#ffe4e6;
+    display:flex;align-items:center;justify-content:center;font-size:26px}
+  .charte-corps{padding:14px 30px 4px;display:flex;flex-direction:column;gap:10px}
+  .charte-r{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;line-height:1.5;
+    color:#3f4b60;font-weight:500}
+  .charte-r span{flex:none}
+  .charte-pied{padding:20px 30px 26px}
+  .charte-ok{width:100%;padding:13px;border:none;border-radius:12px;background:#e11d48;color:#fff;
+    font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;transition:.18s var(--ease)}
+  .charte-ok:hover{filter:brightness(1.08);transform:translateY(-1px)}
+
+  /* Les mots-couleurs du gain : lire « doré » en doré, c'est déjà l'avoir un peu */
+  .teinte-bronze{color:#b45309}
+  .teinte-argent{color:#64748b}
+  .teinte-or{color:#ca8a04;text-shadow:0 0 10px rgba(202,138,4,.35)}
+  .teinte-royal{background:linear-gradient(90deg,#7c3aed,#c026d3);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
 
   /* Fiche : le gain et la progression */
   .bf-gain{display:flex;gap:9px;align-items:flex-start;margin-top:14px;padding:11px 14px;
@@ -403,11 +445,14 @@
     background:#f6f8fc;border-radius:14px;font-size:13.5px;line-height:1.5;
     color:#3f4b60;font-style:italic}
   .bf-indice-i{flex:none;font-style:normal}
-  .bf-porter{width:100%;margin-top:18px;padding:13px;border:1.5px solid var(--border);
-    border-radius:12px;background:#fff;font-family:inherit;font-size:13.5px;font-weight:800;
-    color:var(--muted2);cursor:pointer;transition:.18s var(--ease)}
-  .bf-porter:hover{border-color:var(--rg,var(--blue));color:var(--rg,var(--blue))}
-  .bf-porter.on{background:var(--rg,var(--blue));border-color:transparent;color:#fff}
+  /* L'action à faire est pleine et colorée ; une fois porté, le bouton se
+     calme et confirme — l'inverse serait illisible. */
+  .bf-porter{width:100%;margin-top:18px;padding:13px;border:1.5px solid transparent;
+    border-radius:12px;background:var(--rg,var(--blue));font-family:inherit;font-size:13.5px;
+    font-weight:800;color:#fff;cursor:pointer;transition:.18s var(--ease)}
+  .bf-porter:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .bf-porter.on{background:#fff;border-color:var(--rg,var(--blue));color:var(--rg,var(--blue));
+    filter:none;transform:none}
 
   /* Le badge porté, à côté du nom dans la barre latérale */
   .rbadge.porte{background:rgba(255,255,255,.14);color:#fff;

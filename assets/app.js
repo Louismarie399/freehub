@@ -197,16 +197,16 @@
       check:function(){ return !!state.compte; } },
 
     // --- Paliers d'objectifs : de quoi viser loin ---
-    { id:'palier-5', ico:'🌱', t:'Le pied à l’étrier', d:'Cinq objectifs bouclés.',
+    { id:'palier-5', ico:'🎯', t:'Le pied à l’étrier', d:'Cinq objectifs bouclés.',
       rang:'bronze',
       check:function(){ return nbObjectifsFinis() >= 5; } },
-    { id:'palier-10', ico:'⚙️', t:'Rouage bien huilé', d:'Dix objectifs bouclés.',
+    { id:'palier-10', ico:'🎯', t:'Rouage bien huilé', d:'Dix objectifs bouclés.',
       rang:'argent',
       check:function(){ return nbObjectifsFinis() >= 10; } },
-    { id:'palier-15', ico:'💎', t:'Bête de paperasse', d:'Quinze objectifs bouclés.',
+    { id:'palier-15', ico:'🎯', t:'Bête de paperasse', d:'Quinze objectifs bouclés.',
       rang:'or',
       check:function(){ return nbObjectifsFinis() >= 15; } },
-    { id:'palier-tout', ico:'👑', t:'Souverain de l’administratif',
+    { id:'palier-tout', ico:'🎯', t:'Souverain de l’administratif',
       d:'Tous les parcours bouclés, sans exception.',
       rang:'royal',
       check:function(){ return nbObjectifsFinis() >= catalog.length; } },
@@ -224,6 +224,9 @@
       check:function(){ return etapesFranchies() >= 10; } },
     { id:'marathonien', ico:'🏃', t:'Souffle long', d:'Cinquante étapes franchies.',
       check:function(){ return etapesFranchies() >= 50; } },
+
+    { id:'salon', ico:'👋', t:'Entré dans le salon', d:'Un premier passage dans l’Entraide.',
+      check:function(){ return !!state.faits['chat:visite']; } },
 
     // --- La collection elle-même : des médailles pour les médailles ---
     { id:'serie-5', ico:'🥉', t:'Première salve', d:'Cinq hauts faits débloqués.',
@@ -265,11 +268,12 @@
   // Ce que le badge apporte, une fois porté : c'est la récompense concrète,
   // et elle se voit dans l'Entraide.
   function avantageBadge(b){
+    // Le mot de la couleur porte sa couleur : on se projette avant d'avoir le badge.
     var parRang = {
-      bronze: 'Porté, il teinte ton pseudo en bronze dans l’Entraide',
-      argent: 'Porté, il teinte ton pseudo en argenté dans l’Entraide',
-      or:     'Porté, il teinte ton pseudo en doré, avec un halo, dans l’Entraide',
-      royal:  'Porté, il passe ton pseudo en dégradé royal dans l’Entraide — réservé à ce badge',
+      bronze: 'Porté, il teinte ton pseudo en <b class="teinte-bronze">bronze</b> dans l’Entraide',
+      argent: 'Porté, il teinte ton pseudo en <b class="teinte-argent">argenté</b> dans l’Entraide',
+      or:     'Porté, il teinte ton pseudo en <b class="teinte-or">doré</b>, avec un halo, dans l’Entraide',
+      royal:  'Porté, il passe ton pseudo en <b class="teinte-royal">dégradé royal</b> dans l’Entraide, réservé à ce badge',
     };
     return b.rang ? parRang[b.rang]
                   : 'Débloqué, tu peux le porter à côté de ton nom, visible de tous';
@@ -305,6 +309,7 @@
     'curieux':      'On a sélectionné quelques outils, va voir.',
     'assidu':       'Les étapes s’accumulent sans qu’on s’en rende compte.',
     'marathonien':  'Un chiffre qu’on n’atteint pas par hasard.',
+    'salon':        'Là où les membres se parlent, il y a une porte.',
     'serie-5':      'Les hauts faits appellent les hauts faits.',
     'serie-10':     'La collection commence à peser.',
     'serie-15':     'Il ne t’en manque plus beaucoup.',
@@ -372,6 +377,29 @@
       + '</div></div>';
   }
 
+  // Charte d'accueil : le ton attendu, dit une fois, avant d'entrer.
+  function chatCharteHtml(){
+    if(!state.chatCharte) return '';
+    return '<div class="overlay" data-action="chat-charte-ok">'
+      + '<div class="modal charte-modal" data-action="stop">'
+        + '<div class="charte-haut"><div class="charte-ico">💬</div>'
+          + '<div class="cat-t">Bienvenue dans l’Entraide</div>'
+          + '<div class="cat-s">Le seul endroit de FreeHub où l’on se parle entre membres</div></div>'
+        + '<div class="charte-corps">'
+          + '<div class="charte-r"><span>🤝</span>On se parle comme à un confrère : '
+            + 'professionnel, correct, bienveillant</div>'
+          + '<div class="charte-r"><span>🔒</span>Pas de données sensibles ici : SIRET, '
+            + 'revenus précis, coordonnées</div>'
+          + '<div class="charte-r"><span>🚩</span>Un message déplacé ? Signale-le, '
+            + 'la modération s’en occupe</div>'
+          + '<div class="charte-r"><span>⚖️</span>La modération peut retirer un message '
+            + 'ou suspendre l’écriture d’un compte</div>'
+        + '</div>'
+        + '<div class="charte-pied"><button class="charte-ok" data-action="chat-charte-ok">'
+          + 'J’ai compris, j’entre</button></div>'
+      + '</div></div>';
+  }
+
   // File de modération : les messages signalés, avec le contexte et les actions.
   function chatModerationHtml(){
     var m = state.chat.moderation;
@@ -431,7 +459,7 @@
                 + '<i style="width:'+Math.round(pr.n / pr.sur * 100)+'%"></i></div>'
                 + '<span class="bf-prog-n">'+pr.n+' / '+pr.sur+'</span></div>';
             })()
-          + '<div class="bf-gain"><span class="bf-gain-i">🎁</span>'+esc(avantageBadge(b))+'</div>'
+          + '<div class="bf-gain"><span class="bf-gain-i">🎁</span><span>'+avantageBadge(b)+'</span></div>'
           + (acquis
               ? '<button class="bf-porter'+(porte?' on':'')+'" data-action="badge-porter"'
                 + ' data-id="'+b.id+'">'
@@ -2144,6 +2172,7 @@
     badgeOuvert: null,      // badge dont la fiche est ouverte
     chat: { messages:[], charge:false, erreur:null, muet:null, admin:false,
             nonLus:0, nbSignales:0, moderation:null },
+    chatCharte: false,      // charte d'accueil de l'Entraide (première visite)
     badgePorte: (function(){
       try { return localStorage.getItem('freehub_badge_porte') || null; } catch(e){ return null; }
     })(),
@@ -7649,7 +7678,7 @@
 
   function chatMessagesHtml(){
     var c = state.chat;
-    if(c.erreur) return '<div class="ch-info erreur">'+esc(c.erreur)+'</div>';
+    if(c.erreur && !c.messages.length) return '<div class="ch-info erreur">'+esc(c.erreur)+'</div>';
     if(!c.charge) return '<div class="ch-info">Chargement du fil…</div>';
     if(!c.messages.length){
       return '<div class="ch-vide">'
@@ -7709,18 +7738,13 @@
             : '')
       + '</div>'
       + '<div class="ch-fil" data-chat-fil>'+chatMessagesHtml()+'</div>'
+      + (c.erreur && c.messages.length ? '<div class="ch-alerte">'+esc(c.erreur)+'</div>' : '')
       + muet
-      // La lecture est ouverte à tous ; écrire engage une identité, donc un compte.
-      + (state.compte
-          ? '<form class="ch-form" data-chat-form'+(c.muet ? ' data-inactif' : '')+'>'
-            + '<textarea data-chat-input rows="1" maxlength="800"'+(c.muet ? ' disabled' : '')
-              + ' placeholder="Une question, un retour d’expérience…"></textarea>'
-            + '<button type="submit" class="ch-envoi"'+(c.muet ? ' disabled' : '')+'>Envoyer</button>'
-          + '</form>'
-          : '<div class="ch-connexion">'
-            + '<span class="ch-connexion-t">Tu peux lire librement — pour écrire, il faut un compte</span>'
-            + '<button class="ch-connexion-b" data-action="auth-open">Créer mon compte →</button>'
-          + '</div>')
+      + '<form class="ch-form" data-chat-form'+(c.muet ? ' data-inactif' : '')+'>'
+        + '<textarea data-chat-input rows="1" maxlength="800"'+(c.muet ? ' disabled' : '')
+          + ' placeholder="Une question, un retour d’expérience…"></textarea>'
+        + '<button type="submit" class="ch-envoi"'+(c.muet ? ' disabled' : '')+'>Envoyer</button>'
+      + '</form>'
       + '<div class="ch-regles">Les messages sont publics et visibles par tous les membres. '
         + 'La modération peut retirer un message ou suspendre l’accès à l’écriture</div>'
       + '</div>';
@@ -8408,7 +8432,7 @@
     document.getElementById('modal-root').innerHTML =
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
       + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml()
-      + finisModalHtml() + suiteAjoutHtml() + chatModerationHtml() + badgeFicheHtml()
+      + finisModalHtml() + suiteAjoutHtml() + chatCharteHtml() + chatModerationHtml() + badgeFicheHtml()
       + badgeCelebreHtml();
 
     // L'onboarding et le catalogue vivent dans leur propre root persistant : on
@@ -8587,6 +8611,10 @@
         var target = el.getAttribute('data-tab');
         if(target === 'chat'){
           state.chat.nonLus = 0;
+          // Première visite : la charte d'accueil, une seule fois.
+          var vuCharte = null;
+          try { vuCharte = localStorage.getItem('freehub_chat_onb'); } catch(err){}
+          if(!vuCharte) state.chatCharte = true;
           chatCharger(false);
         }
         // Revenir sur l'onglet Simulateur ramène à la liste des simulateurs.
@@ -8666,6 +8694,11 @@
       }
       case 'suite-rester':
         setState({ suiteAjout: null });
+        break;
+      case 'chat-charte-ok':
+        try { localStorage.setItem('freehub_chat_onb', '1'); } catch(err){}
+        marquerFait('chat:visite');
+        setState({ chatCharte: false });
         break;
       case 'chat-signaler': {
         var sid = el.getAttribute('data-id');
