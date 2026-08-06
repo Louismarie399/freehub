@@ -20,6 +20,8 @@ const CHAT_LONGUEUR_MAX = 800;   // caractères
 const CHAT_DEBIT_NB     = 5;     // messages…
 const CHAT_DEBIT_SEC    = 60;    // …par minute
 const CHAT_PAGE         = 60;    // messages renvoyés au maximum
+// Liste fermée : pas le clavier emoji entier, cinq gestes qui suffisent.
+const CHAT_EMOJIS = ['👍', '👎', '🙏', '❤️', '🔥'];
 
 /** Le membre est-il réduit au silence ? Renvoie la date de fin, ou null. */
 function chat_muet(int $userId): ?string
@@ -114,9 +116,42 @@ function route_chat_liste(): void
     $auteurs = chat_auteurs(array_values(array_unique(
         array_map(fn($l) => (int) $l['user_id'], $lignes))));
 
+    // Réactions des messages affichés, regroupées par message puis par emoji.
+    $reactions = [];
+    if ($lignes) {
+        $ids = array_map(fn($l) => (int) $l['id'], $lignes);
+        $marques = implode(',', array_fill(0, count($ids), '?'));
+        $st = $pdo->prepare(
+            "SELECT r.message_id, r.emoji, r.user_id, u.prenom, u.nom
+               FROM chat_reactions r JOIN users u ON u.id = r.user_id
+              WHERE r.message_id IN ($marques) ORDER BY r.created ASC");
+        $st->execute($ids);
+        foreach ($st->fetchAll() as $r) {
+            $mid = (int) $r['message_id'];
+            $e = $r['emoji'];
+            if (!isset($reactions[$mid][$e])) {
+                $reactions[$mid][$e] = ['e' => $e, 'n' => 0, 'moi' => false, 'qui' => []];
+            }
+            $reactions[$mid][$e]['n']++;
+            if ($u && (int) $r['user_id'] === (int) $u['id']) $reactions[$mid][$e]['moi'] = true;
+            if (count($reactions[$mid][$e]['qui']) < 15) {
+                $p = trim((string) $r['prenom']);
+                $reactions[$mid][$e]['qui'][] = $p !== ''
+                    ? $p . (($r['nom'] ?? '') !== '' ? ' ' . mb_substr($r['nom'], 0, 1) . '.' : '')
+                    : 'Membre';
+            }
+        }
+    }
+
     $messages = [];
     foreach ($lignes as $l) {
         $supprime = (bool) $l['supprime'];
+        $mid = (int) $l['id'];
+        // L'ordre d'affichage suit la liste fermée, pas l'ordre d'arrivée.
+        $rs = [];
+        foreach (CHAT_EMOJIS as $e) {
+            if (isset($reactions[$mid][$e])) $rs[] = $reactions[$mid][$e];
+        }
         $messages[] = [
             'id'       => (int) $l['id'],
             'auteur'   => $auteurs[(int) $l['user_id']] ?? ['nom' => 'Membre', 'admin' => false],
@@ -128,6 +163,7 @@ function route_chat_liste(): void
             'contenu'  => $supprime
                 ? (($u && $u['is_admin']) ? $l['contenu'] : '')
                 : $l['contenu'],
+            'reactions' => $supprime ? [] : $rs,
         ];
     }
 
@@ -165,6 +201,34 @@ function route_chat_envoyer(): void
         'INSERT INTO chat_messages(user_id, contenu, created) VALUES (?,?,?)');
     $st->execute([$u['id'], $texte, maintenant()]);
     json_reponse(['ok' => true, 'id' => (int) db()->lastInsertId()]);
+}
+
+/** POST /api/chat/reagir — pose ou retire une réaction (liste fermée). */
+function route_chat_reagir(): void
+{
+    $u = exige_connexion();
+    $c = corps();
+    $id = (int) ($c['id'] ?? 0);
+    $emoji = (string) ($c['emoji'] ?? '');
+    if (!$id) erreur('Message introuvable.');
+    if (!in_array($emoji, CHAT_EMOJIS, true)) erreur('Réaction inconnue.');
+
+    $st = db()->prepare('SELECT supprime FROM chat_messages WHERE id = ?');
+    $st->execute([$id]);
+    $m = $st->fetch();
+    if (!$m) erreur('Message introuvable.');
+    if ((int) $m['supprime']) erreur('Ce message a été retiré.');
+
+    // Un second appel sur le même emoji retire la réaction : un seul geste.
+    $st = db()->prepare(
+        'DELETE FROM chat_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?');
+    $st->execute([$id, $u['id'], $emoji]);
+    if ($st->rowCount() === 0) {
+        db()->prepare(
+            'INSERT INTO chat_reactions(message_id, user_id, emoji, created) VALUES (?,?,?,?)')
+            ->execute([$id, $u['id'], $emoji, maintenant()]);
+    }
+    json_reponse(['ok' => true]);
 }
 
 /** POST /api/chat/signaler — n'importe quel membre peut alerter. */

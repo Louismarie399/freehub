@@ -44,6 +44,7 @@ $routes = [
     // Espace d'entraide
     'GET /chat'                  => 'route_chat_liste',
     'POST /chat'                 => 'route_chat_envoyer',
+    'POST /chat/reagir'          => 'route_chat_reagir',
     'POST /chat/signaler'        => 'route_chat_signaler',
     'POST /chat/supprimer'       => 'route_chat_supprimer',
     'POST /chat/muet'            => 'route_chat_muet',

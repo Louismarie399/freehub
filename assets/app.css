@@ -352,23 +352,7 @@
     100%{background-position:-60% 0}}
   @media (prefers-reduced-motion: reduce){
     .med.on.rang-or .med-coin::after,.med.on.rang-royal .med-coin::after{animation:none}}
-  /* La forme suit le rang : cercle, hexagone, écusson, couronne. On voit la
-     silhouette même verrouillée : c'est elle qui donne envie de monter. */
-  .med.rang-argent .med-coin{border-radius:0;border:none;box-shadow:none;
-    clip-path:polygon(50% 0%,96% 25%,96% 75%,50% 100%,4% 75%,4% 25%);
-    filter:drop-shadow(0 7px 9px rgba(15,27,51,.3))}
-  .med.rang-or .med-coin{border-radius:0;border:none;box-shadow:none;
-    clip-path:polygon(50% 0%,100% 14%,96% 60%,50% 100%,4% 60%,0% 14%);
-    filter:drop-shadow(0 8px 12px rgba(202,138,4,.45))}
-  .med.rang-royal .med-coin{border-radius:0;border:none;box-shadow:none;
-    clip-path:polygon(8% 95%,0% 30%,25% 48%,50% 8%,75% 48%,100% 30%,92% 95%);
-    filter:drop-shadow(0 8px 14px rgba(124,58,237,.5))}
-  .med.rang-argent .med-coin::before,.med.rang-or .med-coin::before,
-  .med.rang-royal .med-coin::before{content:none}
-  .med.rang-or .med-coin::after,.med.rang-royal .med-coin::after{border-radius:0}
-  .med.rang-royal .med-ico{transform:translateY(16%)}
-
-  /* Et la taille grimpe avec le rang : chaque palier domine le précédent */
+  /* La taille grimpe avec le rang : chaque palier domine le précédent */
   .med.grand.rang-bronze .med-coin{width:84px;height:84px}
   .med.grand.rang-argent .med-coin{width:94px;height:94px}
   .med.grand.rang-or .med-coin{width:106px;height:106px}
@@ -384,6 +368,21 @@
   .med.on.rang-or .med-n{color:#a16207}
   .med.on.rang-royal .med-n{background:linear-gradient(90deg,#7c3aed,#c026d3);
     -webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* Réactions : des pastilles comptées, cinq gestes possibles au survol */
+  .ch-reacts{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:7px}
+  .ch-react{display:inline-flex;align-items:center;gap:4px;background:#fff;
+    border:1px solid var(--border);border-radius:999px;padding:2px 8px;
+    font-family:inherit;font-size:12.5px;cursor:pointer;transition:.16s var(--ease)}
+  .ch-react:hover{border-color:#e11d48;transform:translateY(-1px)}
+  .ch-react:disabled{cursor:default;transform:none}
+  .ch-react-n{font-size:11px;font-weight:800;color:var(--muted2)}
+  .ch-react.moi{background:#ffe4e6;border-color:#fda4af}
+  .ch-react.moi .ch-react-n{color:#be123c}
+  .ch-rapides{display:inline-flex;gap:3px;opacity:0;transition:opacity .18s var(--ease)}
+  .ch-msg:hover .ch-rapides{opacity:1}
+  .ch-react.ajout{padding:2px 6px;filter:grayscale(1);opacity:.75}
+  .ch-react.ajout:hover{filter:none;opacity:1}
 
   /* Une erreur d'envoi s'affiche sans effacer le fil */
   .ch-alerte{margin-top:12px;padding:11px 15px;border-radius:12px;background:#fee2e2;

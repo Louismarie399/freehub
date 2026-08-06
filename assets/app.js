@@ -227,6 +227,14 @@
 
     { id:'salon', ico:'👋', t:'Entré dans le salon', d:'Un premier passage dans l’Entraide.',
       check:function(){ return !!state.faits['chat:visite']; } },
+    // Réservé à l'alpha : introuvable ensuite. La rareté fait le badge.
+    { id:'pionnier', ico:'🚀', t:'Pionnier de l’alpha',
+      d:'Membre pendant l’alpha privée. Ce badge ne reviendra jamais.',
+      check:function(){ return !!(state.compte && state.compte.beta); } },
+    // Celui-là ne se cherche pas, il se trouve.
+    { id:'secret', ico:'🕵️', t:'Là où personne ne regarde',
+      d:'Trouvé sans indice : sept clics au bon endroit.',
+      check:function(){ return !!state.faits['secret:logo']; } },
 
     // --- La collection elle-même : des médailles pour les médailles ---
     { id:'serie-5', ico:'🥉', t:'Première salve', d:'Cinq hauts faits débloqués.',
@@ -241,9 +249,18 @@
     { id:'serie-tout', ico:'🏆', t:'Sans faute',
       d:'Tous les hauts faits débloqués, jusqu’au dernier.',
       rang:'royal',
-      // Tous les autres : il ne peut évidemment pas se compter lui-même.
-      check:function(){ return state.badges.length >= BADGES.length - 1; } },
+      // Tous les autres — sauf lui-même, et sauf les badges exclusifs qu'un
+      // membre arrivé après l'alpha ne pourra jamais avoir.
+      check:function(){
+        return BADGES.every(function(b){
+          return b.id === 'serie-tout' || BADGES_EXCLUSIFS.indexOf(b.id) >= 0
+            || state.badges.indexOf(b.id) >= 0;
+        });
+      } },
   ];
+
+  // Introuvables hors de leur fenêtre : jamais requis pour « Sans faute ».
+  var BADGES_EXCLUSIFS = ['pionnier'];
 
   // Les deux échelles de paliers, pour l'affichage en vitrine.
   var BADGES_SERIE   = ['serie-5', 'serie-10', 'serie-15', 'serie-tout'];
@@ -259,8 +276,14 @@
     }
     var ciblesS = { 'serie-5':5, 'serie-10':10, 'serie-15':15 };
     if(/^serie-/.test(id)){
-      var cibleS = ciblesS[id] || (BADGES.length - 1);
-      return { n: Math.min(state.badges.length, cibleS), sur: cibleS };
+      if(id === 'serie-tout'){
+        var requis = BADGES.filter(function(b){
+          return b.id !== 'serie-tout' && BADGES_EXCLUSIFS.indexOf(b.id) < 0; });
+        var faits = requis.filter(function(b){
+          return state.badges.indexOf(b.id) >= 0; }).length;
+        return { n: faits, sur: requis.length };
+      }
+      return { n: Math.min(state.badges.length, ciblesS[id]), sur: ciblesS[id] };
     }
     return null;
   }
@@ -275,6 +298,9 @@
       or:     'Porté, il teinte ton pseudo en <b class="teinte-or">doré</b>, avec un halo, dans l’Entraide',
       royal:  'Porté, il passe ton pseudo en <b class="teinte-royal">dégradé royal</b> dans l’Entraide, réservé à ce badge',
     };
+    if(b.id === 'pionnier'){
+      return 'Porté, il dit que tu étais là avant tout le monde — introuvable après l’alpha';
+    }
     return b.rang ? parRang[b.rang]
                   : 'Débloqué, tu peux le porter à côté de ton nom, visible de tous';
   }
@@ -310,6 +336,8 @@
     'assidu':       'Les étapes s’accumulent sans qu’on s’en rende compte.',
     'marathonien':  'Un chiffre qu’on n’atteint pas par hasard.',
     'salon':        'Là où les membres se parlent, il y a une porte.',
+    'pionnier':     'Être là avant tout le monde. Ça ne se rattrape pas.',
+    'secret':       'Aucun indice. C’est tout le principe.',
     'serie-5':      'Les hauts faits appellent les hauts faits.',
     'serie-10':     'La collection commence à peser.',
     'serie-15':     'Il ne t’en manque plus beaucoup.',
@@ -2171,7 +2199,7 @@
     retourVers: null,       // onglet d'où l'objectif a été ouvert
     badgeOuvert: null,      // badge dont la fiche est ouverte
     chat: { messages:[], charge:false, erreur:null, muet:null, admin:false,
-            nonLus:0, nbSignales:0, moderation:null },
+            nonLus:0, nbSignales:0, moderation:null, empreinte:null },
     chatCharte: false,      // charte d'accueil de l'Entraide (première visite)
     badgePorte: (function(){
       try { return localStorage.getItem('freehub_badge_porte') || null; } catch(e){ return null; }
@@ -7661,8 +7689,33 @@
       + esc(a.nom || 'Membre')
       + (b ? '<span class="ch-badge" title="'+esc(b.t)+'">'+b.ico+'</span>' : '')
       + (a.admin ? '<span class="ch-role admin">Admin</span>' : '')
-      + (!a.admin && a.beta ? '<span class="ch-role beta">Bêta</span>' : '')
     + '</span>';
+  }
+
+  // Cinq réactions possibles, pas le clavier entier : des gestes, pas du bruit.
+  var CHAT_EMOJIS = ['👍', '👎', '🙏', '❤️', '🔥'];
+
+  function chatReactionsHtml(m){
+    if(m.supprime) return '';
+    var posees = {};
+    (m.reactions || []).forEach(function(x){ posees[x.e] = true; });
+    var pastilles = (m.reactions || []).map(function(x){
+      return '<button class="ch-react'+(x.moi ? ' moi' : '')+'"'
+        + (state.compte ? ' data-action="chat-react" data-id="'+m.id+'" data-e="'+x.e+'"'
+                        : ' disabled')
+        + ' title="'+esc((x.qui || []).join(', '))+'">'+x.e
+        + '<span class="ch-react-n">'+x.n+'</span></button>';
+    }).join('');
+    // Les emojis pas encore posés apparaissent au survol du message.
+    var rapides = state.compte
+      ? CHAT_EMOJIS.filter(function(e){ return !posees[e]; }).map(function(e){
+          return '<button class="ch-react ajout" data-action="chat-react"'
+            + ' data-id="'+m.id+'" data-e="'+e+'">'+e+'</button>';
+        }).join('')
+      : '';
+    if(!pastilles && !rapides) return '';
+    return '<div class="ch-reacts">'+pastilles
+      + (rapides ? '<span class="ch-rapides">'+rapides+'</span>' : '')+'</div>';
   }
 
   function chatHeure(iso){
@@ -7700,6 +7753,7 @@
           + (m.signale && !m.supprime ? '<span class="ch-tag signale">signalé</span>' : '')
         + '</div>'
         + '<div class="ch-txt">'+esc(m.contenu).replace(/\n/g, '<br>')+'</div>'
+        + chatReactionsHtml(m)
         + '<div class="ch-actions">'
           + (state.compte && !m.moi && !m.signale && !m.supprime
               ? '<button class="ch-act" data-action="chat-signaler" data-id="'+m.id+'">Signaler</button>'
@@ -7752,30 +7806,34 @@
 
   // --- Réseau -----------------------------------------------------------------
   function chatCharger(silencieux){
-    var depuis = state.chat.messages.length
-      ? state.chat.messages[state.chat.messages.length - 1].id : 0;
-    apiJson('GET', '/api/chat' + (depuis ? '?depuis=' + depuis : '')).then(function(r){
+    // On recharge toujours la fenêtre complète : les réactions et les retraits
+    // touchent d'anciens messages, qu'un chargement incrémental ne verrait pas.
+    apiJson('GET', '/api/chat').then(function(r){
       if(!r.ok){
         if(!silencieux) setState({ chat: Object.assign({}, state.chat,
           { charge:true, erreur:'Le fil n’a pas pu être chargé.' }) });
         return;
       }
       var neufs = r.data.messages || [];
-      var liste = depuis ? state.chat.messages.concat(neufs) : neufs;
-      // On borne l'historique en mémoire : le fil peut tourner longtemps.
-      if(liste.length > 200) liste = liste.slice(-200);
+      // Rien n'a bougé ? On ne re-rend pas : c'est ce re-rendu périodique qui
+      // vidait le champ de saisie en pleine frappe.
+      var empreinte = JSON.stringify([neufs, r.data.muet || null, !!r.data.admin]);
+      if(state.chat.charge && empreinte === state.chat.empreinte) return;
+
+      var dernierAvant = state.chat.messages.length
+        ? state.chat.messages[state.chat.messages.length - 1].id : 0;
       var c = Object.assign({}, state.chat, {
-        charge:true, erreur:null, messages:liste,
+        charge:true, erreur:null, messages:neufs, empreinte:empreinte,
         muet:r.data.muet || null, admin:!!r.data.admin,
-        nbSignales: liste.filter(function(m){ return m.signale && !m.supprime; }).length,
+        nbSignales: neufs.filter(function(m){ return m.signale && !m.supprime; }).length,
       });
-      // Pastille de non-lus quand on n'est pas sur l'onglet.
-      if(state.tab !== 'chat' && neufs.length && depuis){
-        c.nonLus = (state.chat.nonLus || 0) + neufs.length;
+      if(state.tab !== 'chat' && dernierAvant){
+        var nouveaux = neufs.filter(function(m){ return m.id > dernierAvant; }).length;
+        if(nouveaux) c.nonLus = (state.chat.nonLus || 0) + nouveaux;
       }
       var enBas = chatEnBas();
       setState({ chat: c });
-      if(state.tab === 'chat' && (enBas || !depuis)) chatDefiler();
+      if(state.tab === 'chat' && (enBas || !dernierAvant)) chatDefiler();
     });
   }
 
@@ -8386,7 +8444,6 @@
     if(bp) roles += '<span class="rbadge porte'+(bp.rang ? ' rang-'+bp.rang : '')+'"'
       + ' title="'+esc(bp.t)+'">'+bp.ico+' '+esc(bp.t)+'</span>';
     if(state.compte && state.compte.isAdmin) roles += '<span class="rbadge admin">★ Admin</span>';
-    if(state.compte && state.compte.beta)    roles += '<span class="rbadge beta">Bêta testeur</span>';
     app.querySelector('.user-roles').innerHTML = roles;
     var av = app.querySelector('.avatar');
     if(state.profil.photo){
@@ -8405,6 +8462,13 @@
 
     // Contenu.
     var content = app.querySelector('.content');
+    // Un re-rendu ne doit jamais manger ce que l'utilisateur est en train de
+    // taper dans l'Entraide : on capture le champ avant, on restaure après.
+    var chAvant = document.querySelector('[data-chat-input]');
+    var chVal = chAvant ? chAvant.value : '';
+    var chFocus = chAvant && chAvant === document.activeElement;
+    var chPos = chFocus ? chAvant.selectionStart : 0;
+
     content.innerHTML = state.tab === 'accueil' ? accueilHtml()
                       : state.tab === 'objectifs' ? objectifsHtml()
                       : state.tab === 'calendrier' ? calendrierHtml()
@@ -8415,6 +8479,17 @@
                       : state.tab === 'succes' ? succesHtml()
                       : state.tab === 'admin' ? adminHtml()
                       : simulateurHtml();
+
+    var chApres = document.querySelector('[data-chat-input]');
+    if(chApres && chVal && !chApres.value){
+      chApres.value = chVal;
+      chApres.style.height = 'auto';
+      chApres.style.height = Math.min(chApres.scrollHeight, 140) + 'px';
+      if(chFocus){
+        chApres.focus();
+        try { chApres.setSelectionRange(chPos, chPos); } catch(e){}
+      }
+    }
 
     // Animation d'entrée uniquement quand on change réellement d'écran.
     var key = state.tab + ':' + (state.tab === 'simulateur'
@@ -8601,7 +8676,20 @@
     });
   })();
 
+  // Sept clics rapprochés sur le logo : le badge que personne ne cherche.
+  var secretClics = { n: 0, t: 0 };
   document.getElementById('app').addEventListener('click', function(e){
+    var marque = e.target.closest && e.target.closest('.brand');
+    if(marque){
+      var now = Date.now();
+      if(now - secretClics.t > 4000) secretClics.n = 0;
+      secretClics.n++; secretClics.t = now;
+      if(secretClics.n >= 7 && !state.faits['secret:logo']){
+        marquerFait('secret:logo');
+        render();
+      }
+      return;
+    }
     var el = e.target.closest('[data-action]');
     if(!el) return;
     var action = el.getAttribute('data-action');
@@ -8700,6 +8788,18 @@
         marquerFait('chat:visite');
         setState({ chatCharte: false });
         break;
+      case 'chat-react': {
+        e.stopPropagation();
+        apiJson('POST', '/api/chat/reagir', {
+          id: parseInt(el.getAttribute('data-id'), 10),
+          emoji: el.getAttribute('data-e'),
+        }).then(function(r){
+          if(!r.ok) return;
+          state.chat.empreinte = null;   // forcer le rafraîchissement du fil
+          chatCharger(true);
+        });
+        break;
+      }
       case 'chat-signaler': {
         var sid = el.getAttribute('data-id');
         apiJson('POST', '/api/chat/signaler', { id: parseInt(sid, 10) })
@@ -8710,11 +8810,7 @@
       case 'chat-supprimer': {
         var did = parseInt(el.getAttribute('data-id'), 10);
         apiJson('POST', '/api/chat/supprimer', { id: did }).then(function(r){
-          if(!r.ok) return;
-          // Le fil est rechargé depuis zéro : un message retiré change d'état
-          // au milieu de l'historique, un simple « depuis » ne le verrait pas.
-          setState({ chat: Object.assign({}, state.chat, { messages: [] }) });
-          chatCharger(true);
+          if(r.ok) chatCharger(true);
         });
         break;
       }

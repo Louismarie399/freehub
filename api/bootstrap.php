@@ -156,6 +156,11 @@ function init_db(PDO $pdo): void
         -- lire, ce qui évite qu'il se recrée un compte dans la foulée.
         CREATE TABLE IF NOT EXISTS chat_muets(
             user_id INTEGER PRIMARY KEY, jusqu_a TEXT NOT NULL, motif TEXT DEFAULT '');
+        -- Réactions : une par membre, par message et par emoji (liste fermée).
+        CREATE TABLE IF NOT EXISTS chat_reactions(
+            message_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
+            emoji TEXT NOT NULL, created TEXT NOT NULL,
+            PRIMARY KEY(message_id, user_id, emoji));
     ");
     // Migration douce, comme en Python : ajoute les colonnes manquantes.
     $cols = array_column($pdo->query('PRAGMA table_info(users)')->fetchAll(), 'name');
