@@ -224,7 +224,56 @@
       check:function(){ return etapesFranchies() >= 10; } },
     { id:'marathonien', ico:'🏃', t:'Souffle long', d:'Cinquante étapes franchies.',
       check:function(){ return etapesFranchies() >= 50; } },
+
+    // --- La collection elle-même : des médailles pour les médailles ---
+    { id:'serie-5', ico:'🥉', t:'Première salve', d:'Cinq hauts faits débloqués.',
+      rang:'bronze',
+      check:function(){ return state.badges.length >= 5; } },
+    { id:'serie-10', ico:'🥈', t:'Chasseur de trophées', d:'Dix hauts faits débloqués.',
+      rang:'argent',
+      check:function(){ return state.badges.length >= 10; } },
+    { id:'serie-15', ico:'🥇', t:'Vitrine bien garnie', d:'Quinze hauts faits débloqués.',
+      rang:'or',
+      check:function(){ return state.badges.length >= 15; } },
+    { id:'serie-tout', ico:'🏆', t:'Sans faute',
+      d:'Tous les hauts faits débloqués, jusqu’au dernier.',
+      rang:'royal',
+      // Tous les autres : il ne peut évidemment pas se compter lui-même.
+      check:function(){ return state.badges.length >= BADGES.length - 1; } },
   ];
+
+  // Les deux échelles de paliers, pour l'affichage en vitrine.
+  var BADGES_SERIE   = ['serie-5', 'serie-10', 'serie-15', 'serie-tout'];
+  var BADGES_PALIERS = ['palier-5', 'palier-10', 'palier-15', 'palier-tout'];
+
+  // Où en est-on vers un palier encore verrouillé ? Montrer « 7/10 » transforme
+  // un badge opaque en objectif chiffré : c'est là que la collection devient un jeu.
+  function progresBadge(id){
+    var cibles = { 'palier-5':5, 'palier-10':10, 'palier-15':15 };
+    if(/^palier-/.test(id)){
+      var cible = cibles[id] || catalog.length;
+      return { n: Math.min(nbObjectifsFinis(), cible), sur: cible };
+    }
+    var ciblesS = { 'serie-5':5, 'serie-10':10, 'serie-15':15 };
+    if(/^serie-/.test(id)){
+      var cibleS = ciblesS[id] || (BADGES.length - 1);
+      return { n: Math.min(state.badges.length, cibleS), sur: cibleS };
+    }
+    return null;
+  }
+
+  // Ce que le badge apporte, une fois porté : c'est la récompense concrète,
+  // et elle se voit dans l'Entraide.
+  function avantageBadge(b){
+    var parRang = {
+      bronze: 'Porté, il teinte ton pseudo en bronze dans l’Entraide',
+      argent: 'Porté, il teinte ton pseudo en argenté dans l’Entraide',
+      or:     'Porté, il teinte ton pseudo en doré, avec un halo, dans l’Entraide',
+      royal:  'Porté, il passe ton pseudo en dégradé royal dans l’Entraide — réservé à ce badge',
+    };
+    return b.rang ? parRang[b.rang]
+                  : 'Débloqué, tu peux le porter à côté de ton nom, visible de tous';
+  }
 
   // Nombre total d'étapes cochées, tous objectifs confondus.
   function etapesFranchies(){
@@ -256,6 +305,10 @@
     'curieux':      'On a sélectionné quelques outils, va voir.',
     'assidu':       'Les étapes s’accumulent sans qu’on s’en rende compte.',
     'marathonien':  'Un chiffre qu’on n’atteint pas par hasard.',
+    'serie-5':      'Les hauts faits appellent les hauts faits.',
+    'serie-10':     'La collection commence à peser.',
+    'serie-15':     'Il ne t’en manque plus beaucoup.',
+    'serie-tout':   'Le badge de fin. Littéralement.',
   };
 
   function loadBadges(){
@@ -319,7 +372,6 @@
       + '</div></div>';
   }
 
-  // Le mur complet : on y va quand on veut voir ce qu'il reste à décrocher.
   // File de modération : les messages signalés, avec le contexte et les actions.
   function chatModerationHtml(){
     var m = state.chat.moderation;
@@ -353,32 +405,6 @@
       + '</div></div>';
   }
 
-  function badgesMurHtml(){
-    if(!state.badgesTous) return '';
-    var n = state.badges.length;
-    return '<div class="overlay" data-action="badges-tous-close">'
-      + '<div class="modal cat-modal bm-modal" data-action="stop">'
-        + '<div class="cat-head">'
-          + '<div><div class="cat-t">Tes hauts faits</div>'
-            + '<div class="cat-s">'+n+' débloqué'+(n>1?'s':'')+' sur '+BADGES.length
-              + ' · clique sur un badge pour en savoir plus</div></div>'
-          + '<button class="cat-x" data-action="badges-tous-close" aria-label="Fermer">✕</button>'
-        + '</div>'
-        + '<div class="cat-body"><div class="acc-badges bm-grid">'
-          + BADGES.map(function(b){
-              var on = state.badges.indexOf(b.id) >= 0;
-              var porte = state.badgePorte === b.id;
-              return '<button class="acc-badge'+(on?' on':'')+(porte?' porte':'')
-                + (b.rang ? ' rang-'+b.rang : '')+'" data-action="badge-fiche" data-id="'+b.id+'">'
-                + '<span class="acc-badge-i">'+(on ? b.ico : '🔒')+'</span>'
-                + '<span class="acc-badge-t">'+(on ? esc(b.t) : '???')+'</span>'
-                + (porte ? '<span class="acc-badge-p">porté</span>' : '')
-              + '</button>';
-            }).join('')
-        + '</div></div>'
-      + '</div></div>';
-  }
-
   function badgeFicheHtml(){
     var b = badge(state.badgeOuvert);
     if(!b) return '';
@@ -397,6 +423,15 @@
               ? '<p class="bf-d">'+esc(b.d)+'</p>'
               : '<p class="bf-indice"><span class="bf-indice-i">✨</span>'
                 + esc(BADGE_INDICES[b.id] || 'À toi de trouver.')+'</p>')
+          + (function(){
+              // Un palier verrouillé montre où l'on en est : l'objectif devient chiffré.
+              var pr = acquis ? null : progresBadge(b.id);
+              if(!pr) return '';
+              return '<div class="bf-prog"><div class="bf-prog-b">'
+                + '<i style="width:'+Math.round(pr.n / pr.sur * 100)+'%"></i></div>'
+                + '<span class="bf-prog-n">'+pr.n+' / '+pr.sur+'</span></div>';
+            })()
+          + '<div class="bf-gain"><span class="bf-gain-i">🎁</span>'+esc(avantageBadge(b))+'</div>'
           + (acquis
               ? '<button class="bf-porter'+(porte?' on':'')+'" data-action="badge-porter"'
                 + ' data-id="'+b.id+'">'
@@ -1055,6 +1090,7 @@
     calendrier: ['Calendrier',      '🗓', '#db2777'],
     partenaires:['Nos partenaires', '🤝', '#16a34a'],
     chat:       ['Entraide',        '💬', '#e11d48'],
+    succes:     ['Hauts faits',     '🏆', '#d97706'],
     profil:     ['Mon profil',      '👤', '#475569'],
     admin:      ['Dashboard admin', '🛠', '#be123c'],
   };
@@ -2106,7 +2142,6 @@
     })(),
     retourVers: null,       // onglet d'où l'objectif a été ouvert
     badgeOuvert: null,      // badge dont la fiche est ouverte
-    badgesTous: false,      // pop-up du mur des hauts faits
     chat: { messages:[], charge:false, erreur:null, muet:null, admin:false,
             nonLus:0, nbSignales:0, moderation:null },
     badgePorte: (function(){
@@ -2530,6 +2565,9 @@
               + '<line x1="8" y1="3" x2="8" y2="6"/><line x1="16" y1="3" x2="16" y2="6"/>',
     chat:       '<path d="M20.5 12.2c0 4-3.8 7.2-8.5 7.2a10 10 0 0 1-2.7-.36L4.5 20.5l1.3-3.6'
               + 'A6.8 6.8 0 0 1 3.5 12.2C3.5 8.2 7.3 5 12 5s8.5 3.2 8.5 7.2z"/>',
+    succes:     '<path d="M7 4h10v3.6a5 5 0 0 1-10 0z"/>'
+              + '<path d="M7 5H4.7a2.9 2.9 0 0 0 3 2.9M17 5h2.3a2.9 2.9 0 0 1-3 2.9"/>'
+              + '<path d="M12 12.6V16M10 16h4l.7 3.5H9.3z"/><path d="M8.3 19.5h7.4"/>',
     // Espace admin : un bouclier, pour marquer l'accès restreint.
     admin:      '<path d="M12 3.5 19 6v6c0 4-3 7-7 8.5C8 19 5 16 5 12V6z"/>'
               + '<path d="M9.2 12.2l2 2 3.6-3.9"/>',
@@ -2542,6 +2580,7 @@
     // L'entraide vit à part : c'est le seul endroit où l'on croise d'autres
     // personnes, autant que la navigation le dise.
     tabs.push({ key:'chat', label:'Entraide', section:'Social' });
+    tabs.push({ key:'succes', label:'Hauts faits' });
     // Espace admin : tout en bas, et seulement pour les comptes administrateurs.
     // (L'API vérifie de toute façon le rôle côté serveur.)
     if(state.compte && state.compte.isAdmin) tabs.push({key:'admin', label:'Dashboard admin'});
@@ -2829,38 +2868,6 @@
         + '</button>';
     }).join('');
 
-    // Bande de badges : débloqués en couleur, à débloquer en grisé.
-    var nbDebloques = state.badges.length;
-    var pastilles = BADGES.map(function(b){
-      var on = state.badges.indexOf(b.id) >= 0;
-      var porte = state.badgePorte === b.id;
-      return '<button class="acc-badge'+(on?' on':'')+(porte?' porte':'')
-        + (b.rang ? ' rang-'+b.rang : '')+'" data-action="badge-fiche" data-id="'+b.id+'">'
-        + '<span class="acc-badge-i">'+(on ? b.ico : '🔒')+'</span>'
-        + '<span class="acc-badge-t">'+(on ? esc(b.t) : '???')+'</span>'
-        + (porte ? '<span class="acc-badge-p">porté</span>' : '')
-      + '</button>';
-    }).join('');
-    // On montre les derniers obtenus et le prochain à portée, pas les 22 d'un coup.
-    var obtenus = BADGES.filter(function(b){ return state.badges.indexOf(b.id) >= 0; }).slice(-4);
-    var aVenir = BADGES.filter(function(b){ return state.badges.indexOf(b.id) < 0; }).slice(0, 8 - obtenus.length);
-    var vitrine = obtenus.concat(aVenir).map(function(b){
-      var on = state.badges.indexOf(b.id) >= 0;
-      var porte = state.badgePorte === b.id;
-      return '<button class="acc-badge'+(on?' on':'')+(porte?' porte':'')
-        + (b.rang ? ' rang-'+b.rang : '')+'" data-action="badge-fiche" data-id="'+b.id+'">'
-        + '<span class="acc-badge-i">'+(on ? b.ico : '🔒')+'</span>'
-        + '<span class="acc-badge-t">'+(on ? esc(b.t) : '???')+'</span>'
-        + (porte ? '<span class="acc-badge-p">porté</span>' : '')
-      + '</button>';
-    }).join('');
-    var blocBadges = '<div class="acc-bloc">'
-      + '<div class="acc-bloc-h">Tes hauts faits'
-        + '<span class="acc-badge-compte">'+nbDebloques+' / '+BADGES.length+'</span>'
-        + '<button class="btn-link" data-action="badges-tous">Tout voir →</button></div>'
-      + '<div class="acc-badges">'+vitrine+'</div>'
-    + '</div>';
-
     return '<div class="view">'
       + hero
       + repriseHtml()
@@ -2873,7 +2880,6 @@
             + '<div class="acc-objs">'+enCours+'</div>'
           + '</div>'
           : '')
-      + blocBadges
       + '</div>';
   }
 
@@ -7523,6 +7529,85 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Hauts faits — la salle des trophées
+  // ---------------------------------------------------------------------------
+  // Des médailles, pas des cases : les paliers en grand avec leur progression
+  // chiffrée, le reste de la collection en dessous. Tout est cliquable — la
+  // fiche dit ce que le badge donne, et comment s'en approcher.
+
+  function medailleHtml(id, grand){
+    var b = badge(id);
+    if(!b) return '';
+    var on = state.badges.indexOf(id) >= 0;
+    // Un badge non acquis ne peut pas être « porté », même si le stockage le
+    // prétend (données importées d'un autre profil, par exemple).
+    var porte = on && state.badgePorte === id;
+    var pr = !on ? progresBadge(id) : null;
+    return '<button class="med'+(on ? ' on' : ' verrou')+(grand ? ' grand' : '')
+      + (b.rang ? ' rang-'+b.rang : '')+(porte ? ' porte' : '')+'"'
+      + ' data-action="badge-fiche" data-id="'+id+'">'
+      + '<span class="med-coin"><span class="med-ico">'+(on ? b.ico : '🔒')+'</span></span>'
+      + '<span class="med-n">'+(on ? esc(b.t) : '???')+'</span>'
+      + (pr ? '<span class="med-prog">'+pr.n+' / '+pr.sur+'</span>' : '')
+      + (porte ? '<span class="med-porte">porté</span>' : '')
+    + '</button>';
+  }
+
+  function succesHtml(){
+    var n = state.badges.length, total = BADGES.length;
+    var pct = total ? Math.round(n / total * 100) : 0;
+
+    var R = 30, C = 2 * Math.PI * R;
+    var anneau = '<svg viewBox="0 0 72 72" width="72" height="72">'
+      + '<circle cx="36" cy="36" r="'+R+'" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="6"/>'
+      + '<circle cx="36" cy="36" r="'+R+'" fill="none" stroke="#fff" stroke-width="6" '
+        + 'stroke-linecap="round" stroke-dasharray="'+(pct/100*C)+' '+C+'" '
+        + 'transform="rotate(-90 36 36)"/>'
+      + '<text x="36" y="42" text-anchor="middle" font-size="17" font-weight="800" fill="#fff">'
+        + n + '</text></svg>';
+
+    var entete = '<div class="suc-tete">'
+      + '<div class="obj-tete-r">'+anneau+'</div>'
+      + '<div class="obj-tete-x">'
+        + '<div class="obj-tete-t">'
+          + (n ? n+' haut'+(n>1?'s':'')+' fait'+(n>1?'s':'')+' sur '+total
+               : 'Ta collection commence ici')+'</div>'
+        + '<div class="obj-tete-s">Clique sur une médaille : chacune dit ce qu’elle '
+          + 'donne, et comment s’en approcher</div>'
+        + '<div class="obj-tete-c">'
+          + '<span class="ochip on"><b>'+(total - n)+'</b> à débloquer</span>'
+          + (state.badgePorte && state.badges.indexOf(state.badgePorte) >= 0
+              ? '<span class="ochip ok"><b>'+esc((badge(state.badgePorte)||{}).t||'')
+                + '</b> porté</span>'
+              : '<span class="ochip">aucun badge porté pour l’instant</span>')
+        + '</div>'
+      + '</div>'
+    + '</div>';
+
+    var autres = BADGES.filter(function(b){
+      return BADGES_SERIE.indexOf(b.id) < 0 && BADGES_PALIERS.indexOf(b.id) < 0;
+    });
+
+    return '<div class="view">'
+      + entete
+      + '<div class="suc-sec"><div class="suc-sec-t">La collection'
+        + '<span class="suc-sec-h">plus tu débloques, plus tu montes</span></div>'
+        + '<div class="suc-paliers">'
+          + BADGES_SERIE.map(function(id){ return medailleHtml(id, true); }).join('')
+        + '</div></div>'
+      + '<div class="suc-sec"><div class="suc-sec-t">Les parcours'
+        + '<span class="suc-sec-h">des objectifs bouclés, du premier au dernier</span></div>'
+        + '<div class="suc-paliers">'
+          + BADGES_PALIERS.map(function(id){ return medailleHtml(id, true); }).join('')
+        + '</div></div>'
+      + '<div class="suc-sec"><div class="suc-sec-t">Tous les hauts faits</div>'
+        + '<div class="suc-grille">'
+          + autres.map(function(b){ return medailleHtml(b.id, false); }).join('')
+        + '</div></div>'
+      + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
   // Entraide — le seul écran où l'on croise d'autres membres
   // ---------------------------------------------------------------------------
   // Volontairement simple pour l'alpha : un fil unique, rafraîchi par sondage
@@ -7587,7 +7672,7 @@
         + '</div>'
         + '<div class="ch-txt">'+esc(m.contenu).replace(/\n/g, '<br>')+'</div>'
         + '<div class="ch-actions">'
-          + (!m.moi && !m.signale && !m.supprime
+          + (state.compte && !m.moi && !m.signale && !m.supprime
               ? '<button class="ch-act" data-action="chat-signaler" data-id="'+m.id+'">Signaler</button>'
               : '')
           + (c.admin && !m.supprime
@@ -7603,18 +7688,6 @@
   }
 
   function chatHtml(){
-    // Sans compte, pas d'entraide : on a besoin de savoir qui parle.
-    if(!state.compte){
-      return '<div class="view"><div class="obj-vide illu">'
-        + '<img src="assets/illus/en-route.svg" alt="" class="illu-img">'
-        + '<div class="obj-vide-t">L’entraide demande un compte</div>'
-        + '<div class="obj-vide-d">C’est le seul endroit de FreeHub où l’on parle '
-          + 'à d’autres personnes : on a besoin de savoir qui écrit</div>'
-        + '<button class="acc-hero-cta" style="margin-top:16px" data-action="auth-open">'
-          + 'Créer mon compte →</button>'
-      + '</div></div>';
-    }
-
     var c = state.chat;
     var muet = c.muet
       ? '<div class="ch-muet">Tu ne peux plus écrire pour le moment. '
@@ -7637,11 +7710,17 @@
       + '</div>'
       + '<div class="ch-fil" data-chat-fil>'+chatMessagesHtml()+'</div>'
       + muet
-      + '<form class="ch-form" data-chat-form'+(c.muet ? ' data-inactif' : '')+'>'
-        + '<textarea data-chat-input rows="1" maxlength="800"'+(c.muet ? ' disabled' : '')
-          + ' placeholder="Une question, un retour d’expérience…"></textarea>'
-        + '<button type="submit" class="ch-envoi"'+(c.muet ? ' disabled' : '')+'>Envoyer</button>'
-      + '</form>'
+      // La lecture est ouverte à tous ; écrire engage une identité, donc un compte.
+      + (state.compte
+          ? '<form class="ch-form" data-chat-form'+(c.muet ? ' data-inactif' : '')+'>'
+            + '<textarea data-chat-input rows="1" maxlength="800"'+(c.muet ? ' disabled' : '')
+              + ' placeholder="Une question, un retour d’expérience…"></textarea>'
+            + '<button type="submit" class="ch-envoi"'+(c.muet ? ' disabled' : '')+'>Envoyer</button>'
+          + '</form>'
+          : '<div class="ch-connexion">'
+            + '<span class="ch-connexion-t">Tu peux lire librement — pour écrire, il faut un compte</span>'
+            + '<button class="ch-connexion-b" data-action="auth-open">Créer mon compte →</button>'
+          + '</div>')
       + '<div class="ch-regles">Les messages sont publics et visibles par tous les membres. '
         + 'La modération peut retirer un message ou suspendre l’accès à l’écriture</div>'
       + '</div>';
@@ -7649,7 +7728,6 @@
 
   // --- Réseau -----------------------------------------------------------------
   function chatCharger(silencieux){
-    if(!state.compte) return;
     var depuis = state.chat.messages.length
       ? state.chat.messages[state.chat.messages.length - 1].id : 0;
     apiJson('GET', '/api/chat' + (depuis ? '?depuis=' + depuis : '')).then(function(r){
@@ -7691,7 +7769,7 @@
   // serveur pendant qu'on remplit un simulateur.
   function chatSondage(){
     if(chatTimer){ clearInterval(chatTimer); chatTimer = null; }
-    if(state.tab !== 'chat' || !state.compte) return;
+    if(state.tab !== 'chat') return;
     chatTimer = setInterval(function(){ chatCharger(true); }, CHAT_INTERVALLE);
   }
 
@@ -8310,6 +8388,7 @@
                       : state.tab === 'partenaires' ? partenairesHtml()
                       : state.tab === 'profil' ? profilHtml()
                       : state.tab === 'chat' ? chatHtml()
+                      : state.tab === 'succes' ? succesHtml()
                       : state.tab === 'admin' ? adminHtml()
                       : simulateurHtml();
 
@@ -8329,7 +8408,7 @@
     document.getElementById('modal-root').innerHTML =
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
       + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml()
-      + finisModalHtml() + suiteAjoutHtml() + chatModerationHtml() + badgesMurHtml() + badgeFicheHtml()
+      + finisModalHtml() + suiteAjoutHtml() + chatModerationHtml() + badgeFicheHtml()
       + badgeCelebreHtml();
 
     // L'onboarding et le catalogue vivent dans leur propre root persistant : on
@@ -8621,12 +8700,6 @@
         break;
       case 'chat-moderation-close':
         setState({ chat: Object.assign({}, state.chat, { moderation: null }) });
-        break;
-      case 'badges-tous':
-        setState({ badgesTous: true });
-        break;
-      case 'badges-tous-close':
-        setState({ badgesTous: false });
         break;
       case 'badge-fiche':
         setState({ badgeOuvert: el.getAttribute('data-id') });

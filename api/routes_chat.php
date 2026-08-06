@@ -83,10 +83,15 @@ function chat_auteurs(array $ids): array
     return $out;
 }
 
-/** GET /api/chat?depuis=<id> — les messages, du plus ancien au plus récent. */
+/**
+ * GET /api/chat?depuis=<id> — les messages, du plus ancien au plus récent.
+ *
+ * La lecture est OUVERTE : pas besoin de compte pour suivre le fil. Seule
+ * l'écriture engage une identité — c'est elle qui exige la connexion.
+ */
 function route_chat_liste(): void
 {
-    $u = exige_connexion();
+    $u = utilisateur_courant();   // null si personne n'est connecté
     $depuis = (int) ($_GET['depuis'] ?? 0);
     $pdo = db();
 
@@ -115,21 +120,22 @@ function route_chat_liste(): void
         $messages[] = [
             'id'       => (int) $l['id'],
             'auteur'   => $auteurs[(int) $l['user_id']] ?? ['nom' => 'Membre', 'admin' => false],
-            'moi'      => (int) $l['user_id'] === (int) $u['id'],
+            'moi'      => $u && (int) $l['user_id'] === (int) $u['id'],
             'created'  => $l['created'],
             'supprime' => $supprime,
             'signale'  => (bool) $l['signale'],
             // Le texte d'un message supprimé n'est renvoyé qu'aux admins.
             'contenu'  => $supprime
-                ? ($u['is_admin'] ? $l['contenu'] : '')
+                ? (($u && $u['is_admin']) ? $l['contenu'] : '')
                 : $l['contenu'],
         ];
     }
 
     json_reponse([
         'messages' => $messages,
-        'muet'     => chat_muet((int) $u['id']),
-        'admin'    => (bool) $u['is_admin'],
+        'muet'     => $u ? chat_muet((int) $u['id']) : null,
+        'admin'    => (bool) ($u && $u['is_admin']),
+        'connecte' => (bool) $u,
     ]);
 }
 

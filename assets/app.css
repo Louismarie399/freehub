@@ -281,12 +281,103 @@
   .acc-cards.une{grid-template-columns:minmax(0,1fr)}
   .acc-cards.une .acc-card{max-width:none}
 
-  .acc-badge{cursor:pointer;font-family:inherit;position:relative}
-  .acc-badge.porte{border-color:var(--rg,var(--blue))}
-  .acc-badge-p{position:absolute;top:6px;right:7px;padding:1px 6px;border-radius:999px;
-    background:var(--rg,var(--blue));color:#fff;font-size:9px;font-weight:800}
-  .bm-modal{width:760px}
-  .bm-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+
+  /* ---------- Salle des trophées ---------- */
+  .suc-tete{position:relative;overflow:hidden;display:flex;align-items:center;gap:20px;
+    border-radius:18px;padding:18px 24px;margin-bottom:16px;
+    background:linear-gradient(135deg,#451a03 0%,#b45309 58%,#f59e0b 135%)}
+  .suc-tete::after{content:"";position:absolute;right:-60px;top:-90px;width:230px;height:230px;
+    border-radius:50%;background:rgba(255,255,255,.07)}
+  .suc-tete > *{position:relative;z-index:1}
+  .suc-sec{margin-bottom:22px}
+  .suc-sec-t{display:flex;align-items:baseline;gap:9px;margin:0 2px 12px;
+    font-size:13.5px;font-weight:800;color:var(--ink);letter-spacing:-.012em}
+  .suc-sec-h{font-size:12px;font-weight:600;color:var(--muted)}
+  .suc-paliers{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+  .suc-grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:12px}
+
+  /* Une médaille : une pièce ronde frappée, pas une case. */
+  .med{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;
+    background:none;border:none;cursor:pointer;font-family:inherit;padding:12px 6px 10px;
+    border-radius:16px;transition:transform .2s var(--ease),background .2s var(--ease),
+    box-shadow .2s var(--ease)}
+  .med:hover{background:#fff;transform:translateY(-3px);
+    box-shadow:0 16px 32px -22px rgba(15,27,51,.5)}
+  .med-coin{position:relative;overflow:hidden;width:72px;height:72px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 32% 26%,#ffffff 0%,#dde5f0 52%,#b9c5d8 100%);
+    border:3px solid #cbd5e1;
+    box-shadow:inset 0 2px 4px rgba(255,255,255,.9),inset 0 -4px 8px rgba(15,27,51,.16),
+      0 7px 16px -7px rgba(15,27,51,.4)}
+  /* L'anneau gravé, comme sur une pièce */
+  .med-coin::before{content:"";position:absolute;inset:5px;border-radius:50%;
+    border:1.5px dashed rgba(15,27,51,.16)}
+  .med-ico{font-size:30px;line-height:1}
+  .med.grand .med-coin{width:94px;height:94px}
+  .med.grand .med-ico{font-size:40px}
+  .med-n{font-size:11.5px;font-weight:800;text-align:center;color:var(--ink);line-height:1.25;
+    max-width:130px}
+  .med.grand .med-n{font-size:12.5px}
+  .med-prog{font-size:10.5px;font-weight:800;color:var(--muted);background:#eef1f7;
+    border-radius:999px;padding:2px 9px}
+  .med-porte{font-size:9.5px;font-weight:800;color:#fff;background:var(--rg,var(--blue));
+    border-radius:999px;padding:2px 8px}
+
+  /* Verrouillée : une pièce éteinte, au contenu inconnu */
+  .med.verrou .med-coin{background:radial-gradient(circle at 32% 26%,#eef1f6 0%,#d6dce7 55%,#c3cbd9 100%);
+    border-color:#cfd6e2}
+  .med.verrou .med-ico{font-size:22px;opacity:.55}
+  .med.verrou .med-n{color:#a3adc0}
+  .med.grand.verrou .med-ico{font-size:28px}
+
+  /* Les métaux : le rang se voit avant même de lire */
+  .med.on.rang-bronze .med-coin{border-color:#92400e;
+    background:radial-gradient(circle at 32% 26%,#ffd9ae 0%,#e0863a 55%,#8a4410 100%)}
+  .med.on.rang-argent .med-coin{border-color:#64748b;
+    background:radial-gradient(circle at 32% 26%,#ffffff 0%,#c4cedb 55%,#8595ab 100%)}
+  .med.on.rang-or .med-coin{border-color:#a16207;
+    background:radial-gradient(circle at 32% 26%,#fff4c2 0%,#f0b515 55%,#9a6a06 100%);
+    box-shadow:inset 0 2px 4px rgba(255,255,255,.9),inset 0 -4px 8px rgba(15,27,51,.16),
+      0 7px 20px -6px rgba(234,179,8,.65)}
+  .med.on.rang-royal .med-coin{border-color:#6d28d9;
+    background:radial-gradient(circle at 32% 26%,#f2e6ff 0%,#a855f7 50%,#5b21b6 100%);
+    box-shadow:inset 0 2px 4px rgba(255,255,255,.85),inset 0 -4px 8px rgba(15,27,51,.2),
+      0 7px 22px -6px rgba(147,51,234,.7)}
+  /* Reflet qui balaie l'or et le royal : la vitrine vit un peu */
+  .med.on.rang-or .med-coin::after,.med.on.rang-royal .med-coin::after{content:"";
+    position:absolute;inset:0;border-radius:50%;
+    background:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.6) 48%,transparent 62%);
+    background-size:260% 100%;animation:medreflet 3.4s var(--ease) infinite}
+  @keyframes medreflet{0%{background-position:130% 0}45%{background-position:-60% 0}
+    100%{background-position:-60% 0}}
+  @media (prefers-reduced-motion: reduce){
+    .med.on.rang-or .med-coin::after,.med.on.rang-royal .med-coin::after{animation:none}}
+  /* Le nom prend la teinte du métal */
+  .med.on.rang-bronze .med-n{color:#92400e}
+  .med.on.rang-argent .med-n{color:#475569}
+  .med.on.rang-or .med-n{color:#a16207}
+  .med.on.rang-royal .med-n{background:linear-gradient(90deg,#7c3aed,#c026d3);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* Écrire sans compte : l'invitation remplace le champ */
+  .ch-connexion{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:12px;
+    padding:14px 18px;border-radius:14px;background:#fff;border:1.5px dashed var(--border)}
+  .ch-connexion-t{flex:1;min-width:200px;font-size:13px;font-weight:600;color:var(--muted2)}
+  .ch-connexion-b{flex:none;background:#e11d48;color:#fff;border:none;border-radius:11px;
+    padding:11px 16px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;
+    transition:transform .18s var(--ease)}
+  .ch-connexion-b:hover{transform:translateY(-1px)}
+
+  /* Fiche : le gain et la progression */
+  .bf-gain{display:flex;gap:9px;align-items:flex-start;margin-top:14px;padding:11px 14px;
+    background:var(--rgs,#f6f8fc);border-radius:12px;font-size:13px;line-height:1.5;
+    color:#3f4b60;font-weight:600}
+  .bf-gain-i{flex:none}
+  .bf-prog{display:flex;align-items:center;gap:10px;margin-top:14px}
+  .bf-prog-b{flex:1;height:9px;border-radius:999px;background:#eef1f7;overflow:hidden}
+  .bf-prog-b i{display:block;height:100%;border-radius:999px;
+    background:var(--rg,var(--blue));transition:width .4s var(--ease)}
+  .bf-prog-n{flex:none;font-size:12px;font-weight:800;color:var(--muted2)}
 
   /* ---------- Badges ---------- */
   /* Un rang par palier : le doré se voit de loin, le royal encore plus. */
@@ -2182,19 +2273,6 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .acc-obj-p{font-size:12px;font-weight:800;color:var(--c)}
 
-  /* Badges sur l'accueil */
-  .acc-badge-compte{margin-left:auto;font-size:12.5px;font-weight:800;color:var(--blue);
-    background:var(--soft);border-radius:8px;padding:3px 10px}
-  .acc-badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
-  .acc-badge{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
-    background:var(--bg);border:1px solid transparent;border-radius:13px;padding:14px 8px;
-    transition:transform .18s var(--ease)}
-  .acc-badge.on{background:#fff;border-color:var(--border);box-shadow:0 8px 20px -16px rgba(15,27,51,.5)}
-  .acc-badge.on:hover{transform:translateY(-3px)}
-  .acc-badge-i{font-size:26px;line-height:1;filter:grayscale(1);opacity:.45}
-  .acc-badge.on .acc-badge-i{filter:none;opacity:1}
-  .acc-badge-t{font-size:11px;font-weight:700;color:var(--muted);line-height:1.25}
-  .acc-badge.on .acc-badge-t{color:var(--ink)}
 
   /* Célébration de déblocage */
   .bd-overlay{background:rgba(15,27,51,.62)}
