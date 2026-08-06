@@ -140,6 +140,22 @@ function init_db(PDO $pdo): void
             uses INTEGER DEFAULT 0, actif INTEGER DEFAULT 1, created TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS oauth_states(
             state TEXT PRIMARY KEY, mode TEXT NOT NULL, code TEXT DEFAULT '', created TEXT NOT NULL);
+        -- Espace d'entraide. `supprime` est un effacement DOUX : le message
+        -- disparaît pour tout le monde mais reste consultable par un admin,
+        -- ce qui permet de traiter un signalement sans perdre la preuve.
+        CREATE TABLE IF NOT EXISTS chat_messages(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            contenu TEXT NOT NULL,
+            created TEXT NOT NULL,
+            supprime INTEGER DEFAULT 0,
+            supprime_par INTEGER DEFAULT NULL,
+            signale INTEGER DEFAULT 0);
+        CREATE INDEX IF NOT EXISTS idx_chat_id ON chat_messages(id);
+        -- Un utilisateur réduit au silence ne peut plus écrire ; il continue de
+        -- lire, ce qui évite qu'il se recrée un compte dans la foulée.
+        CREATE TABLE IF NOT EXISTS chat_muets(
+            user_id INTEGER PRIMARY KEY, jusqu_a TEXT NOT NULL, motif TEXT DEFAULT '');
     ");
     // Migration douce, comme en Python : ajoute les colonnes manquantes.
     $cols = array_column($pdo->query('PRAGMA table_info(users)')->fetchAll(), 'name');

@@ -320,6 +320,39 @@
   }
 
   // Le mur complet : on y va quand on veut voir ce qu'il reste à décrocher.
+  // File de modération : les messages signalés, avec le contexte et les actions.
+  function chatModerationHtml(){
+    var m = state.chat.moderation;
+    if(m === null) return '';
+    return '<div class="overlay" data-action="chat-moderation-close">'
+      + '<div class="modal cat-modal" data-action="stop">'
+        + '<div class="cat-head">'
+          + '<div><div class="cat-t">File de modération</div>'
+            + '<div class="cat-s">'+(m.length ? m.length+' message'+(m.length>1?'s':'')+' signalé'+(m.length>1?'s':'')
+                : 'Rien en attente')+'</div></div>'
+          + '<button class="cat-x" data-action="chat-moderation-close" aria-label="Fermer">✕</button>'
+        + '</div>'
+        + '<div class="cat-body">'
+          + (m.length
+              ? m.map(function(x){
+                  return '<div class="ch-modmsg'+(x.supprime ? ' efface' : '')+'">'
+                    + '<div class="ch-tete">'+chatAuteurHtml(x.auteur)
+                      + '<span class="ch-h">'+chatHeure(x.created)+'</span>'
+                      + (x.supprime ? '<span class="ch-tag">déjà retiré</span>' : '')+'</div>'
+                    + '<div class="ch-txt">'+esc(x.contenu)+'</div>'
+                    + '<div class="ch-actions">'
+                      + (x.supprime ? ''
+                          : '<button class="ch-act sup" data-action="chat-supprimer" data-id="'+x.id+'">Retirer</button>')
+                      + '<button class="ch-act sup" data-action="chat-muet" data-id="'+x.userId+'">'
+                        + 'Réduire au silence 24 h</button>'
+                    + '</div>'
+                  + '</div>';
+                }).join('')
+              : '<div class="obj-vide">Aucun signalement — c’est bon signe</div>')
+        + '</div>'
+      + '</div></div>';
+  }
+
   function badgesMurHtml(){
     if(!state.badgesTous) return '';
     var n = state.badges.length;
@@ -1021,6 +1054,7 @@
     lexique:    ['Lexique',         '📖', '#0891b2'],
     calendrier: ['Calendrier',      '🗓', '#db2777'],
     partenaires:['Nos partenaires', '🤝', '#16a34a'],
+    chat:       ['Entraide',        '💬', '#e11d48'],
     profil:     ['Mon profil',      '👤', '#475569'],
     admin:      ['Dashboard admin', '🛠', '#be123c'],
   };
@@ -2073,6 +2107,8 @@
     retourVers: null,       // onglet d'où l'objectif a été ouvert
     badgeOuvert: null,      // badge dont la fiche est ouverte
     badgesTous: false,      // pop-up du mur des hauts faits
+    chat: { messages:[], charge:false, erreur:null, muet:null, admin:false,
+            nonLus:0, nbSignales:0, moderation:null },
     badgePorte: (function(){
       try { return localStorage.getItem('freehub_badge_porte') || null; } catch(e){ return null; }
     })(),
@@ -2185,7 +2221,7 @@
     },
   };
 
-  function setState(patch){ Object.assign(state, patch); render(); majHistorique(); }
+  function setState(patch){ Object.assign(state, patch); render(); majHistorique(); chatSondage(); }
 
   // Historique du navigateur : on n'y pousse qu'une chose, l'ouverture d'un
   // objectif. C'est le seul endroit où l'utilisateur s'attend à ce que la
@@ -2492,6 +2528,8 @@
               + '<line x1="9" y1="8" x2="14" y2="8"/>',
     calendrier: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><line x1="3.5" y1="9" x2="20.5" y2="9"/>'
               + '<line x1="8" y1="3" x2="8" y2="6"/><line x1="16" y1="3" x2="16" y2="6"/>',
+    chat:       '<path d="M20.5 12.2c0 4-3.8 7.2-8.5 7.2a10 10 0 0 1-2.7-.36L4.5 20.5l1.3-3.6'
+              + 'A6.8 6.8 0 0 1 3.5 12.2C3.5 8.2 7.3 5 12 5s8.5 3.2 8.5 7.2z"/>',
     // Espace admin : un bouclier, pour marquer l'accès restreint.
     admin:      '<path d="M12 3.5 19 6v6c0 4-3 7-7 8.5C8 19 5 16 5 12V6z"/>'
               + '<path d="M9.2 12.2l2 2 3.6-3.9"/>',
@@ -2501,17 +2539,24 @@
                  {key:'calendrier',label:'Calendrier'},
                  {key:'simulateur',label:'Simulateur'}, {key:'lexique',label:'Lexique'},
                  {key:'partenaires',label:'Nos partenaires'} ];
+    // L'entraide vit à part : c'est le seul endroit où l'on croise d'autres
+    // personnes, autant que la navigation le dise.
+    tabs.push({ key:'chat', label:'Entraide', section:'Social' });
     // Espace admin : tout en bas, et seulement pour les comptes administrateurs.
     // (L'API vérifie de toute façon le rôle côté serveur.)
     if(state.compte && state.compte.isAdmin) tabs.push({key:'admin', label:'Dashboard admin'});
     return tabs.map(function(t){
       var on = state.tab === t.key;
-      return '<button class="nav-row'+(on?' on':'')+(t.key==='admin'?' nav-admin':'')
+      return (t.section ? '<div class="nav-sec">'+esc(t.section)+'</div>' : '')
+        + '<button class="nav-row'+(on?' on':'')+(t.key==='admin'?' nav-admin':'')
+        + (t.key==='chat'?' nav-chat':'')
         + '" data-action="tab" data-tab="'+t.key+'">'
         + '<span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
           + 'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+NAV_ICONES[t.key]+'</svg></span>'
         + '<span class="nav-text">'+esc(t.label)+'</span>'
         + (t.key === 'objectifs' ? '<span class="nav-badge">New</span>' : '')
+        + (t.key === 'chat' && state.chat.nonLus
+            ? '<span class="nav-pastille">'+state.chat.nonLus+'</span>' : '')
         + '</button>';
     }).join('');
   }
@@ -5774,7 +5819,7 @@
   var CLES_SAUVEGARDE = ['freehub_profil','freehub_historique','freehub_hist_vl',
                          'freehub_hist_tva','freehub_scenarios','freehub_params',
                          'freehub_objectifs','freehub_lexique','freehub_dep_favoris','freehub_badges','freehub_faits',
-                         'freehub_onboarded'];
+                         'freehub_badge_porte','freehub_onboarded'];
 
   function exporterDonnees(){
     var paquet = { app:'FreeHub', version:1, date:new Date().toISOString(), donnees:{} };
@@ -7478,6 +7523,192 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Entraide — le seul écran où l'on croise d'autres membres
+  // ---------------------------------------------------------------------------
+  // Volontairement simple pour l'alpha : un fil unique, rafraîchi par sondage
+  // pendant qu'on est sur l'onglet. Pas de temps réel, pas de fils multiples :
+  // on veut d'abord mesurer l'usage et la charge de modération.
+
+  var CHAT_INTERVALLE = 6000;   // ms entre deux relevés
+  var chatTimer = null;
+
+  // Le rang du badge porté colore le nom : c'est ce qui rend la progression
+  // visible par les autres, et donc désirable.
+  function chatRang(auteur){
+    if(!auteur || !auteur.badge) return null;
+    var b = badge(auteur.badge);
+    return b && b.rang ? b.rang : null;
+  }
+
+  function chatAuteurHtml(a){
+    var b = a.badge ? badge(a.badge) : null;
+    var rang = chatRang(a);
+    return '<span class="ch-auteur'+(rang ? ' rang-'+rang : '')+'">'
+      + esc(a.nom || 'Membre')
+      + (b ? '<span class="ch-badge" title="'+esc(b.t)+'">'+b.ico+'</span>' : '')
+      + (a.admin ? '<span class="ch-role admin">Admin</span>' : '')
+      + (!a.admin && a.beta ? '<span class="ch-role beta">Bêta</span>' : '')
+    + '</span>';
+  }
+
+  function chatHeure(iso){
+    var d = new Date(iso);
+    if(isNaN(d)) return '';
+    var auj = new Date();
+    var memeJour = d.toDateString() === auj.toDateString();
+    return memeJour
+      ? d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
+      : d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })
+        + ' · ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  }
+
+  function chatMessagesHtml(){
+    var c = state.chat;
+    if(c.erreur) return '<div class="ch-info erreur">'+esc(c.erreur)+'</div>';
+    if(!c.charge) return '<div class="ch-info">Chargement du fil…</div>';
+    if(!c.messages.length){
+      return '<div class="ch-vide">'
+        + '<img src="assets/illus/en-route.svg" alt="" class="illu-img">'
+        + '<div class="obj-vide-t">Personne n’a encore écrit</div>'
+        + '<div class="obj-vide-d">Lance-toi : une question, un retour d’expérience, '
+          + 'un bon plan qui t’a servi</div>'
+      + '</div>';
+    }
+    return c.messages.map(function(m){
+      if(m.supprime && !c.admin){
+        return '<div class="ch-msg efface"><span class="ch-efface">'
+          + 'Message retiré par la modération</span></div>';
+      }
+      return '<div class="ch-msg'+(m.moi ? ' moi' : '')+(m.supprime ? ' efface' : '')+'">'
+        + '<div class="ch-tete">'+chatAuteurHtml(m.auteur)
+          + '<span class="ch-h">'+chatHeure(m.created)+'</span>'
+          + (m.supprime ? '<span class="ch-tag">retiré</span>' : '')
+          + (m.signale && !m.supprime ? '<span class="ch-tag signale">signalé</span>' : '')
+        + '</div>'
+        + '<div class="ch-txt">'+esc(m.contenu).replace(/\n/g, '<br>')+'</div>'
+        + '<div class="ch-actions">'
+          + (!m.moi && !m.signale && !m.supprime
+              ? '<button class="ch-act" data-action="chat-signaler" data-id="'+m.id+'">Signaler</button>'
+              : '')
+          + (c.admin && !m.supprime
+              ? '<button class="ch-act sup" data-action="chat-supprimer" data-id="'+m.id+'">Retirer</button>'
+              : '')
+          + (c.admin && !m.moi && m.auteur.id
+              ? '<button class="ch-act sup" data-action="chat-muet" data-id="'+m.auteur.id+'">'
+                + 'Réduire au silence 24 h</button>'
+              : '')
+        + '</div>'
+      + '</div>';
+    }).join('');
+  }
+
+  function chatHtml(){
+    // Sans compte, pas d'entraide : on a besoin de savoir qui parle.
+    if(!state.compte){
+      return '<div class="view"><div class="obj-vide illu">'
+        + '<img src="assets/illus/en-route.svg" alt="" class="illu-img">'
+        + '<div class="obj-vide-t">L’entraide demande un compte</div>'
+        + '<div class="obj-vide-d">C’est le seul endroit de FreeHub où l’on parle '
+          + 'à d’autres personnes : on a besoin de savoir qui écrit</div>'
+        + '<button class="acc-hero-cta" style="margin-top:16px" data-action="auth-open">'
+          + 'Créer mon compte →</button>'
+      + '</div></div>';
+    }
+
+    var c = state.chat;
+    var muet = c.muet
+      ? '<div class="ch-muet">Tu ne peux plus écrire pour le moment. '
+        + 'Tu peux continuer à lire le fil.</div>'
+      : '';
+
+    return '<div class="view">'
+      + '<div class="ch-tete-b">'
+        + '<div class="ch-tete-x">'
+          + '<div class="ch-tete-t">L’entraide entre membres</div>'
+          + '<div class="ch-tete-s">Un fil unique, pour poser une question ou '
+            + 'partager ce qui t’a servi. On est en alpha : sois indulgent, et '
+            + 'signale ce qui n’a rien à faire ici</div>'
+        + '</div>'
+        + (c.admin
+            ? '<button class="ch-mod" data-action="chat-moderation">Modération'
+              + (c.nbSignales ? '<span class="ch-mod-n">'+c.nbSignales+'</span>' : '')
+              + '</button>'
+            : '')
+      + '</div>'
+      + '<div class="ch-fil" data-chat-fil>'+chatMessagesHtml()+'</div>'
+      + muet
+      + '<form class="ch-form" data-chat-form'+(c.muet ? ' data-inactif' : '')+'>'
+        + '<textarea data-chat-input rows="1" maxlength="800"'+(c.muet ? ' disabled' : '')
+          + ' placeholder="Une question, un retour d’expérience…"></textarea>'
+        + '<button type="submit" class="ch-envoi"'+(c.muet ? ' disabled' : '')+'>Envoyer</button>'
+      + '</form>'
+      + '<div class="ch-regles">Les messages sont publics et visibles par tous les membres. '
+        + 'La modération peut retirer un message ou suspendre l’accès à l’écriture</div>'
+      + '</div>';
+  }
+
+  // --- Réseau -----------------------------------------------------------------
+  function chatCharger(silencieux){
+    if(!state.compte) return;
+    var depuis = state.chat.messages.length
+      ? state.chat.messages[state.chat.messages.length - 1].id : 0;
+    apiJson('GET', '/api/chat' + (depuis ? '?depuis=' + depuis : '')).then(function(r){
+      if(!r.ok){
+        if(!silencieux) setState({ chat: Object.assign({}, state.chat,
+          { charge:true, erreur:'Le fil n’a pas pu être chargé.' }) });
+        return;
+      }
+      var neufs = r.data.messages || [];
+      var liste = depuis ? state.chat.messages.concat(neufs) : neufs;
+      // On borne l'historique en mémoire : le fil peut tourner longtemps.
+      if(liste.length > 200) liste = liste.slice(-200);
+      var c = Object.assign({}, state.chat, {
+        charge:true, erreur:null, messages:liste,
+        muet:r.data.muet || null, admin:!!r.data.admin,
+        nbSignales: liste.filter(function(m){ return m.signale && !m.supprime; }).length,
+      });
+      // Pastille de non-lus quand on n'est pas sur l'onglet.
+      if(state.tab !== 'chat' && neufs.length && depuis){
+        c.nonLus = (state.chat.nonLus || 0) + neufs.length;
+      }
+      var enBas = chatEnBas();
+      setState({ chat: c });
+      if(state.tab === 'chat' && (enBas || !depuis)) chatDefiler();
+    });
+  }
+
+  function chatEnBas(){
+    var f = document.querySelector('[data-chat-fil]');
+    if(!f) return true;
+    return f.scrollHeight - f.scrollTop - f.clientHeight < 80;
+  }
+  function chatDefiler(){
+    var f = document.querySelector('[data-chat-fil]');
+    if(f) f.scrollTop = f.scrollHeight;
+  }
+
+  // Le sondage ne tourne QUE sur l'onglet entraide : inutile de solliciter le
+  // serveur pendant qu'on remplit un simulateur.
+  function chatSondage(){
+    if(chatTimer){ clearInterval(chatTimer); chatTimer = null; }
+    if(state.tab !== 'chat' || !state.compte) return;
+    chatTimer = setInterval(function(){ chatCharger(true); }, CHAT_INTERVALLE);
+  }
+
+  function chatEnvoyer(texte){
+    texte = (texte || '').trim();
+    if(!texte) return;
+    apiJson('POST', '/api/chat', { contenu: texte }).then(function(r){
+      if(!r.ok){
+        setState({ chat: Object.assign({}, state.chat,
+          { erreur: (r.data && r.data.error) || 'Envoi impossible.' }) });
+        return;
+      }
+      chatCharger(true);
+    });
+  }
+
+  // ---------------------------------------------------------------------------
   // Lexique
   // ---------------------------------------------------------------------------
   function estEpingle(id){ return state.lexEpingles.indexOf(id) >= 0; }
@@ -8078,6 +8309,7 @@
                       : state.tab === 'lexique' ? lexiqueHtml()
                       : state.tab === 'partenaires' ? partenairesHtml()
                       : state.tab === 'profil' ? profilHtml()
+                      : state.tab === 'chat' ? chatHtml()
                       : state.tab === 'admin' ? adminHtml()
                       : simulateurHtml();
 
@@ -8097,7 +8329,7 @@
     document.getElementById('modal-root').innerHTML =
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
       + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml()
-      + finisModalHtml() + suiteAjoutHtml() + badgesMurHtml() + badgeFicheHtml()
+      + finisModalHtml() + suiteAjoutHtml() + chatModerationHtml() + badgesMurHtml() + badgeFicheHtml()
       + badgeCelebreHtml();
 
     // L'onboarding et le catalogue vivent dans leur propre root persistant : on
@@ -8136,6 +8368,28 @@
     if(!root) return;
     var btn = root.querySelector('.onb-primary');
     if(btn){ e.preventDefault(); btn.click(); }
+  });
+
+  // Entraide : envoi du formulaire, et Entrée pour publier (Maj+Entrée = saut
+  // de ligne, comme partout ailleurs).
+  document.addEventListener('submit', function(e){
+    var f = e.target.closest && e.target.closest('[data-chat-form]');
+    if(!f) return;
+    e.preventDefault();
+    if(f.hasAttribute('data-inactif')) return;
+    var champ = f.querySelector('[data-chat-input]');
+    if(!champ || !champ.value.trim()) return;
+    chatEnvoyer(champ.value);
+    champ.value = '';
+    champ.style.height = 'auto';
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter' || e.shiftKey) return;
+    var champ = e.target.closest && e.target.closest('[data-chat-input]');
+    if(!champ) return;
+    e.preventDefault();
+    var f = champ.closest('[data-chat-form]');
+    if(f) f.dispatchEvent(new Event('submit', { bubbles:true, cancelable:true }));
   });
 
   // ---------------------------------------------------------------------------
@@ -8252,6 +8506,10 @@
     switch(action){
       case 'tab': {
         var target = el.getAttribute('data-tab');
+        if(target === 'chat'){
+          state.chat.nonLus = 0;
+          chatCharger(false);
+        }
         // Revenir sur l'onglet Simulateur ramène à la liste des simulateurs.
         if(target === 'simulateur') state.sim.open = null;
         if(target === 'objectifs') state.objectifOuvert = null;
@@ -8329,6 +8587,40 @@
       }
       case 'suite-rester':
         setState({ suiteAjout: null });
+        break;
+      case 'chat-signaler': {
+        var sid = el.getAttribute('data-id');
+        apiJson('POST', '/api/chat/signaler', { id: parseInt(sid, 10) })
+          .then(function(){ chatCharger(true); });
+        el.textContent = 'Signalé'; el.disabled = true;
+        break;
+      }
+      case 'chat-supprimer': {
+        var did = parseInt(el.getAttribute('data-id'), 10);
+        apiJson('POST', '/api/chat/supprimer', { id: did }).then(function(r){
+          if(!r.ok) return;
+          // Le fil est rechargé depuis zéro : un message retiré change d'état
+          // au milieu de l'historique, un simple « depuis » ne le verrait pas.
+          setState({ chat: Object.assign({}, state.chat, { messages: [] }) });
+          chatCharger(true);
+        });
+        break;
+      }
+      case 'chat-muet': {
+        var uid = parseInt(el.getAttribute('data-id'), 10);
+        apiJson('POST', '/api/chat/muet', { userId: uid, heures: 24 })
+          .then(function(){ chatCharger(true); });
+        el.textContent = 'Réduit au silence'; el.disabled = true;
+        break;
+      }
+      case 'chat-moderation':
+        apiJson('GET', '/api/chat/moderation').then(function(r){
+          setState({ chat: Object.assign({}, state.chat,
+            { moderation: r.ok ? (r.data.messages || []) : [] }) });
+        });
+        break;
+      case 'chat-moderation-close':
+        setState({ chat: Object.assign({}, state.chat, { moderation: null }) });
         break;
       case 'badges-tous':
         setState({ badgesTous: true });
@@ -9396,6 +9688,13 @@
     var ac = e.target.closest('[data-accueil-ca]');
     if(ac){ majAccueilProjection(parseFloat(ac.value)); return; }
     // Recherche du lexique : on met à jour la grille sans re-render (focus gardé).
+    var ci = e.target.closest('[data-chat-input]');
+    if(ci){
+      // Le champ grandit avec le texte, jusqu'à une limite raisonnable.
+      ci.style.height = 'auto';
+      ci.style.height = Math.min(ci.scrollHeight, 140) + 'px';
+      return;
+    }
     var ls = e.target.closest('[data-lex-search]');
     if(ls){ state.lexRecherche = ls.value; majLexique(); return; }
     var ds = e.target.closest('[data-dep-search]');
