@@ -232,6 +232,32 @@
   }
   function badge(id){ return BADGES.filter(function(b){ return b.id === id; })[0]; }
 
+  // Confirmation après l'ajout d'un objectif suggéré : on dit ce qui a été
+  // ajouté, et on laisse le choix entre y aller et finir ce qu'on faisait.
+  function suiteAjoutHtml(){
+    var a = state.suiteAjout;
+    if(!a) return '';
+    var o = obj(a.id);
+    if(!o) return '';
+    var d = dom(o), depuis = a.retour ? obj(a.retour) : null;
+    return '<div class="overlay" data-action="suite-rester">'
+      + '<div class="modal sa-modal" data-action="stop">'
+        + '<div class="sa-body" style="--c:'+d.c+'">'
+          + '<div class="sa-ico" style="background:'+d.soft+'">'+d.ico+'</div>'
+          + '<div class="sa-l">Ajouté à tes objectifs</div>'
+          + '<div class="sa-t">'+esc(o.title)+'</div>'
+          + '<div class="sa-d">'+esc(o.desc)+'</div>'
+          + '<div class="sa-meta">'+o.steps.length+' étapes'
+            + (depuis ? ' · tu le retrouveras dans tes objectifs' : '')+'</div>'
+          + '<button class="sa-go" data-action="suite-go">Commencer maintenant</button>'
+          + (depuis
+              ? '<button class="sa-rester" data-action="suite-rester">Finir « '
+                + esc(depuis.title)+' » d’abord</button>'
+              : '<button class="sa-rester" data-action="suite-rester">Plus tard</button>')
+        + '</div>'
+      + '</div></div>';
+  }
+
   function badgeCelebreHtml(){
     if(!state.badgeQueue.length) return '';
     var b = badge(state.badgeQueue[0]);
@@ -266,187 +292,216 @@
   // `pertinent` : à qui l'objectif s'adresse, d'après le profil.
   var catalog = [
     { id:'statut', dom:'statut', title:'Choisir son statut de société',
-      desc:'Micro, EURL ou SASU : trancher en confiance.',
+      suite:['creer-societe','piloter'],
+      desc:'Micro, EURL ou SASU : trancher en confiance',
       pertinent:function(p){ return estMicro(p) || /je ne sais pas/i.test(p.forme || ''); },
-      pourquoi:'Tu es en micro : vois à partir de quand une société te rapporterait plus.',
+      pourquoi:'Tu es en micro : vois à partir de quand une société te rapporterait plus',
       steps:[
-        {t:'Comparer micro, EURL et SASU', h:'Les vraies différences, sans jargon.', sim:'statut'},
-        {t:'Estimer ton net par statut', h:'Sur ton chiffre d’affaires réel.', sim:'statut'},
-        {t:'Vérifier ta protection sociale', h:'TNS vs assimilé salarié.'},
-        {t:'Décider et planifier la bascule', h:'Choisir la date et faire les démarches.', part:0},
+        {t:'Comparer micro, EURL et SASU', h:'Les vraies différences, sans jargon', sim:'statut', duree:'10 min', illu:'balance'},
+        {t:'Estimer ton net par statut', h:'Sur ton chiffre d’affaires réel', sim:'statut', duree:'10 min', illu:'courbe'},
+        {t:'Vérifier ta protection sociale', h:'TNS vs assimilé salarié', duree:'10 min', illu:'bouclier'},
+        {t:'Décider et planifier la bascule', h:'Choisir la date et faire les démarches', part:0, duree:'À ton rythme', illu:'fusee'},
       ]},
     { id:'tva-comprendre', dom:'tva', title:'Comprendre la TVA',
-      desc:'Les bases pour ne plus jamais être perdu·e.',
-      pourquoi:'La TVA revient dans presque toutes les décisions : autant la comprendre une fois.',
+      suite:['tva-passer','facturer-etranger'],
+      desc:'Les bases pour ne plus jamais être perdu·e',
+      pourquoi:'La TVA revient dans presque toutes les décisions : autant la comprendre une fois',
       steps:[
-        {t:'Qu’est-ce que la TVA ?', h:'Le principe en 3 minutes.'},
-        {t:'La franchise en base', h:'Pourquoi tu n’en factures pas encore.'},
-        {t:'TVA collectée vs déductible', h:'Le mécanisme qui change tout.'},
-        {t:'Voir ce que ça donnerait chez toi', h:'Sur tes vrais chiffres.', sim:'tva'},
+        {t:'Qu’est-ce que la TVA ?', h:'Le principe en 3 minutes', duree:'5 min', illu:'loupe'},
+        {t:'La franchise en base', h:'Pourquoi tu n’en factures pas encore', duree:'5 min', illu:'facture'},
+        {t:'TVA collectée vs déductible', h:'Le mécanisme qui change tout', duree:'10 min', illu:'balance'},
+        {t:'Voir ce que ça donnerait chez toi', h:'Sur tes vrais chiffres', sim:'tva', duree:'10 min', illu:'courbe'},
       ]},
     { id:'cfe', dom:'fiscalite', title:'Déclarer la CFE',
-      desc:'La cotisation foncière des entreprises, sans stress.',
+      suite:['urssaf-1','compte-pro'],
+      desc:'La cotisation foncière des entreprises, sans stress',
       echeance:{ jour:15, mois:12, quoi:'Paiement de la CFE' },
-      pourquoi:'Elle concerne presque toutes les entreprises, et son avis n’arrive pas par courrier.',
+      pourquoi:'Elle concerne presque toutes les entreprises, et son avis n’arrive pas par courrier',
       steps:[
-        {t:'Créer ton espace pro sur impots.gouv', h:'Indispensable pour recevoir ton avis.'},
-        {t:'Vérifier ton avis de CFE', h:'Disponible en novembre dans ton espace.'},
-        {t:'Vérifier si tu es exonéré·e', h:'1re année ou faible CA : possible exonération.'},
-        {t:'Payer avant le 15 décembre', h:'Prélèvement ou paiement en ligne.'},
+        {t:'Créer ton espace pro sur impots.gouv', h:'Indispensable pour recevoir ton avis', duree:'15 min', illu:'ecran'},
+        {t:'Vérifier ton avis de CFE', h:'Disponible en novembre dans ton espace', duree:'10 min', illu:'enveloppe'},
+        {t:'Vérifier si tu es exonéré·e', h:'1re année ou faible CA : possible exonération', duree:'10 min', illu:'loupe'},
+        {t:'Payer avant le 15 décembre', h:'Prélèvement ou paiement en ligne', duree:'10 min', illu:'euro'},
       ]},
     { id:'tva-passer', dom:'tva', title:'Passer à la TVA',
-      desc:'Basculer proprement en TVA quand c’est le moment.',
+      suite:['facturer-etranger','facture-elec'],
+      desc:'Basculer proprement en TVA quand c’est le moment',
       pertinent:function(p){ return /franchise/i.test(p.tva || ''); },
-      pourquoi:'Tu es en franchise : l’option pour la TVA est parfois gagnante, parfois non.',
+      pourquoi:'Tu es en franchise : l’option pour la TVA est parfois gagnante, parfois non',
       steps:[
-        {t:'Vérifier ton dépassement de seuil', h:'Les seuils figurent sur ton espace impots.gouv.'},
-        {t:'Chiffrer si l’option est rentable', h:'TVA récupérable contre TVA absorbée.', sim:'tva'},
-        {t:'Choisir ton régime de TVA', h:'Franchise, réel simplifié ou normal.'},
-        {t:'Faire la demande au guichet unique', h:'Obtenir ton numéro de TVA intracom.'},
-        {t:'Mettre à jour ta facturation', h:'Ajouter la TVA sur devis et factures.', part:1},
+        {t:'Vérifier ton dépassement de seuil', h:'Les seuils figurent sur ton espace impots.gouv', duree:'10 min', illu:'courbe'},
+        {t:'Chiffrer si l’option est rentable', h:'TVA récupérable contre TVA absorbée', sim:'tva', duree:'15 min', illu:'euro'},
+        {t:'Choisir ton régime de TVA', h:'Franchise, réel simplifié ou normal', duree:'10 min', illu:'balance'},
+        {t:'Faire la demande au guichet unique', h:'Obtenir ton numéro de TVA intracom', duree:'20 min', illu:'form'},
+        {t:'Mettre à jour ta facturation', h:'Ajouter la TVA sur devis et factures', part:1, duree:'30 min', illu:'facture'},
       ]},
     { id:'vfl', dom:'fiscalite', title:'Passer au versement libératoire',
-      desc:'Payer ton impôt au fil de l’eau, si c’est avantageux.',
+      suite:['impot-ae','urssaf-1'],
+      desc:'Payer ton impôt au fil de l’eau, si c’est avantageux',
       echeance:{ jour:30, mois:9, quoi:'Demande de versement libératoire' },
       pertinent:estMicro,
-      pourquoi:'Réservé aux micro-entrepreneurs : à comparer avec le barème classique.',
+      pourquoi:'Réservé aux micro-entrepreneurs : à comparer avec le barème classique',
       steps:[
-        {t:'Vérifier ton éligibilité', h:'Revenu fiscal de référence sous le plafond.', sim:'vl'},
-        {t:'Simuler l’intérêt du versement', h:'Compare avec l’imposition classique.', sim:'vl'},
-        {t:'Faire la demande', h:'Avant le 30 septembre pour l’année suivante.'},
+        {t:'Vérifier ton éligibilité', h:'Revenu fiscal de référence sous le plafond', sim:'vl', duree:'5 min', illu:'loupe'},
+        {t:'Simuler l’intérêt du versement', h:'Compare avec l’imposition classique', sim:'vl', duree:'10 min', illu:'courbe'},
+        {t:'Faire la demande', h:'Avant le 30 septembre pour l’année suivante', duree:'15 min', illu:'enveloppe'},
       ]},
     { id:'compte-pro', dom:'administratif', title:'Ouvrir un compte pro',
-      desc:'Séparer perso et pro proprement.',
-      pourquoi:'Séparer les flux simplifie toute ta comptabilité, quel que soit ton statut.',
+      suite:['facture-elec','piloter'],
+      desc:'Séparer perso et pro proprement',
+      pourquoi:'Séparer les flux simplifie toute ta comptabilité, quel que soit ton statut',
       steps:[
-        {t:'Vérifier si c’est obligatoire', h:'Au-delà de 10 000 € de CA deux ans de suite.'},
-        {t:'Comparer les comptes pro', h:'Frais, services, dépôt de capital.', part:2},
-        {t:'Ouvrir le compte', h:'Réunir les justificatifs.', part:2},
+        {t:'Vérifier si c’est obligatoire', h:'Au-delà de 10 000 € de CA deux ans de suite', duree:'5 min', illu:'loupe'},
+        {t:'Comparer les comptes pro', h:'Frais, services, dépôt de capital', part:2, duree:'20 min', illu:'balance'},
+        {t:'Ouvrir le compte', h:'Réunir les justificatifs', part:2, duree:'30 min', illu:'carte'},
       ]},
     { id:'piloter', dom:'pilotage', title:'Piloter ma société',
-      desc:'Savoir ce qui passe en charge et ce que tu touches vraiment.',
+      suite:['revenu-regulier','impot-societe'],
+      desc:'Savoir ce qui passe en charge et ce que tu touches vraiment',
       pertinent:estSociete,
-      pourquoi:'Tu es en société : rémunération, dividendes et charges se pilotent.',
+      pourquoi:'Tu es en société : rémunération, dividendes et charges se pilotent',
       steps:[
-        {t:'Vérifier quelles dépenses passent', h:'Une analyse dépense par dépense.', sim:'depenses'},
-        {t:'Régler rémunération et dividendes', h:'Trouver ton équilibre net / société.', sim:'optim'},
-        {t:'Activer les bons leviers', h:'Mutuelle, prévoyance, retraite, bureau.', sim:'optim'},
-        {t:'Faire valider par un comptable', h:'Les arbitrages sensibles se confirment.', part:3},
+        {t:'Vérifier quelles dépenses passent', h:'Une analyse dépense par dépense', sim:'depenses', duree:'20 min', illu:'loupe'},
+        {t:'Régler rémunération et dividendes', h:'Trouver ton équilibre net / société', sim:'optim', duree:'20 min', illu:'euro'},
+        {t:'Activer les bons leviers', h:'Mutuelle, prévoyance, retraite, bureau', sim:'optim', duree:'15 min', illu:'bouclier'},
+        {t:'Faire valider par un comptable', h:'Les arbitrages sensibles se confirment', part:3, duree:'1 rendez-vous', illu:'signature'},
       ]},
 
     // --- Créer ---
-    { id:'creer-ae', dom:'statut', title:'Les 5 étapes pour créer son auto-entreprise',
-      desc:'Le statut le plus simple pour se lancer, de A à Z.',
-      pourquoi:'Le moyen le plus rapide de démarrer une activité : voici le parcours complet.',
+    { id:'creer-ae', dom:'statut', title:'Créer son auto-entreprise',
+      desc:'Le statut le plus simple pour se lancer, de A à Z',
+      pourquoi:'Le moyen le plus rapide de démarrer une activité : on déroule le parcours complet',
+      suite:['obligations-creation','compte-pro'],
       steps:[
-        {t:'Vérifier que ton activité est éligible', h:'Certaines activités en sont exclues.'},
-        {t:'Réunir tes justificatifs', h:'Identité, domicile, diplôme si nécessaire.'},
-        {t:'Déclarer ton activité au guichet unique', h:'La déclaration de début d’activité.', part:0},
-        {t:'Récupérer ton SIRET', h:'Il arrive sous quelques jours.'},
-        {t:'Mettre en place ta facturation', h:'Devis, factures, suivi des encaissements.', part:1},
+        {t:'Vérifier que ton activité est éligible', h:'Deux minutes pour éviter une mauvaise surprise', duree:'2 min', illu:'loupe'},
+        {t:'Réunir tes justificatifs', h:'Identité, domicile, diplôme si ton métier est réglementé', duree:'15 min', illu:'dossier'},
+        {t:'Remplir la déclaration de début d’activité', h:'Le formulaire du guichet unique, écran par écran', part:0, duree:'30 min', illu:'form'},
+        {t:'Récupérer ton SIRET', h:'Il arrive tout seul, il n’y a rien à faire', duree:'Attente', illu:'tampon'},
+        {t:'Mettre en place ta facturation', h:'Pour être prêt dès le premier client', part:1, duree:'20 min', illu:'facture'},
+      ]},
+    { id:'obligations-creation', dom:'administratif', title:'Tes premières obligations après la création',
+      desc:'Les comptes à ouvrir et les papiers à ne pas rater',
+      pourquoi:'Une fois immatriculé, quelques démarches conditionnent tout le reste : autant les faire d’un coup',
+      pertinent:estMicro,
+      suite:['compte-pro','urssaf-1'],
+      steps:[
+        {t:'Créer ton compte URSSAF', h:'C’est là que tu déclareras ton chiffre d’affaires', duree:'10 min', illu:'ecran'},
+        {t:'Créer ton espace pro sur impots.gouv', h:'Rien n’arrive par courrier, tout passe par là', duree:'15 min', illu:'batiment'},
+        {t:'Envoyer ta déclaration initiale de CFE', h:'Le formulaire que presque tout le monde oublie', duree:'20 min', illu:'form'},
+        {t:'Ouvrir un compte dédié à ton activité', h:'Obligatoire au-delà d’un certain chiffre d’affaires', part:2, duree:'20 min', illu:'carte'},
       ]},
     { id:'creer-societe', dom:'statut', title:'Les 5 étapes pour créer sa société',
-      desc:'EURL, SASU… les étapes clés jusqu’au Kbis.',
-      pourquoi:'Créer une société suit un parcours précis : on le déroule sans jargon.',
+      suite:['compte-pro','piloter'],
+      desc:'EURL, SASU… les étapes clés jusqu’au Kbis',
+      pourquoi:'Créer une société suit un parcours précis : on le déroule sans jargon',
       steps:[
-        {t:'Choisir ta forme juridique', h:'EURL, SASU, SARL : les vraies différences.', sim:'statut'},
-        {t:'Rédiger tes statuts', h:'Le contrat de base de ta société.', part:0},
-        {t:'Déposer ton capital', h:'Sur un compte dédié à la création.', part:2},
-        {t:'Immatriculer ta société', h:'Le dépôt du dossier au guichet unique.', part:0},
-        {t:'Obtenir ton Kbis', h:'La carte d’identité de ton entreprise.'},
+        {t:'Choisir ta forme juridique', h:'EURL, SASU, SARL : les vraies différences', sim:'statut', duree:'20 min', illu:'balance'},
+        {t:'Rédiger tes statuts', h:'Le contrat de base de ta société', part:0, duree:'1 h', illu:'signature'},
+        {t:'Déposer ton capital', h:'Sur un compte dédié à la création', part:2, duree:'30 min', illu:'carte'},
+        {t:'Immatriculer ta société', h:'Le dépôt du dossier au guichet unique', part:0, duree:'45 min', illu:'form'},
+        {t:'Obtenir ton Kbis', h:'La carte d’identité de ton entreprise', duree:'Attente', illu:'tampon'},
       ]},
     { id:'domicilier', dom:'administratif', title:'Pourquoi et comment domicilier son entreprise',
-      desc:'L’adresse de ton entreprise n’est pas un détail.',
-      pourquoi:'Le choix de ton adresse a des effets fiscaux, pratiques et d’image.',
+      suite:['compte-pro','facture-elec'],
+      desc:'L’adresse de ton entreprise n’est pas un détail',
+      pourquoi:'Le choix de ton adresse a des effets fiscaux, pratiques et d’image',
       steps:[
-        {t:'Comprendre ce qu’est la domiciliation', h:'L’adresse administrative de ton activité.'},
-        {t:'Comparer les options', h:'Domicile, société de domiciliation, local.'},
-        {t:'Choisir ta solution', h:'Selon ton budget et l’image voulue.', part:0},
-        {t:'Déclarer ton adresse', h:'Sur le dossier de ton entreprise.'},
+        {t:'Comprendre ce qu’est la domiciliation', h:'L’adresse administrative de ton activité', duree:'5 min', illu:'loupe'},
+        {t:'Comparer les options', h:'Domicile, société de domiciliation, local', duree:'15 min', illu:'balance'},
+        {t:'Choisir ta solution', h:'Selon ton budget et l’image voulue', part:0, duree:'15 min', illu:'maison'},
+        {t:'Déclarer ton adresse', h:'Sur le dossier de ton entreprise', duree:'20 min', illu:'form'},
       ]},
 
     // --- Facturation ---
     { id:'facture-elec', dom:'administratif', title:'Tout comprendre sur la facture électronique',
-      desc:'La réforme qui va toucher toutes les entreprises.',
-      pourquoi:'La facturation électronique se généralise : mieux vaut l’anticiper.',
+      suite:['facturer-etranger','tva-comprendre'],
+      desc:'La réforme qui va toucher toutes les entreprises',
+      pourquoi:'La facturation électronique se généralise : mieux vaut l’anticiper',
       steps:[
-        {t:'Comprendre ce qui change', h:'Facture papier vs électronique, et pour qui.'},
-        {t:'Situer ton calendrier d’obligation', h:'La date dépend de la taille de ton entreprise.'},
-        {t:'Choisir un outil compatible', h:'Une plateforme de facturation conforme.', part:1},
-        {t:'Adapter tes factures', h:'Mentions et format électronique.'},
+        {t:'Comprendre ce qui change', h:'Facture papier vs électronique, et pour qui', duree:'10 min', illu:'loupe'},
+        {t:'Situer ton calendrier d’obligation', h:'La date dépend de la taille de ton entreprise', duree:'5 min', illu:'calendrier'},
+        {t:'Choisir un outil compatible', h:'Une plateforme de facturation conforme', part:1, duree:'20 min', illu:'outil'},
+        {t:'Adapter tes factures', h:'Mentions et format électronique', duree:'30 min', illu:'facture'},
       ]},
     { id:'facturer-etranger', dom:'tva', title:'Facturer à l’étranger, comment ça marche',
-      desc:'UE ou hors UE, la TVA change tout.',
-      pourquoi:'Une facture internationale ne se remplit pas comme une facture française.',
+      suite:['tva-comprendre','facture-elec'],
+      desc:'UE ou hors UE, la TVA change tout',
+      pourquoi:'Une facture internationale ne se remplit pas comme une facture française',
       steps:[
-        {t:'Distinguer UE et hors UE', h:'Les règles ne sont pas les mêmes.'},
-        {t:'Vérifier le statut de ton client', h:'Professionnel ou particulier.'},
-        {t:'Appliquer la bonne TVA', h:'Autoliquidation, exonération ou TVA française.'},
-        {t:'Ajouter les mentions obligatoires', h:'Numéro de TVA intracommunautaire, mention légale.'},
+        {t:'Distinguer UE et hors UE', h:'Les règles ne sont pas les mêmes', duree:'5 min', illu:'globe'},
+        {t:'Vérifier le statut de ton client', h:'Professionnel ou particulier', duree:'10 min', illu:'loupe'},
+        {t:'Appliquer la bonne TVA', h:'Autoliquidation, exonération ou TVA française', duree:'10 min', illu:'balance'},
+        {t:'Ajouter les mentions obligatoires', h:'Numéro de TVA intracommunautaire, mention légale', duree:'15 min', illu:'facture'},
       ]},
 
     // --- Déclarations ---
     { id:'urssaf-1', dom:'fiscalite', title:'Faire sa première déclaration URSSAF',
-      desc:'La première fait peur pour rien.',
+      suite:['impot-ae','vfl'],
+      desc:'La première fait peur pour rien',
       pertinent:estMicro,
-      pourquoi:'On déroule ta première déclaration, pas à pas, pour la faire sereinement.',
+      pourquoi:'On déroule ta première déclaration, pas à pas, pour la faire sereinement',
       steps:[
-        {t:'Connaître ta périodicité', h:'Mensuelle ou trimestrielle, choisie au départ.'},
-        {t:'Calculer ton chiffre d’affaires', h:'Les sommes réellement encaissées.'},
-        {t:'Déclarer sur ton espace URSSAF', h:'Même à zéro, la déclaration est obligatoire.', part:1},
-        {t:'Payer tes cotisations', h:'Prélevées selon ce que tu déclares.'},
+        {t:'Connaître ta périodicité', h:'Mensuelle ou trimestrielle, choisie au départ', duree:'5 min', illu:'calendrier'},
+        {t:'Calculer ton chiffre d’affaires', h:'Les sommes réellement encaissées', duree:'15 min', illu:'euro'},
+        {t:'Déclarer sur ton espace URSSAF', h:'Même à zéro, la déclaration est obligatoire', part:1, duree:'10 min', illu:'form'},
+        {t:'Payer tes cotisations', h:'Prélevées selon ce que tu déclares', duree:'5 min', illu:'carte'},
       ]},
     { id:'impot-ae', dom:'fiscalite', title:'Remplir sa déclaration d’impôt en auto-entreprise',
-      desc:'Reporter ton CA au bon endroit, sans erreur.',
+      suite:['cfe','vfl'],
+      desc:'Reporter ton CA au bon endroit, sans erreur',
       pertinent:estMicro,
       echeance:{ periode:'avril → juin', moisDebut:4, quoi:'Déclaration de revenus' },
-      pourquoi:'Bien déclarer évite les erreurs — et parfois de payer trop d’impôt.',
+      pourquoi:'Bien déclarer évite les erreurs, et parfois de payer trop d’impôt',
       steps:[
-        {t:'Choisir ton mode d’imposition', h:'Versement libératoire ou barème progressif.', sim:'vl'},
-        {t:'Retrouver ton chiffre d’affaires annuel', h:'Le total encaissé sur l’année.'},
-        {t:'Le reporter sur ta déclaration', h:'Dans la bonne case selon ta catégorie.'},
-        {t:'Vérifier avant d’envoyer', h:'L’abattement s’applique automatiquement.'},
+        {t:'Choisir ton mode d’imposition', h:'Versement libératoire ou barème progressif', sim:'vl', duree:'10 min', illu:'balance'},
+        {t:'Retrouver ton chiffre d’affaires annuel', h:'Le total encaissé sur l’année', duree:'10 min', illu:'euro'},
+        {t:'Le reporter sur ta déclaration', h:'Dans la bonne case selon ta catégorie', duree:'15 min', illu:'form'},
+        {t:'Vérifier avant d’envoyer', h:'L’abattement s’applique automatiquement', duree:'10 min', illu:'loupe'},
       ]},
     { id:'impot-societe', dom:'fiscalite', title:'Remplir sa déclaration d’impôt en société',
-      desc:'Résultat, IS, rémunération, dividendes.',
+      suite:['piloter','revenu-regulier'],
+      desc:'Résultat, IS, rémunération, dividendes',
       pertinent:estSociete,
       echeance:{ periode:'avril → juin', moisDebut:4, quoi:'Déclaration de revenus' },
-      pourquoi:'La déclaration d’une société a ses règles : on les clarifie une par une.',
+      pourquoi:'La déclaration d’une société a ses règles : on les clarifie une par une',
       steps:[
-        {t:'Établir ton résultat', h:'Produits moins charges de l’exercice.'},
-        {t:'Déclarer ton impôt sur les sociétés', h:'Le formulaire de résultat.'},
-        {t:'Déclarer ta rémunération', h:'Sur ta déclaration de revenus personnelle.'},
-        {t:'Traiter tes dividendes', h:'Selon le PFU ou le barème.', sim:'optim'},
+        {t:'Établir ton résultat', h:'Produits moins charges de l’exercice', duree:'1 h', illu:'courbe'},
+        {t:'Déclarer ton impôt sur les sociétés', h:'Le formulaire de résultat', duree:'30 min', illu:'batiment'},
+        {t:'Déclarer ta rémunération', h:'Sur ta déclaration de revenus personnelle', duree:'15 min', illu:'form'},
+        {t:'Traiter tes dividendes', h:'Selon le PFU ou le barème', sim:'optim', duree:'20 min', illu:'euro'},
       ]},
 
     // --- Vie de l'indépendant ---
     { id:'droits-independant', dom:'administratif', title:'Comprendre mes droits en indépendant',
-      desc:'Chômage, retraite, maladie, naissance : ce à quoi tu as droit.',
-      pourquoi:'Être indépendant ne veut pas dire être sans filet : voici ce qui te protège.',
+      suite:['revenu-regulier','urssaf-1'],
+      desc:'Chômage, retraite, maladie, naissance : ce à quoi tu as droit',
+      pourquoi:'Être indépendant ne veut pas dire être sans filet : voici ce qui te protège',
       steps:[
-        {t:'Ta protection maladie', h:'Remboursements et indemnités journalières.'},
-        {t:'Ta retraite', h:'Ce que tu cotises et ce que ça t’ouvre.'},
-        {t:'Congé maternité ou paternité', h:'Indemnités et démarches.'},
-        {t:'En cas d’arrêt d’activité', h:'Ce qui existe, et ses limites.'},
+        {t:'Ta protection maladie', h:'Remboursements et indemnités journalières', duree:'10 min', illu:'bouclier'},
+        {t:'Ta retraite', h:'Ce que tu cotises et ce que ça t’ouvre', duree:'10 min', illu:'horloge'},
+        {t:'Congé maternité ou paternité', h:'Indemnités et démarches', duree:'10 min', illu:'equipe'},
+        {t:'En cas d’arrêt d’activité', h:'Ce qui existe, et ses limites', duree:'10 min', illu:'dossier'},
       ]},
     { id:'embaucher-alternant', dom:'administratif', title:'Les 5 étapes pour embaucher un alternant',
-      desc:'Un renfort peu coûteux, mais un cadre précis.',
-      pourquoi:'L’alternance t’aide à grandir à moindre coût, si le cadre est bien posé.',
+      suite:['piloter','revenu-regulier'],
+      desc:'Un renfort peu coûteux, mais un cadre précis',
+      pourquoi:'L’alternance t’aide à grandir à moindre coût, si le cadre est bien posé',
       steps:[
-        {t:'Définir le poste et le rythme', h:'Missions et alternance école / entreprise.'},
-        {t:'Trouver ton alternant', h:'Écoles, plateformes, cooptation.'},
-        {t:'Établir le contrat', h:'Apprentissage ou professionnalisation.'},
-        {t:'Faire la déclaration d’embauche', h:'La DPAE, avant l’arrivée.'},
-        {t:'Activer les aides employeur', h:'Des aides existent selon le contrat.'},
+        {t:'Définir le poste et le rythme', h:'Missions et alternance école / entreprise', duree:'30 min', illu:'equipe'},
+        {t:'Trouver ton alternant', h:'Écoles, plateformes, cooptation', duree:'Plusieurs semaines', illu:'loupe'},
+        {t:'Établir le contrat', h:'Apprentissage ou professionnalisation', duree:'45 min', illu:'signature'},
+        {t:'Faire la déclaration d’embauche', h:'La DPAE, avant l’arrivée', duree:'15 min', illu:'form'},
+        {t:'Activer les aides employeur', h:'Des aides existent selon le contrat', duree:'20 min', illu:'euro'},
       ]},
     { id:'revenu-regulier', dom:'pilotage', title:'Se verser un revenu régulier selon son statut',
-      desc:'Se payer sans mettre sa trésorerie en danger.',
-      pourquoi:'Un revenu régulier, ça s’organise — surtout quand le chiffre d’affaires varie.',
+      suite:['piloter','impot-societe','urssaf-1'],
+      desc:'Se payer sans mettre sa trésorerie en danger',
+      pourquoi:'Un revenu régulier, ça s’organise, surtout quand le chiffre d’affaires varie',
       steps:[
-        {t:'Comprendre comment tu te paies', h:'Micro : prélèvement libre. Société : salaire et dividendes.'},
-        {t:'Fixer un montant tenable', h:'Ce que ton activité permet vraiment.', sim:'optim'},
-        {t:'Provisionner charges et impôts', h:'Pour ne jamais être pris de court.', part:2},
-        {t:'Automatiser ton versement', h:'Un virement régulier, comme un salaire.'},
+        {t:'Comprendre comment tu te paies', h:'Micro : prélèvement libre. Société : salaire et dividendes', duree:'10 min', illu:'loupe'},
+        {t:'Fixer un montant tenable', h:'Ce que ton activité permet vraiment', sim:'optim', duree:'20 min', illu:'balance'},
+        {t:'Provisionner charges et impôts', h:'Pour ne jamais être pris de court', part:2, duree:'15 min', illu:'dossier'},
+        {t:'Automatiser ton versement', h:'Un virement régulier, comme un salaire', duree:'15 min', illu:'outil'},
       ]},
   ];
 
@@ -463,232 +518,296 @@
 
   var CONTENUS = {
     statut: [
-      { intro:'Trois familles de statuts, trois logiques différentes. L’idée n’est pas de trouver « le meilleur » dans l’absolu, mais celui qui colle à ton activité.',
-        faire:['Micro-entreprise : le plus simple, cotisations sur le chiffre d’affaires, pas de déduction des charges.',
-               'EURL : une société à l’IR ou à l’IS, dirigeant « travailleur non salarié ».',
-               'SASU : une société à l’IS, dirigeant « assimilé salarié », mieux couvert mais plus coûteux.'],
+      { intro:'Trois familles de statuts, trois logiques différentes. L’idée n’est pas de trouver « le meilleur » dans l’absolu, mais celui qui colle à ton activité',
+        astuce:'Ne choisis pas pour dans cinq ans : changer de statut plus tard est possible, tu ne repars pas de zéro',
+        faire:['Micro-entreprise : le plus simple, cotisations sur le chiffre d’affaires, pas de déduction des charges',
+               'EURL : une société à l’IR ou à l’IS, dirigeant « travailleur non salarié »',
+               'SASU : une société à l’IS, dirigeant « assimilé salarié », mieux couvert mais plus coûteux'],
         liens:[SPUBLIC] },
-      { intro:'Le vrai comparatif, c’est ce qu’il te reste en poche. Notre simulateur le calcule sur tes chiffres.',
-        faire:['Renseigne ton chiffre d’affaires et tes charges dans ton profil.',
-               'Le simulateur « Quand passer en société » compare les trois côte à côte.'] },
-      { intro:'Le statut détermine ta protection sociale, souvent sous-estimée au moment du choix.',
-        faire:['En TNS (micro, EURL) : cotisations plus légères, couverture plus limitée.',
-               'En assimilé salarié (SASU) : meilleure couverture santé et retraite, hors chômage.'],
-        vigilance:['Aucun statut n’ouvre droit à l’assurance chômage classique pour le dirigeant.'] },
-      { intro:'Une fois le choix fait, la bascule se prépare : rien n’est urgent, mais mieux vaut anticiper.',
-        faire:['Choisis une date de bascule cohérente (souvent en début d’exercice).',
-               'Prépare la création via un accompagnement si tu passes en société.'] },
+      { intro:'Le vrai comparatif, c’est ce qu’il te reste en poche. Notre simulateur le calcule sur tes chiffres',
+        faire:['Renseigne ton chiffre d’affaires et tes charges dans ton profil',
+               'Le simulateur « Quand passer en société » compare les trois côte à côte'] },
+      { intro:'Le statut détermine ta protection sociale, souvent sous-estimée au moment du choix',
+        faire:['En TNS (micro, EURL) : cotisations plus légères, couverture plus limitée',
+               'En assimilé salarié (SASU) : meilleure couverture santé et retraite, hors chômage'],
+        vigilance:['Aucun statut n’ouvre droit à l’assurance chômage classique pour le dirigeant'] },
+      { intro:'Une fois le choix fait, la bascule se prépare : rien n’est urgent, mais mieux vaut anticiper',
+        faire:['Choisis une date de bascule cohérente (souvent en début d’exercice)',
+               'Prépare la création via un accompagnement si tu passes en société'] },
     ],
     'tva-comprendre': [
-      { intro:'La TVA est un impôt sur la consommation que les entreprises collectent pour l’État. Tu n’en es qu’un intermédiaire.',
-        faire:['Tu ajoutes la TVA à tes prix, tu l’encaisses, puis tu la reverses.',
-               'Ce que tu collectes n’est pas un revenu : ça ne t’appartient pas.'] },
-      { intro:'Tant que tu débutes, tu es souvent en « franchise en base » : tu ne factures pas de TVA.',
-        faire:['Tu factures sans TVA, donc des prix plus simples pour les particuliers.',
-               'En contrepartie, tu ne récupères pas la TVA sur tes achats.'],
-        vigilance:['La franchise a des seuils de chiffre d’affaires : au-delà, la TVA devient obligatoire. Les montants sont sur impots.gouv.fr.'],
+      { intro:'La TVA est un impôt sur la consommation que les entreprises collectent pour l’État. Tu n’en es qu’un intermédiaire',
+        faire:['Tu ajoutes la TVA à tes prix, tu l’encaisses, puis tu la reverses',
+               'Ce que tu collectes n’est pas un revenu : ça ne t’appartient pas'] },
+      { intro:'Tant que tu débutes, tu es souvent en « franchise en base » : tu ne factures pas de TVA',
+        astuce:'Tant que tu es en franchise, garde la mention « TVA non applicable » sur tes factures, sinon ton client la cherchera',
+        faire:['Tu factures sans TVA, donc des prix plus simples pour les particuliers',
+               'En contrepartie, tu ne récupères pas la TVA sur tes achats'],
+        vigilance:['La franchise a des seuils de chiffre d’affaires : au-delà, la TVA devient obligatoire. Les montants sont sur impots.gouv.fr'],
         liens:[IMPOTS] },
-      { intro:'Le mécanisme tient en deux mots : collectée moins déductible.',
-        faire:['TVA collectée : celle que tu factures à tes clients.',
-               'TVA déductible : celle que tu paies sur tes achats pro.',
-               'Tu ne reverses que la différence entre les deux.'] },
-      { intro:'La théorie, c’est bien ; sur tes chiffres, c’est plus parlant.',
-        faire:['Ouvre le simulateur « Passer à la TVA » pour voir ce que ça donnerait chez toi.'] },
+      { intro:'Le mécanisme tient en deux mots : collectée moins déductible',
+        faire:['TVA collectée : celle que tu factures à tes clients',
+               'TVA déductible : celle que tu paies sur tes achats pro',
+               'Tu ne reverses que la différence entre les deux'] },
+      { intro:'La théorie, c’est bien ; sur tes chiffres, c’est plus parlant',
+        faire:['Ouvre le simulateur « Passer à la TVA » pour voir ce que ça donnerait chez toi'] },
     ],
     cfe: [
-      { intro:'Ton espace professionnel sur impots.gouv.fr est indispensable : c’est là qu’arrive ton avis de CFE, jamais par courrier.',
-        faire:['Crée ton espace pro avec ton SIRET.','Active la réception des avis en ligne.'],
+      { intro:'Ton espace professionnel sur impots.gouv.fr est indispensable : c’est là qu’arrive ton avis de CFE, jamais par courrier',
+        astuce:'Crée cet espace dès ta première année : la CFE oubliée est la mauvaise surprise classique de décembre',
+        faire:['Crée ton espace pro avec ton SIRET','Active la réception des avis en ligne'],
         liens:[IMPOTS] },
-      { intro:'L’avis de CFE est mis à disposition en fin d’année dans ton espace.',
-        faire:['Consulte-le dès sa mise en ligne, en général à l’automne.','Vérifie la commune et la base retenues.'] },
-      { intro:'Certaines situations ouvrent droit à une exonération, totale ou partielle.',
-        faire:['La première année d’activité est souvent exonérée.','Un chiffre d’affaires faible peut réduire la base.'],
-        vigilance:['Les conditions exactes évoluent : vérifie ton cas sur impots.gouv.fr plutôt que de supposer.'],
+      { intro:'L’avis de CFE est mis à disposition en fin d’année dans ton espace',
+        faire:['Consulte-le dès sa mise en ligne, en général à l’automne','Vérifie la commune et la base retenues'] },
+      { intro:'Certaines situations ouvrent droit à une exonération, totale ou partielle',
+        faire:['La première année d’activité est souvent exonérée','Un chiffre d’affaires faible peut réduire la base'],
+        vigilance:['Les conditions exactes évoluent : vérifie ton cas sur impots.gouv.fr plutôt que de supposer'],
         liens:[IMPOTS] },
-      { intro:'Le paiement se fait en ligne, avant la date limite indiquée sur ton avis (souvent mi-décembre).',
-        faire:['Paie depuis ton espace pro, ou mets en place un prélèvement.'] },
+      { intro:'Le paiement se fait en ligne, avant la date limite indiquée sur ton avis (souvent mi-décembre)',
+        faire:['Paie depuis ton espace pro, ou mets en place un prélèvement'] },
     ],
     'tva-passer': [
-      { intro:'Passer à la TVA peut être subi (dépassement de seuil) ou choisi (option volontaire).',
-        faire:['Compare ton chiffre d’affaires aux seuils de franchise, indiqués sur impots.gouv.fr.'],
-        vigilance:['Au-delà des seuils, la TVA n’est plus une option : elle devient obligatoire.'],
+      { intro:'Passer à la TVA peut être subi (dépassement de seuil) ou choisi (option volontaire)',
+        faire:['Compare ton chiffre d’affaires aux seuils de franchise, indiqués sur impots.gouv.fr'],
+        vigilance:['Au-delà des seuils, la TVA n’est plus une option : elle devient obligatoire'],
         liens:[IMPOTS] },
-      { intro:'Opter volontairement n’a de sens que si tu récupères plus que tu n’absorbes.',
-        faire:['Le simulateur « Passer à la TVA » chiffre le gain ou la perte sur tes données.'] },
-      { intro:'Plusieurs régimes de déclaration existent selon ton activité et ton volume.',
-        faire:['Franchise, réel simplifié, réel normal : le bon dépend de ta situation.','Renseigne-toi avant de choisir.'],
+      { intro:'Opter volontairement n’a de sens que si tu récupères plus que tu n’absorbes',
+        faire:['Le simulateur « Passer à la TVA » chiffre le gain ou la perte sur tes données'] },
+      { intro:'Plusieurs régimes de déclaration existent selon ton activité et ton volume',
+        faire:['Franchise, réel simplifié, réel normal : le bon dépend de ta situation','Renseigne-toi avant de choisir'],
         liens:[SPUBLIC] },
-      { intro:'La demande se fait via le guichet unique des formalités.',
-        faire:['Formule ton option pour la TVA.','Tu obtiens un numéro de TVA intracommunautaire.'],
+      { intro:'La demande se fait via le guichet unique des formalités',
+        faire:['Formule ton option pour la TVA','Tu obtiens un numéro de TVA intracommunautaire'],
         liens:[GUICHET] },
-      { intro:'Une fois assujetti, tes documents changent.',
-        faire:['Ajoute la TVA sur tes devis et factures.','Fais apparaître ton numéro de TVA.','Un outil de facturation t’évite les oublis.'] },
+      { intro:'Une fois assujetti, tes documents changent',
+        astuce:'Préviens tes clients avant de changer tes tarifs, pas après : la surprise passe beaucoup moins bien que l’explication',
+        faire:['Ajoute la TVA sur tes devis et factures','Fais apparaître ton numéro de TVA','Un outil de facturation t’évite les oublis'] },
     ],
     vfl: [
-      { intro:'Le versement libératoire n’est ouvert qu’à certaines conditions de revenu.',
-        faire:['Vérifie ton revenu fiscal de référence sur ton avis d’impôt.'],
-        vigilance:['Le plafond d’éligibilité dépend de ton foyer : les valeurs sont sur impots.gouv.fr.'],
+      { intro:'Le versement libératoire n’est ouvert qu’à certaines conditions de revenu',
+        faire:['Vérifie ton revenu fiscal de référence sur ton avis d’impôt'],
+        vigilance:['Le plafond d’éligibilité dépend de ton foyer : les valeurs sont sur impots.gouv.fr'],
         liens:[IMPOTS] },
-      { intro:'Avantageux pour les uns, coûteux pour les autres : tout dépend de ton taux d’imposition.',
-        faire:['Le simulateur « Versement libératoire ou impôt classique » tranche sur tes chiffres.'] },
-      { intro:'L’option se demande à l’avance et s’applique l’année suivante.',
-        faire:['Fais ta demande auprès de l’Urssaf, en respectant la date limite annuelle.'],
+      { intro:'Avantageux pour les uns, coûteux pour les autres : tout dépend de ton taux d’imposition',
+        faire:['Le simulateur « Versement libératoire ou impôt classique » tranche sur tes chiffres'] },
+      { intro:'L’option se demande à l’avance et s’applique l’année suivante',
+        astuce:'Note la date limite dans ton agenda tout de suite : une option ratée ne se rattrape que l’année suivante',
+        faire:['Fais ta demande auprès de l’Urssaf, en respectant la date limite annuelle'],
         liens:[URSSAF] },
     ],
     'compte-pro': [
-      { intro:'Un compte dédié n’est pas toujours obligatoire, mais il simplifie tout.',
-        faire:['En société : un compte professionnel est requis, notamment pour le dépôt de capital.',
-               'En micro : un compte dédié devient obligatoire au-delà d’un certain chiffre d’affaires sur deux ans.'],
+      { intro:'Un compte dédié n’est pas toujours obligatoire, mais il simplifie tout',
+        astuce:'Même sans obligation, un compte séparé te fera gagner des heures quand tu chercheras une dépense',
+        faire:['En société : un compte professionnel est requis, notamment pour le dépôt de capital',
+               'En micro : un compte dédié devient obligatoire au-delà d’un certain chiffre d’affaires sur deux ans'],
         liens:[SPUBLIC] },
-      { intro:'Compte pro « classique » ou néobanque : compare sur ce qui compte pour toi.',
-        faire:['Frais mensuels, dépôt de capital, encaissements, intégration comptable.'] },
-      { intro:'L’ouverture est rapide, souvent 100 % en ligne.',
-        faire:['Réunis pièce d’identité, justificatif d’activité (Kbis ou SIRET).'] },
+      { intro:'Compte pro « classique » ou néobanque : compare sur ce qui compte pour toi',
+        faire:['Frais mensuels, dépôt de capital, encaissements, intégration comptable'] },
+      { intro:'L’ouverture est rapide, souvent 100 % en ligne',
+        faire:['Réunis pièce d’identité, justificatif d’activité (Kbis ou SIRET)'] },
     ],
     piloter: [
-      { intro:'Avant d’optimiser, il faut savoir ce qui passe vraiment en charge.',
-        faire:['Le simulateur « Mes dépenses » analyse chaque dépense.','Sa conclusion peut redescendre dans ton profil.'] },
-      { intro:'Rémunération et dividendes n’ont ni le même coût, ni la même couverture sociale.',
-        faire:['Le cockpit « Optimiser ma société » te montre l’effet en direct.'] },
-      { intro:'Plusieurs dispositifs sont des charges déductibles pour la société.',
-        faire:['Mutuelle, prévoyance, retraite, bureau à domicile : à activer selon tes besoins.'],
-        vigilance:['Chaque dispositif a ses plafonds d’exonération, non vérifiés par l’outil.'] },
-      { intro:'Les arbitrages fiscaux sensibles se confirment avec un professionnel.',
-        faire:['Fais valider ta stratégie par ton expert-comptable.'] },
+      { intro:'Avant d’optimiser, il faut savoir ce qui passe vraiment en charge',
+        astuce:'Prends l’habitude de photographier tes justificatifs au moment de payer, pas en fin d’année',
+        faire:['Le simulateur « Mes dépenses » analyse chaque dépense','Sa conclusion peut redescendre dans ton profil'] },
+      { intro:'Rémunération et dividendes n’ont ni le même coût, ni la même couverture sociale',
+        faire:['Le cockpit « Optimiser ma société » te montre l’effet en direct'] },
+      { intro:'Plusieurs dispositifs sont des charges déductibles pour la société',
+        faire:['Mutuelle, prévoyance, retraite, bureau à domicile : à activer selon tes besoins'],
+        vigilance:['Chaque dispositif a ses plafonds d’exonération, non vérifiés par l’outil'] },
+      { intro:'Les arbitrages fiscaux sensibles se confirment avec un professionnel',
+        faire:['Fais valider ta stratégie par ton expert-comptable'] },
     ],
     'creer-ae': [
-      { intro:'Toutes les activités ne sont pas ouvertes à la micro-entreprise.',
-        faire:['Vérifie que ton activité est compatible (certaines professions en sont exclues).'],
+      { intro:'Bonne nouvelle : la grande majorité des activités passent en micro-entreprise. Quelques métiers en sont exclus (certaines professions juridiques, médicales, agricoles ou liées à l’immobilier), et d’autres demandent un diplôme ou une expérience pour être exercés',
+        faire:['Cherche ton métier sur le site de l’Urssaf pour lever le doute',
+               'Si ton activité est réglementée, prévois le justificatif de qualification'],
+        astuce:'Dans le doute, appelle l’Urssaf : c’est gratuit et ils répondent vite',
         liens:[URSSAF] },
-      { intro:'Le dossier est simple mais demande quelques pièces.',
-        faire:['Pièce d’identité, justificatif de domicile, et diplôme pour les activités réglementées.'] },
-      { intro:'La déclaration de début d’activité passe désormais par le guichet unique.',
-        faire:['Crée ton compte et déclare ton activité en ligne.'],
-        liens:[GUICHET] },
-      { intro:'Ton numéro SIRET arrive ensuite, sous quelques jours.',
-        faire:['Note-le : il figure sur toutes tes factures.'] },
-      { intro:'Dès le premier client, tu factures — autant partir sur de bonnes bases.',
-        faire:['Mets en place devis et factures conformes.','Un outil dédié te fait gagner du temps.'] },
+      { intro:'Le dossier tient en trois pièces. Prépare-les en amont, tu rempliras la déclaration d’une traite au lieu de la reprendre trois fois',
+        faire:['Ta pièce d’identité, recto verso, scannée ou photographiée nettement',
+               'Un justificatif de domicile de moins de trois mois',
+               'Ton diplôme ou une attestation d’expérience, seulement si ton métier est réglementé'],
+        astuce:'Mets tout dans un même dossier sur ton ordinateur : tu les rechercheras encore souvent' },
+      { intro:'Tout se passe en ligne sur le guichet unique des formalités des entreprises, qui a remplacé les anciens CFE. Compte une trentaine de minutes, et pas un centime : la création d’une auto-entreprise est gratuite',
+        video:{ url:'https://www.youtube.com/watch?v=u34Ow_Q_-5Y',
+                t:'La déclaration en vidéo, écran par écran',
+                d:'Si tu préfères voir quelqu’un le faire avant de te lancer' },
+        faire:['Crée ton compte sur le guichet unique, puis choisis « Créer une entreprise »',
+               'Renseigne ton identité et ton adresse personnelle',
+               'Choisis l’adresse de ton entreprise : ton domicile convient très bien pour démarrer',
+               'Décris ton activité en une phrase claire, c’est elle qui déterminera ton code APE',
+               'Indique ta date de début d’activité : elle peut être dans le futur',
+               'Choisis ton régime social et coche le versement libératoire si tu y as droit',
+               'Relis, signe électroniquement et valide'],
+        vigilance:['Ta date de début d’activité déclenche tes cotisations : ne la place pas avant d’être vraiment prêt',
+                   'La description de ton activité oriente ton régime fiscal et ta CFE, prends le temps de la formuler'],
+        liens:[GUICHET, URSSAF] },
+      { intro:'Rien à faire à cette étape, c’est l’administration qui travaille. Ton dossier part à l’Insee, qui t’attribue un numéro SIREN et un SIRET, puis tu reçois ton mémento fiscal',
+        faire:['Surveille tes mails, y compris les indésirables',
+               'Note ton SIRET quelque part : tu le mettras sur chaque facture'],
+        astuce:'Pas de nouvelles au bout de trois semaines ? Relance via ton compte au guichet unique' },
+      { intro:'Dès ton premier client, tu émets une facture. Autant partir avec les bons réflexes plutôt que de tout reprendre dans six mois',
+        faire:['Prépare un modèle de facture avec toutes les mentions obligatoires',
+               'Note ton SIRET et la mention de franchise de TVA si tu n’y es pas assujetti',
+               'Tiens ton livre de recettes à jour dès la première vente'],
+        astuce:'Un outil de facturation te génère tout ça et suit tes seuils à ta place' },
+    ],
+    'obligations-creation': [
+      { intro:'C’est ton interlocuteur pour les cotisations sociales. Tu y déclareras ton chiffre d’affaires chaque mois ou chaque trimestre, même quand il est à zéro',
+        faire:['Crée ton compte sur autoentrepreneur.urssaf.fr avec ton SIRET',
+               'Choisis ta périodicité de déclaration, mensuelle ou trimestrielle',
+               'Note la date de ta première déclaration dans ton agenda'],
+        vigilance:['Une déclaration à zéro reste obligatoire : ne rien envoyer déclenche une pénalité'],
+        astuce:'Le mensuel fait de plus petits montants et évite les mauvaises surprises de trésorerie',
+        liens:[URSSAF] },
+      { intro:'Ton espace professionnel sur impots.gouv, c’est là qu’arrivent tes avis. Rien ne te sera envoyé par courrier : sans ce compte, tu ne verras pas passer ta CFE',
+        faire:['Crée ton espace professionnel avec ton SIRET',
+               'Active le service « Consulter mon avis de CFE »',
+               'Renseigne un moyen de paiement pour ne pas courir en décembre'],
+        astuce:'Fais-le tout de suite après avoir reçu ton SIRET, tu n’y penseras plus après',
+        liens:[IMPOTS] },
+      { intro:'C’est le papier le plus oublié de la création. La déclaration initiale de CFE se dépose l’année de ta création, et elle conditionne ton exonération de première année',
+        faire:['Repère le formulaire de déclaration initiale de CFE sur impots.gouv',
+               'Renseigne l’adresse de ton local ou de ton domicile professionnel',
+               'Dépose-le avant la fin de l’année de création'],
+        vigilance:['Sans cette déclaration, tu peux perdre l’exonération de ta première année',
+                   'La date limite exacte figure sur impots.gouv, vérifie-la pour ton cas'],
+        liens:[IMPOTS] },
+      { intro:'Un compte dédié à ton activité devient obligatoire au-delà d’un certain chiffre d’affaires sur deux années consécutives. En dessous, ce n’est pas obligatoire, mais ça sépare ta vie perso de ton activité',
+        faire:['Un compte courant séparé suffit au début, un compte pro n’est pas exigé',
+               'Fais passer toutes tes recettes et tes dépenses pro par ce compte'],
+        astuce:'Même sans obligation, c’est ce qui te fera gagner le plus de temps en comptabilité' },
     ],
     'creer-societe': [
-      { intro:'Le choix de la forme conditionne fiscalité, statut social et coûts.',
-        faire:['Le simulateur « Quand passer en société » compare EURL et SASU sur tes chiffres.'] },
-      { intro:'Les statuts sont le contrat fondateur de ta société.',
-        faire:['Rédige-les avec soin — un accompagnement évite les erreurs coûteuses.'] },
-      { intro:'Le capital se dépose sur un compte dédié avant l’immatriculation.',
-        faire:['Ouvre un compte, dépose le capital, récupère l’attestation.'] },
-      { intro:'L’immatriculation se fait via le guichet unique.',
-        faire:['Dépose ton dossier complet en ligne.'],
+      { intro:'Le choix de la forme conditionne fiscalité, statut social et coûts',
+        faire:['Le simulateur « Quand passer en société » compare EURL et SASU sur tes chiffres'] },
+      { intro:'Les statuts sont le contrat fondateur de ta société',
+        astuce:'Relis tes statuts en te demandant ce qui se passe si tu n’es plus seul : c’est là que les modèles gratuits montrent leurs limites',
+        faire:['Rédige-les avec soin : un accompagnement évite les erreurs coûteuses'] },
+      { intro:'Le capital se dépose sur un compte dédié avant l’immatriculation',
+        faire:['Ouvre un compte, dépose le capital, récupère l’attestation'] },
+      { intro:'L’immatriculation se fait via le guichet unique',
+        faire:['Dépose ton dossier complet en ligne'],
         liens:[GUICHET] },
-      { intro:'Le Kbis officialise l’existence de ta société.',
-        faire:['Conserve-le : il te sera demandé partout (banque, clients, aides).'] },
+      { intro:'Le Kbis officialise l’existence de ta société',
+        faire:['Conserve-le : il te sera demandé partout (banque, clients, aides)'] },
     ],
     domicilier: [
-      { intro:'Domicilier, c’est fixer l’adresse administrative officielle de ton entreprise.',
-        faire:['Elle apparaît sur tes documents et détermine ta commune de CFE.'] },
-      { intro:'Plusieurs options, avec des conséquences différentes.',
-        faire:['Ton domicile : gratuit, mais adresse visible.','Société de domiciliation : une adresse pro, souvent mieux située.','Un local : si tu reçois du public.'] },
-      { intro:'Le bon choix dépend de ton budget et de l’image voulue.',
-        faire:['Compare les offres de domiciliation selon la localisation et les services.'] },
-      { intro:'L’adresse retenue se déclare sur ton dossier d’entreprise.',
-        faire:['Mets-la à jour au guichet unique en cas de changement.'],
+      { intro:'Domicilier, c’est fixer l’adresse administrative officielle de ton entreprise',
+        astuce:'L’adresse de ton entreprise devient publique : c’est souvent ce qui fait renoncer à domicilier chez soi',
+        faire:['Elle apparaît sur tes documents et détermine ta commune de CFE'] },
+      { intro:'Plusieurs options, avec des conséquences différentes',
+        faire:['Ton domicile : gratuit, mais adresse visible','Société de domiciliation : une adresse pro, souvent mieux située','Un local : si tu reçois du public'] },
+      { intro:'Le bon choix dépend de ton budget et de l’image voulue',
+        faire:['Compare les offres de domiciliation selon la localisation et les services'] },
+      { intro:'L’adresse retenue se déclare sur ton dossier d’entreprise',
+        faire:['Mets-la à jour au guichet unique en cas de changement'],
         liens:[GUICHET] },
     ],
     'facture-elec': [
-      { intro:'La facturation électronique va progressivement devenir obligatoire entre entreprises.',
-        faire:['Comprends la différence : une facture PDF envoyée par mail n’est pas une facture électronique au sens de la réforme.'] },
-      { intro:'Le calendrier dépend de la taille de ton entreprise.',
-        faire:['Repère ta date d’entrée dans le dispositif sur les sources officielles.'],
-        vigilance:['Le calendrier a déjà évolué : vérifie les échéances à jour plutôt que de te fier à une date entendue.'],
+      { intro:'La facturation électronique va progressivement devenir obligatoire entre entreprises',
+        faire:['Comprends la différence : une facture PDF envoyée par mail n’est pas une facture électronique au sens de la réforme'] },
+      { intro:'Le calendrier dépend de la taille de ton entreprise',
+        faire:['Repère ta date d’entrée dans le dispositif sur les sources officielles'],
+        vigilance:['Le calendrier a déjà évolué : vérifie les échéances à jour plutôt que de te fier à une date entendue'],
         liens:[IMPOTS] },
-      { intro:'Tu devras émettre et recevoir tes factures via une plateforme conforme.',
-        faire:['Choisis un outil de facturation compatible pour être prêt le moment venu.'] },
-      { intro:'Quelques mentions et formats deviennent incontournables.',
-        faire:['Assure-toi que ton outil gère le format électronique attendu.'] },
+      { intro:'Tu devras émettre et recevoir tes factures via une plateforme conforme',
+        astuce:'Change d’outil avant la date butoir, pas la semaine d’avant : reprendre son historique de factures prend du temps',
+        faire:['Choisis un outil de facturation compatible pour être prêt le moment venu'] },
+      { intro:'Quelques mentions et formats deviennent incontournables',
+        faire:['Assure-toi que ton outil gère le format électronique attendu'] },
     ],
     'facturer-etranger': [
-      { intro:'La règle de TVA change selon que ton client est dans l’UE ou en dehors.',
-        faire:['Identifie d’abord le pays de ton client.'] },
-      { intro:'Le statut du client (pro ou particulier) change tout.',
-        faire:['Demande son numéro de TVA intracommunautaire s’il est professionnel dans l’UE.'] },
-      { intro:'Selon les cas : TVA française, exonération, ou autoliquidation par le client.',
-        faire:['Vérifie la règle applicable à ta situation précise.'],
-        vigilance:['En cas de doute sur une facture internationale, fais-la relire : les erreurs de TVA se paient cher.'],
+      { intro:'La règle de TVA change selon que ton client est dans l’UE ou en dehors',
+        faire:['Identifie d’abord le pays de ton client'] },
+      { intro:'Le statut du client (pro ou particulier) change tout',
+        astuce:'Demande son numéro de TVA intracommunautaire au client dès le devis, et vérifie-le : c’est lui qui détermine la règle',
+        faire:['Demande son numéro de TVA intracommunautaire s’il est professionnel dans l’UE'] },
+      { intro:'Selon les cas : TVA française, exonération, ou autoliquidation par le client',
+        faire:['Vérifie la règle applicable à ta situation précise'],
+        vigilance:['En cas de doute sur une facture internationale, fais-la relire : les erreurs de TVA se paient cher'],
         liens:[SPUBLIC] },
-      { intro:'Les factures transfrontalières exigent des mentions spécifiques.',
-        faire:['Fais figurer les numéros de TVA et la mention légale correspondant au régime (ex. « autoliquidation »).'] },
+      { intro:'Les factures transfrontalières exigent des mentions spécifiques',
+        faire:['Fais figurer les numéros de TVA et la mention légale correspondant au régime (ex. « autoliquidation »)'] },
     ],
     'urssaf-1': [
-      { intro:'Tu déclares à l’Urssaf selon la périodicité choisie à ton inscription.',
-        faire:['Vérifie si tu es en déclaration mensuelle ou trimestrielle.'],
+      { intro:'Tu déclares à l’Urssaf selon la périodicité choisie à ton inscription',
+        faire:['Vérifie si tu es en déclaration mensuelle ou trimestrielle'],
         liens:[URSSAF] },
-      { intro:'Le montant à déclarer, c’est ce que tu as réellement encaissé.',
-        faire:['Additionne tes encaissements de la période, pas tes factures émises.'] },
-      { intro:'La déclaration se fait en ligne, même si tu n’as rien encaissé.',
-        faire:['Déclare sur ton espace autoentrepreneur.urssaf.fr.','Une déclaration à zéro reste obligatoire.'],
-        vigilance:['Oublier une déclaration entraîne des pénalités — mets un rappel.'],
+      { intro:'Le montant à déclarer, c’est ce que tu as réellement encaissé',
+        faire:['Additionne tes encaissements de la période, pas tes factures émises'] },
+      { intro:'La déclaration se fait en ligne, même si tu n’as rien encaissé',
+        astuce:'Déclare le jour où tu reçois le rappel plutôt qu’au dernier moment : le site sature aux échéances',
+        faire:['Déclare sur ton espace autoentrepreneur.urssaf.fr','Une déclaration à zéro reste obligatoire'],
+        vigilance:['Oublier une déclaration entraîne des pénalités, mets un rappel'],
         liens:[URSSAF] },
-      { intro:'Tes cotisations sont calculées automatiquement sur ce que tu déclares.',
-        faire:['Le prélèvement suit ta déclaration.'] },
+      { intro:'Tes cotisations sont calculées automatiquement sur ce que tu déclares',
+        faire:['Le prélèvement suit ta déclaration'] },
     ],
     'impot-ae': [
-      { intro:'En micro, ton imposition dépend de l’option choisie : versement libératoire ou barème.',
-        faire:['Le simulateur « Versement libératoire ou impôt classique » t’aide à choisir.'] },
-      { intro:'Le point de départ, c’est ton chiffre d’affaires annuel.',
-        faire:['Récupère le total encaissé sur l’année civile.'] },
-      { intro:'Tu le reportes sur ta déclaration de revenus, dans la case de ta catégorie.',
-        faire:['Vente, prestations de services ou libéral : chaque catégorie a sa case.'],
+      { intro:'En micro, ton imposition dépend de l’option choisie : versement libératoire ou barème',
+        faire:['Le simulateur « Versement libératoire ou impôt classique » t’aide à choisir'] },
+      { intro:'Le point de départ, c’est ton chiffre d’affaires annuel',
+        faire:['Récupère le total encaissé sur l’année civile'] },
+      { intro:'Tu le reportes sur ta déclaration de revenus, dans la case de ta catégorie',
+        faire:['Vente, prestations de services ou libéral : chaque catégorie a sa case'],
         liens:[IMPOTS] },
-      { intro:'L’abattement forfaitaire s’applique tout seul : tu ne déduis pas tes frais réels.',
-        faire:['Vérifie le montant reporté avant de valider.'] },
+      { intro:'L’abattement forfaitaire s’applique tout seul : tu ne déduis pas tes frais réels',
+        astuce:'Ne déduis rien toi-même : l’abattement remplace tes frais réels, les soustraire une seconde fois est l’erreur la plus fréquente',
+        faire:['Vérifie le montant reporté avant de valider'] },
     ],
     'impot-societe': [
-      { intro:'La société déclare son résultat : ce qu’elle a gagné, moins ce qu’elle a dépensé.',
-        faire:['Établis ton résultat de l’exercice.'] },
-      { intro:'L’impôt sur les sociétés se déclare sur un formulaire de résultat dédié.',
-        faire:['La liasse fiscale se télétransmet, souvent via ton comptable.'],
+      { intro:'La société déclare son résultat : ce qu’elle a gagné, moins ce qu’elle a dépensé',
+        astuce:'Tiens ta comptabilité au fil de l’eau : reconstituer une année entière au printemps coûte bien plus cher qu’un peu de rigueur chaque mois',
+        faire:['Établis ton résultat de l’exercice'] },
+      { intro:'L’impôt sur les sociétés se déclare sur un formulaire de résultat dédié',
+        faire:['La liasse fiscale se télétransmet, souvent via ton comptable'],
         liens:[IMPOTS] },
-      { intro:'Ta rémunération de dirigeant, elle, va sur ta déclaration personnelle.',
-        faire:['Reporte-la comme un revenu d’activité.'] },
-      { intro:'Les dividendes ont leur propre traitement fiscal.',
-        faire:['Le cockpit « Optimiser ma société » montre l’effet PFU vs barème.'] },
+      { intro:'Ta rémunération de dirigeant, elle, va sur ta déclaration personnelle',
+        faire:['Reporte-la comme un revenu d’activité'] },
+      { intro:'Les dividendes ont leur propre traitement fiscal',
+        faire:['Le cockpit « Optimiser ma société » montre l’effet PFU vs barème'] },
     ],
     'droits-independant': [
-      { intro:'Indépendant ne veut pas dire sans protection — mais elle a ses limites.',
-        faire:['Fais le point sur ce que ton statut couvre réellement.'] },
-      { intro:'Santé : tu es rattaché à l’Assurance Maladie, avec des indemnités sous conditions.',
-        faire:['Vérifie tes droits aux indemnités journalières en cas d’arrêt.'],
+      { intro:'Indépendant ne veut pas dire sans protection, mais elle a ses limites',
+        astuce:'Regarde ce que couvre déjà ton régime avant d’acheter une prévoyance : tu sauras quoi demander au lieu de subir un devis',
+        faire:['Fais le point sur ce que ton statut couvre réellement'] },
+      { intro:'Santé : tu es rattaché à l’Assurance Maladie, avec des indemnités sous conditions',
+        faire:['Vérifie tes droits aux indemnités journalières en cas d’arrêt'],
         liens:[URSSAF] },
-      { intro:'Retraite : tu cotises, mais le niveau dépend fortement de ton statut et de ta rémunération.',
-        faire:['Consulte ton relevé de carrière pour anticiper.'] },
-      { intro:'Maternité, paternité, arrêt : des dispositifs existent, avec des montants et durées encadrés.',
-        faire:['Renseigne-toi en amont d’un projet (naissance, pause).'],
-        vigilance:['Le chômage classique ne couvre pas le dirigeant : anticipe une épargne de précaution.'] },
+      { intro:'Retraite : tu cotises, mais le niveau dépend fortement de ton statut et de ta rémunération',
+        faire:['Consulte ton relevé de carrière pour anticiper'] },
+      { intro:'Maternité, paternité, arrêt : des dispositifs existent, avec des montants et durées encadrés',
+        faire:['Renseigne-toi en amont d’un projet (naissance, pause)'],
+        vigilance:['Le chômage classique ne couvre pas le dirigeant : anticipe une épargne de précaution'] },
     ],
     'embaucher-alternant': [
-      { intro:'Un alternant partage son temps entre l’école et ton entreprise.',
-        faire:['Définis ses missions et le rythme de l’alternance.'] },
-      { intro:'Le recrutement passe souvent par les écoles et les plateformes dédiées.',
-        faire:['Diffuse ton offre, ou contacte directement des centres de formation.'] },
-      { intro:'Deux types de contrats existent : apprentissage et professionnalisation.',
-        faire:['Choisis celui adapté au profil et à la formation.'],
+      { intro:'Un alternant partage son temps entre l’école et ton entreprise',
+        faire:['Définis ses missions et le rythme de l’alternance'] },
+      { intro:'Le recrutement passe souvent par les écoles et les plateformes dédiées',
+        faire:['Diffuse ton offre, ou contacte directement des centres de formation'] },
+      { intro:'Deux types de contrats existent : apprentissage et professionnalisation',
+        faire:['Choisis celui adapté au profil et à la formation'],
         liens:[SPUBLIC] },
-      { intro:'La déclaration préalable à l’embauche (DPAE) est obligatoire avant l’arrivée.',
-        faire:['Réalise la DPAE auprès de l’Urssaf.'],
-        vigilance:['Elle doit être faite avant le premier jour, sous peine de sanction.'] },
-      { intro:'Des aides à l’embauche existent pour l’employeur d’alternant.',
-        faire:['Vérifie les aides en vigueur et leurs conditions.'],
+      { intro:'La déclaration préalable à l’embauche (DPAE) est obligatoire avant l’arrivée',
+        astuce:'La DPAE se fait dans les jours qui précèdent l’arrivée, jamais après : c’est le point de contrôle numéro un',
+        faire:['Réalise la DPAE auprès de l’Urssaf'],
+        vigilance:['Elle doit être faite avant le premier jour, sous peine de sanction'] },
+      { intro:'Des aides à l’embauche existent pour l’employeur d’alternant',
+        faire:['Vérifie les aides en vigueur et leurs conditions'],
         liens:[SPUBLIC] },
     ],
     'revenu-regulier': [
-      { intro:'La façon de te payer dépend de ton statut.',
-        faire:['Micro : tu prélèves librement ce que tu veux.','Société : salaire et/ou dividendes, avec des règles distinctes.'] },
-      { intro:'Le bon montant, c’est celui que ton activité soutient dans la durée.',
-        faire:['Le cockpit « Optimiser ma société » aide à fixer un niveau tenable.'] },
-      { intro:'Mettre de côté charges et impôts évite les mauvaises surprises.',
-        faire:['Provisionne dès l’encaissement, sur un sous-compte dédié.'] },
-      { intro:'Un versement automatique et régulier te donne la stabilité d’un salaire.',
-        faire:['Programme un virement mensuel fixe vers ton compte perso.'] },
+      { intro:'La façon de te payer dépend de ton statut',
+        faire:['Micro : tu prélèves librement ce que tu veux','Société : salaire et/ou dividendes, avec des règles distinctes'] },
+      { intro:'Le bon montant, c’est celui que ton activité soutient dans la durée',
+        faire:['Le cockpit « Optimiser ma société » aide à fixer un niveau tenable'] },
+      { intro:'Mettre de côté charges et impôts évite les mauvaises surprises',
+        astuce:'Ouvre un second compte pour tes provisions : l’argent qu’on ne voit pas sur le compte courant ne se dépense pas',
+        faire:['Provisionne dès l’encaissement, sur un sous-compte dédié'] },
+      { intro:'Un versement automatique et régulier te donne la stabilité d’un salaire',
+        faire:['Programme un virement mensuel fixe vers ton compte perso'] },
     ],
   };
 
@@ -779,15 +898,26 @@
   ];
 
   var titles = {
-    accueil:    ['Ton hub', 'Accueil',       'Où tu en es, et ce qui vient ensuite.'],
-    objectifs:  ['Parcours','Mes objectifs', 'Choisis un cap, avance étape par étape.'],
-    simulateur: ['Analyse', 'Simulateur',    'Cinq outils pour y voir clair sur tes chiffres.'],
-    lexique:    ['Comprendre','Lexique',        'Les mots de l’administratif, expliqués simplement. Épingle ceux à retenir.'],
-    calendrier: ['Anticiper','Calendrier',      'Tes échéances de l’année, réunies au même endroit.'],
-    partenaires:['Écosystème','Nos partenaires','Les outils et les gens qu’on recommande pour bien t’entourer.'],
-    profil:     ['Compte',  'Mon profil',    'Toutes tes informations, saisies une fois et réutilisées partout.'],
-    admin:      ['Administration','Dashboard admin','L’état de FreeHub en un coup d’œil. Réservé aux administrateurs.'],
+    accueil:    ['Accueil',         '🏠', '#2f6bff'],
+    objectifs:  ['Mes objectifs',   '🎯', '#2f6bff'],
+    simulateur: ['Simulateur',      '📊', '#7c3aed'],
+    lexique:    ['Lexique',         '📖', '#0891b2'],
+    calendrier: ['Calendrier',      '🗓', '#ea580c'],
+    partenaires:['Nos partenaires', '🤝', '#16a34a'],
+    profil:     ['Mon profil',      '👤', '#475569'],
+    admin:      ['Dashboard admin', '🛠', '#be123c'],
   };
+
+  // Bandeau de titre : une pastille colorée et le nom de l'écran. Assez présent
+  // pour situer, assez discret pour ne pas repousser le contenu vers le bas.
+  function titrePageHtml(){
+    var t = titles[state.tab];
+    if(!t) return '';
+    return '<div class="ptitre" style="--c:'+t[2]+'">'
+      + '<span class="ptitre-i">'+t[1]+'</span>'
+      + '<span class="ptitre-t">'+esc(t[0])+'</span>'
+    + '</div>';
+  }
 
   // Profil d'entreprise — centralisé, persisté dans le navigateur (localStorage),
   // réutilisé par le simulateur. Pré-rempli avec un exemple modifiable.
@@ -1567,6 +1697,10 @@
   }
 
   // Objectifs choisis + étapes cochées. Sans ça, tout se perdait au rechargement.
+  // Au-delà de trois, « en avant » ne veut plus rien dire : on garde la
+  // contrainte qui donne son sens à la mise en avant.
+  var MAX_AVANT = 3;
+
   var OBJECTIFS_DEFAUT = {
     added: ['statut','tva-comprendre','cfe'],
     checks: { 'statut:0':true, 'statut:1':true, 'tva-comprendre:0':true },
@@ -1577,16 +1711,18 @@
       if(raw){
         var o = JSON.parse(raw);
         return { added: Array.isArray(o.added) ? o.added : OBJECTIFS_DEFAUT.added.slice(),
-                 checks: o.checks || {} };
+                 checks: o.checks || {},
+                 avant: Array.isArray(o.avant) ? o.avant : [] };
       }
     } catch(e){}
     return { added: OBJECTIFS_DEFAUT.added.slice(),
-             checks: Object.assign({}, OBJECTIFS_DEFAUT.checks) };
+             checks: Object.assign({}, OBJECTIFS_DEFAUT.checks),
+             avant: [] };
   }
   function saveObjectifs(){
     try {
       localStorage.setItem('freehub_objectifs',
-        JSON.stringify({ added: state.added, checks: state.checks }));
+        JSON.stringify({ added: state.added, checks: state.checks, avant: state.avant }));
     } catch(e){}
     pousserServeur();
   }
@@ -1809,7 +1945,16 @@
     objectifOuvert: null,   // objectif déplié dans l'onglet Mes objectifs
     added: loadObjectifs().added,
     checks: loadObjectifs().checks,
-    objFiltre: null,        // domaine filtré dans Mes objectifs
+    avant: loadObjectifs().avant,   // ids mis en avant, dans l'ordre choisi
+    drag: null,                     // id de la carte en cours de déplacement
+    // Calendrier : vue courante, année, mois, et lundi de la semaine affichée
+    cal: (function(){
+      var n = new Date();
+      var lundi = new Date(n.getFullYear(), n.getMonth(), n.getDate() - ((n.getDay() + 6) % 7));
+      return { vue:'annee', annee:n.getFullYear(), mois:n.getMonth(), semaine:lundi.getTime() };
+    })(),
+    objFiltre: null,        // filtre du catalogue (pop-up)
+    objFiltrePage: null,    // filtre de la page « Mes objectifs », indépendant
     objVoirFinis: false,    // afficher les objectifs déjà maîtrisés
     objectifsVus: false,    // le badge « New » disparaît une fois l'onglet ouvert
     lexEpingles: loadLexique(),  // ids des termes épinglés dans « mon lexique »
@@ -1825,6 +1970,8 @@
     lexMonLexique: false,   // n'afficher que mes termes épinglés
     lexOuvert: null,        // id du terme dont la fiche est ouverte (pop-up)
     stepOuvert: null,       // index de l'étape dépliée (null = l'étape en cours)
+    suiteAjout: null,       // {id, retour} : objectif suggéré qu'on vient d'ajouter
+    catOpen: false,         // pop-up du catalogue d'objectifs
     // Onboarding au premier lancement : tant que le drapeau n'est pas posé.
     onboarding: { actif: !localStorageOk('freehub_onboarded'), etape: 0, rep: {} },
     // Compte (optionnel) : null = déconnecté, sinon { email }.
@@ -1968,6 +2115,7 @@
     });
     state.profil = loadProfil();
     var ob = loadObjectifs(); state.added = ob.added; state.checks = ob.checks;
+    state.avant = ob.avant;
     state.historique = loadHistorique();
     state.vl.historique = loadHistVL();
     state.tva.historique = loadHistTVA();
@@ -2511,6 +2659,10 @@
   }
 
   // `dispo` : objectif pas encore choisi — présenté plus sobrement, avec un +.
+  function illusObjectif(id){
+    return 'assets/illus/obj-' + id + '.svg';
+  }
+
   function objectifTuileHtml(id, dispo){
     var o = obj(id), d = dom(o), etat = etatObjectif(id), pr = pctOf(id);
     var pertinent = o.pertinent && o.pertinent(state.profil);
@@ -2523,15 +2675,18 @@
           : '<span class="tui-x" data-action="obj-remove" data-id="'+id+'" title="Retirer de mes objectifs">×</span>');
 
     return '<button class="tui '+etat+(dispo?' dispo':'')+(pertinent&&dispo?' reco':'')+'"'
+      + (dispo ? '' : ' draggable="true"')
       + ' style="--c:'+d.c+';--s:'+d.soft+'" data-action="'+(dispo?'obj-add':'view')+'" data-id="'+id+'">'
       + '<span class="tui-h">'
         + '<span class="tui-ico">'+d.ico+'</span>'
         + '<span class="tui-dom">'+esc(d.l)+'</span>'
-        + (pertinent && dispo ? '<span class="tui-reco">Pour toi</span>' : '')
+        + (pertinent && dispo
+            ? '<span class="tui-reco"><span class="tui-reco-e">★</span>Pour toi</span>' : '')
         + coin
       + '</span>'
       + '<span class="tui-t">'+esc(o.title)+'</span>'
       + '<span class="tui-d">'+esc(dispo ? (o.pourquoi || o.desc) : sous)+'</span>'
+      + '<img class="tui-illu" src="'+illusObjectif(id)+'" alt="" loading="lazy" decoding="async">'
       + liensTuileHtml(o)
       + '<span class="tui-f">'
         + (dispo ? '<span class="tui-nb">'+o.steps.length+' étapes</span>' : pointsEtapes(id, d.c))
@@ -2556,7 +2711,7 @@
       return e === 'encours' ? 0 : (e === 'fait' ? 2 : 1);
     };
     var tries = mesIds.slice().sort(function(a, b){ return poids(a) - poids(b); });
-    var filtre = function(id){ return !state.objFiltre || obj(id).dom === state.objFiltre; };
+    var filtre = function(id){ return !state.objFiltrePage || obj(id).dom === state.objFiltrePage; };
     var actifs = tries.filter(function(id){ return filtre(id) && etatObjectif(id) !== 'fait'; });
     var finis  = tries.filter(function(id){ return filtre(id) && etatObjectif(id) === 'fait'; });
 
@@ -2579,20 +2734,103 @@
     });
     var pctGlobal = etapesTotal ? Math.round(etapesFaites / etapesTotal * 100) : 0;
     var aDemarrer = mesIds.length - nbEnCours - nbFinis;
+
+    // Même traitement que la jauge du profil : fond sombre, anneau blanc, chiffres
+    // en pastilles. C'est le seul bloc « fier » de la page, il donne le ton.
+    var R = 30, C = 2 * Math.PI * R;
+    var anneau = '<svg viewBox="0 0 72 72" width="72" height="72">'
+      + '<circle cx="36" cy="36" r="'+R+'" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="6"/>'
+      + '<circle cx="36" cy="36" r="'+R+'" fill="none" stroke="#fff" stroke-width="6" '
+        + 'stroke-linecap="round" stroke-dasharray="'+(pctGlobal/100*C)+' '+C+'" '
+        + 'transform="rotate(-90 36 36)"/>'
+      + '<text x="36" y="42" text-anchor="middle" font-size="18" font-weight="800" fill="#fff">'
+        + pctGlobal + '%</text></svg>';
+
+    var puce = function(n, l, cls, action){
+      if(!n) return '';
+      return '<'+(action?'button':'span')+' class="ochip'+(cls?' '+cls:'')+'"'
+        + (action ? ' data-action="'+action+'"' : '')+'>'
+        + '<b>'+n+'</b> '+l+'</'+(action?'button':'span')+'>';
+    };
     var entete = '<div class="obj-tete">'
-      + '<div class="obj-tete-r">'+anneauSection(pctGlobal, '#2f6bff', 58)+'</div>'
-      + '<div><div class="obj-tete-t">Ton parcours administratif</div>'
-        + '<div class="obj-tete-s">'+etapesFaites+' étape'+(etapesFaites>1?'s':'')+' franchie'
-          + (etapesFaites>1?'s':'')+' sur '+etapesTotal+' — sur les '+mesIds.length
-          + ' objectif'+(mesIds.length>1?'s':'')+' que tu as choisi'+(mesIds.length>1?'s':'')+'</div>'
-        + '<div class="obj-tete-c">'
-          + '<span><b>'+nbEnCours+'</b> en cours</span>'
-          + '<span><b>'+aDemarrer+'</b> à démarrer</span>'
-          + '<span><b>'+nbFinis+'</b> maîtrisé'+(nbFinis>1?'s':'')+'</span>'
-        + '</div></div>'
+      + '<div class="obj-tete-r">'+anneau+'</div>'
+      + '<div class="obj-tete-x">'
+        + '<div class="obj-tete-t">'
+          + (etapesTotal
+              ? 'Ton parcours est avancé à '+pctGlobal+' %'
+              : 'Ton parcours commence ici')+'</div>'
+        + '<div class="obj-tete-s">'
+          + (etapesTotal
+              ? etapesFaites+' étape'+(etapesFaites>1?'s':'')+' franchie'+(etapesFaites>1?'s':'')
+                + ' sur '+etapesTotal+', '
+                + (mesIds.length > 1
+                    ? 'dans les '+mesIds.length+' objectifs que tu as choisis'
+                    : 'dans l’objectif que tu as choisi')
+              : 'Choisis un premier objectif, on avance étape par étape')+'</div>'
+        + (mesIds.length
+            ? '<div class="obj-tete-c">'
+              + puce(nbEnCours, 'en cours', 'on')
+              + puce(aDemarrer, 'à démarrer', '')
+              + puce(nbFinis, 'maîtrisé'+(nbFinis>1?'s':''), 'ok', 'obj-voir-finis')
+            + '</div>'
+            : '')
+      + '</div>'
       + '</div>';
 
-    // --- Filtres par domaine, en pastilles colorées ---
+    // --- Filtres par domaine, limités à ce que l'utilisateur a réellement pris ---
+    var domainesPris = ORDRE_DOMAINES.filter(function(k){
+      return mesIds.some(function(id){ return obj(id).dom === k; });
+    });
+    var pastilles = domainesPris.length > 1
+      ? '<div class="fpills">'
+        + '<button class="fpill'+(state.objFiltrePage?'':' on')+'"'
+          + ' data-action="obj-filtre-page" data-dom="">Tous</button>'
+        + domainesPris.map(function(k){
+            var dd = DOMAINES[k], on = state.objFiltrePage === k;
+            var n = mesIds.filter(function(id){ return obj(id).dom === k; }).length;
+            return '<button class="fpill'+(on?' on':'')+'" style="--c:'+dd.c+'"'
+              + ' data-action="obj-filtre-page" data-dom="'+k+'">'+dd.ico+' '+esc(dd.l)
+              + '<span class="fpill-n">'+n+'</span></button>';
+          }).join('')
+      + '</div>'
+      : '';
+
+    // --- Maîtrisés : repliés, pour ne pas encombrer ---
+    // Les maîtrisés vivent dans leur propre pop-up : ils n'encombrent plus la page.
+    var blocFinis = '';
+
+    // --- Ouvrir le catalogue : une invite, pas 18 tuiles de plus sur la page ---
+    var nbDispos = catalog.filter(function(o){ return mesIds.indexOf(o.id) < 0; }).length;
+    var invite = nbDispos
+      ? '<button class="obj-plus" data-action="cat-open">'
+        + '<span class="obj-plus-c">+</span>'
+        + '<span class="obj-plus-txt"><span class="obj-plus-t">Ajouter un objectif</span>'
+          + '<span class="obj-plus-d">'+nbDispos+' parcours t’attendent, on choisit ce qui te parle</span>'
+        + '</span></button>'
+      : '';
+
+    return '<div class="view">'
+      + entete
+      + pastilles
+      + blocFinis
+      + zonesHtml(actifs)
+      + invite
+      + '</div>';
+  }
+
+  // Le catalogue complet vit dans une pop-up : la page d'accueil des objectifs
+  // reste courte, on n'y voit que ce qu'on a choisi.
+  function catalogueModalHtml(){
+    if(!state.catOpen) return '';
+    var p = state.profil;
+    var mesIds = state.added.filter(function(id){ return !!obj(id); });
+    var dispos = catalog.filter(function(o){ return mesIds.indexOf(o.id) < 0; })
+      .filter(function(o){ return !state.objFiltre || o.dom === state.objFiltre; })
+      .sort(function(a, b){
+        var ra = a.pertinent && a.pertinent(p) ? 0 : 1;
+        var rb = b.pertinent && b.pertinent(p) ? 0 : 1;
+        return ra - rb;
+      });
     var pastilles = '<button class="fpill'+(state.objFiltre?'':' on')+'"'
       + ' data-action="obj-filtre" data-dom="">Tous</button>'
       + ORDRE_DOMAINES.filter(function(k){
@@ -2603,35 +2841,146 @@
             + ' data-action="obj-filtre" data-dom="'+k+'">'+dd.ico+' '+esc(dd.l)+'</button>';
         }).join('');
 
-    // --- Maîtrisés : repliés, pour ne pas encombrer ---
-    var blocFinis = '';
-    if(finis.length){
-      blocFinis = '<button class="obj-finis-h" data-action="obj-voir-finis">'
-        + '<span class="obj-finis-c">✓</span>'+finis.length+' objectif'+(finis.length>1?'s':'')
-        + ' maîtrisé'+(finis.length>1?'s':'')
-        + '<span class="obj-finis-x">'+(state.objVoirFinis?'Masquer':'Afficher')+'</span></button>'
-        + (state.objVoirFinis ? '<div class="tuis">'+finis.map(function(id){
-            return objectifTuileHtml(id, false); }).join('')+'</div>' : '');
-    }
-
-    // --- À ajouter ---
-    var blocDispos = dispos.length
-      ? '<div class="obj-sep">'
-        + '<span class="obj-sep-t">Ajouter un objectif</span>'
-        + '<span class="obj-sep-s">'+dispos.length+' parcours disponible'+(dispos.length>1?'s':'')+'</span>'
+    return '<div class="cat-head">'
+        + '<img src="assets/illus/en-route.svg" alt="" class="cat-illu">'
+        + '<div><div class="cat-t">Ajouter un objectif</div>'
+          + '<div class="cat-s">Choisis ce qui te parle, tu pourras en ajouter d’autres plus tard</div></div>'
+        + '<button class="cat-x" data-action="cat-close" aria-label="Fermer">✕</button>'
       + '</div>'
-      + '<div class="tuis">'+dispos.map(function(o){ return objectifTuileHtml(o.id, true); }).join('')+'</div>'
-      : '';
-
-    return '<div class="view">'
-      + entete
-      + '<div class="fpills">'+pastilles+'</div>'
-      + (actifs.length
-          ? '<div class="tuis">'+actifs.map(function(id){ return objectifTuileHtml(id, false); }).join('')+'</div>'
-          : '<div class="obj-vide">Aucun objectif en cours ici — ajoute-en un ci-dessous.</div>')
-      + blocFinis
-      + blocDispos
+      + '<div class="cat-filtres"><div class="fpills">'+pastilles+'</div></div>'
+      + '<div class="cat-body">'
+        + (dispos.length
+            ? '<div class="tuis">'
+              + dispos.map(function(o){ return objectifTuileHtml(o.id, true); }).join('')
+              + '</div>'
+            : '<div class="obj-vide">Rien de plus dans cette catégorie</div>')
       + '</div>';
+  }
+
+  // Deux zones de dépôt : ce qu'on met en avant, et le reste. L'ordre est libre
+  // à l'intérieur de chacune, et il est conservé d'une session à l'autre.
+  function zonesHtml(actifs){
+    var enAvant = state.avant.filter(function(id){ return actifs.indexOf(id) >= 0; });
+    var reste = actifs.filter(function(id){ return enAvant.indexOf(id) < 0; });
+    var grille = function(ids, zone){
+      return ids.map(function(id){
+        return '<div class="tui-slot" data-zone="'+zone+'" data-id="'+id+'">'
+          + objectifTuileHtml(id, false)+'</div>';
+      }).join('');
+    };
+
+    // La zone reste dans le DOM même vide : le CSS la révèle pendant un
+    // glissement. La faire apparaître en JS obligerait à re-rendre en plein
+    // déplacement, ce qui saccade.
+    var haut = '<div class="zone zone-avant'+(enAvant.length?'':' vide')+'" data-zone="avant">'
+      + '<div class="zone-t"><span class="zone-p">★</span>En avant'
+        + '<span class="zone-h">'
+          + (enAvant.length >= MAX_AVANT
+              ? 'trois au maximum, c’est ce qui garde la priorité utile'
+              : 'glisse ici jusqu’à '+MAX_AVANT+' objectifs à traiter en priorité')
+        + '</span></div>'
+      + (enAvant.length
+          ? '<div class="tuis">'+grille(enAvant, 'avant')+'</div>'
+          : '<div class="zone-vide">Dépose une carte ici pour l’épingler en haut</div>')
+    + '</div>';
+
+    var bas = actifs.length
+      ? '<div class="zone zone-reste" data-zone="reste">'
+        + (enAvant.length ? '<div class="zone-t">Le reste de tes objectifs</div>' : '')
+        + (reste.length
+            ? '<div class="tuis">'+grille(reste, 'reste')+'</div>'
+            : '<div class="zone-vide">Tout est en avant</div>')
+      + '</div>'
+      : '<div class="obj-vide illu">'
+        + '<img src="assets/illus/rien-en-cours.svg" alt="" class="illu-img">'
+        + '<div class="obj-vide-t">Rien en cours pour l’instant</div>'
+        + '<div class="obj-vide-d">Choisis un premier objectif, on le déroule étape par étape</div>'
+      + '</div>';
+
+    return haut + bas;
+  }
+
+  // Ce qui est bouclé mérite d'être montré, pas relégué : une pop-up dédiée,
+  // entièrement verte, qui donne le sentiment d'une étagère à trophées.
+  function finisModalHtml(){
+    if(!state.objVoirFinis) return '';
+    var finis = state.added.filter(function(id){
+      return obj(id) && etatObjectif(id) === 'fait'; });
+    if(!finis.length) return '';
+    var etapes = finis.reduce(function(a, id){ return a + pctOf(id).total; }, 0);
+    return '<div class="overlay" data-action="obj-voir-finis">'
+      + '<div class="modal fin-modal" data-action="stop">'
+        + '<div class="fin-head">'
+          + '<div class="fin-ico">🏆</div>'
+          + '<div><div class="fin-t">'+finis.length+' objectif'+(finis.length>1?'s':'')
+            + ' bouclé'+(finis.length>1?'s':'')+'</div>'
+            + '<div class="fin-s">'+etapes+' étapes franchies, tu peux y revenir quand tu veux</div></div>'
+          + '<button class="fin-x" data-action="obj-voir-finis" aria-label="Fermer">✕</button>'
+        + '</div>'
+        + '<div class="fin-body"><div class="tuis">'
+          + finis.map(function(id){ return objectifTuileHtml(id, false); }).join('')
+        + '</div></div>'
+      + '</div></div>';
+  }
+
+  // Le catalogue vit dans un root persistant : ajouter un objectif ne doit pas
+  // recréer l'overlay, sinon la pop-up rejoue son animation à chaque clic et on
+  // a l'impression que la page se rafraîchit.
+  function majCatalogue(){
+    var root = document.getElementById('cat-root');
+    if(!root) return;
+    if(!state.catOpen){ root.innerHTML = ''; return; }
+    var card = root.querySelector('.cat-modal');
+    if(!card){
+      root.innerHTML = '<div class="overlay" data-action="cat-close">'
+        + '<div class="modal cat-modal" data-action="stop"></div></div>';
+      card = root.querySelector('.cat-modal');
+    }
+    // On garde la position de défilement : la tuile ajoutée disparaît, le reste
+    // ne doit pas sauter sous le curseur.
+    var corps = card.querySelector('.cat-body');
+    var y = corps ? corps.scrollTop : 0;
+    card.innerHTML = catalogueModalHtml();
+    var neuf = card.querySelector('.cat-body');
+    if(neuf) neuf.scrollTop = y;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Petites illustrations d'étape
+  // ---------------------------------------------------------------------------
+  // Du trait simple, dessiné à la main, qui prend la couleur du domaine. Le but
+  // n'est pas de décorer : c'est de donner un repère visuel à chaque étape pour
+  // que le parcours ressemble moins à un formulaire administratif.
+  var ILLUS = {
+    loupe:    '<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l4.5 4.5"/>',
+    dossier:  '<path d="M3 6.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2.5h8A1.5 1.5 0 0 1 20 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-14A1.5 1.5 0 0 1 3 18.5z"/>',
+    form:     '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>',
+    enveloppe:'<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.6 6.6L12 13l8.4-6.4"/>',
+    facture:  '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9.5 8.5h5M9.5 12.5h5"/>',
+    ecran:    '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><path d="M10 10.5h4"/>',
+    batiment: '<path d="M3.5 9.5L12 4l8.5 5.5"/><path d="M5.5 10.5V19M18.5 10.5V19M10 10.5V19M14 10.5V19"/><path d="M3 19.5h18"/>',
+    carte:    '<rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M2.5 10h19"/><path d="M6 14.5h3.5"/>',
+    calendrier:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M8 14h3"/>',
+    euro:     '<circle cx="12" cy="12" r="8.5"/><path d="M15 8.6a4 4 0 1 0 0 6.8"/><path d="M7.8 11h5M7.8 13.2h5"/>',
+    balance:  '<path d="M12 4v16M7 20h10"/><path d="M4 8h16"/><path d="M4 8l-2 5a2.6 2.6 0 0 0 4 0z"/><path d="M20 8l2 5a2.6 2.6 0 0 1-4 0z"/>',
+    courbe:   '<path d="M4 19V5M4 19h16"/><path d="M7 15.5l3.5-4 3 2.5L19 8"/>',
+    bouclier: '<path d="M12 3.2l7 2.6v5.6c0 4.3-2.9 7.6-7 9.4-4.1-1.8-7-5.1-7-9.4V5.8z"/><path d="M9.2 12.2l2 2 3.6-3.9"/>',
+    signature:'<path d="M4 17.5c3-1 4-8 6-8s1.5 8 3.5 8 2-3.5 3.5-3.5c1 0 1.5 1 2 2"/><path d="M4 20.5h16"/>',
+    equipe:   '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.2 19.5c0-3.2 2.6-5.3 5.8-5.3s5.8 2.1 5.8 5.3"/><path d="M16.2 6.2a3.2 3.2 0 0 1 0 6.2M17 14.6c2.2.5 3.8 2.3 3.8 4.9"/>',
+    maison:   '<path d="M4 10.5L12 4l8 6.5"/><path d="M6 10v9.5h12V10"/><path d="M10 19.5v-5h4v5"/>',
+    globe:    '<circle cx="12" cy="12" r="8.5"/><path d="M3.6 12h16.8"/><path d="M12 3.5c2.2 2.3 3.4 5.3 3.4 8.5S14.2 18.2 12 20.5c-2.2-2.3-3.4-5.3-3.4-8.5S9.8 5.8 12 3.5z"/>',
+    outil:    '<path d="M14.5 3.5a5 5 0 0 0-5.9 6.4L3.5 15v5.5H9l5.1-5.1a5 5 0 0 0 6.4-5.9l-3 3-2.8-.7-.7-2.8z"/>',
+    horloge:  '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.3l3.4 2"/>',
+    fusee:    '<path d="M12 3c3.2 2.4 5 5.9 5 9.6l-2.6 2.6H9.6L7 12.6C7 8.9 8.8 5.4 12 3z"/><circle cx="12" cy="10" r="1.8"/><path d="M9.6 15.2L7.4 17.4M14.4 15.2l2.2 2.2M12 16v4"/>',
+    tampon:   '<path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><path d="M5 14h14l-1 3H6z"/><path d="M4.5 20.5h15"/>',
+  };
+
+  // Motif par défaut si une étape n'en déclare pas : jamais de trou visuel.
+  function illustrationHtml(nom){
+    var d = ILLUS[nom] || ILLUS.form;
+    return '<svg class="et-illu" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+      + ' stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"'
+      + ' aria-hidden="true">'+d+'</svg>';
   }
 
   // Contenu détaillé d'une étape : un texte d'intro, des points « à faire »,
@@ -2639,18 +2988,32 @@
   function contenuEtapeHtml(d){
     var h = '';
     if(d.intro) h += '<p class="sc-intro">'+d.intro+'</p>';
+    // Une vidéo vaut mieux qu'un paragraphe pour qui bloque sur l'administratif.
+    if(d.video){
+      h += '<a class="sc-video" href="'+esc(d.video.url)+'" target="_blank" rel="noopener">'
+        + '<span class="sc-video-play">▶</span>'
+        + '<span class="sc-video-txt"><span class="sc-video-t">'+esc(d.video.t)+'</span>'
+        + '<span class="sc-video-d">'+esc(d.video.d)+'</span></span>'
+        + '<span class="sc-video-fl">↗</span></a>';
+    }
     if(d.faire && d.faire.length){
-      h += '<div class="sc-bloc"><div class="sc-l">À faire</div><ul class="sc-liste">'
+      // Cases à cocher visuelles : on avance ligne par ligne au lieu de lire une consigne.
+      h += '<div class="sc-bloc"><div class="sc-l">Concrètement, tu fais ça</div>'
+        + '<ul class="sc-liste">'
         + d.faire.map(function(x){ return '<li>'+x+'</li>'; }).join('') + '</ul></div>';
     }
+    if(d.astuce){
+      h += '<div class="sc-astuce"><span class="sc-astuce-i">💡</span><span>'+d.astuce+'</span></div>';
+    }
     if(d.vigilance && d.vigilance.length){
-      h += '<div class="sc-bloc"><div class="sc-l warn">À surveiller</div><ul class="sc-liste warn">'
+      h += '<div class="sc-bloc"><div class="sc-l warn">Là où ça coince souvent</div>'
+        + '<ul class="sc-liste warn">'
         + d.vigilance.map(function(x){ return '<li>'+x+'</li>'; }).join('') + '</ul></div>';
     }
     if(d.liens && d.liens.length){
       h += '<div class="sc-liens">' + d.liens.map(function(a){
         return '<a class="sc-lien" href="'+esc(a.url)+'" target="_blank" rel="noopener">'
-          + '🔗 '+esc(a.l)+'</a>'; }).join('') + '</div>';
+          + esc(a.l)+' ↗</a>'; }).join('') + '</div>';
     }
     return '<div class="step-contenu">'+h+'</div>';
   }
@@ -2658,45 +3021,76 @@
   function objectifDetailHtml(curId){
     var cur = obj(curId), cp = pctOf(curId), dd = dom(cur);
 
-    // Une étape ne s'ouvre que si la précédente est cochée : le parcours reste
-    // linéaire, et on ne peut pas se déclarer plus avancé qu'on ne l'est.
+    // Trois blocs bien distincts plutôt qu'une longue frise : ce qui est fait se
+    // replie en vert, l'étape du moment occupe tout l'espace, la suite reste
+    // volontairement en retrait pour ne pas décourager d'avance.
     var premiereNonFaite = cur.steps.findIndex(function(_, i){ return !state.checks[curId+':'+i]; });
-    var steps = cur.steps.map(function(st, i){
+    var total = cur.steps.length;
+    var blocs = '';
+    var aVenir = [];
+
+    cur.steps.forEach(function(st, i){
       var done = !!state.checks[curId+':'+i];
-      var last = i === cur.steps.length - 1;
-      var verrouillee = !done && premiereNonFaite !== -1 && i > premiereNonFaite;
-      var circle = done
-        ? 'background:'+dd.c+';border:2px solid '+dd.c+';color:#fff'
-        : (i === premiereNonFaite ? 'border-color:'+dd.c+';color:'+dd.c : '');
-      var line = done ? 'background:'+dd.c : '';
+      var enCours = !done && i === premiereNonFaite;
+      if(!done && !enCours){ aVenir.push({ st:st, i:i }); return; }
+
       // Le contenu détaillé vit à part (CONTENUS), pour ne pas alourdir le catalogue.
       var d = (CONTENUS[curId] || [])[i];
-      // La 1re étape non faite est ouverte d'office ; sinon on suit stepOuvert.
-      var ouverte = !verrouillee && (state.stepOuvert === i
-                    || (state.stepOuvert === null && i === premiereNonFaite));
-      var contenu = d ? contenuEtapeHtml(d) : '';
+      var contenu = (d ? contenuEtapeHtml(d) : '') + etapeActionHtml(st);
 
-      return '<div class="step'+(done?' done':'')+(verrouillee?' lock':'')
-        + (i === premiereNonFaite ? ' now':'')+(ouverte?' open':'')+'">'
-        + '<div class="step-rail">'
-          + '<button class="step-circle"'+(verrouillee?' disabled':' data-action="step-check" data-i="'+i+'"')
-            + ' style="'+circle+'">'+(done?'✓':(i+1))+'</button>'
-          + (last ? '' : '<div class="step-line" style="'+line+'"></div>')
-        + '</div>'
-        + '<div class="step-body">'
-          + '<div class="step-hd"'+(verrouillee?'':' data-action="step-expand" data-i="'+i+'"')+'>'
-            + '<div><div class="step-title">'+esc(st.t)+'</div>'
-              + '<div class="step-hint">'+esc(st.h)+'</div></div>'
-            + (contenu && !verrouillee ? '<span class="step-chev">▾</span>' : '')
-          + '</div>'
-          + (verrouillee ? '<div class="step-lock">🔒 Coche l’étape précédente pour valider celle-ci</div>'
-                         : (contenu
-                             ? '<div class="step-wrap"><div class="step-inner">'+contenu
-                               + etapeActionHtml(st)+'</div></div>'
-                             : etapeActionHtml(st)))
-        + '</div>'
+      if(done){
+        // Ce qui est fait se range : une ligne verte, rouvrable si besoin.
+        var ouvertFait = state.stepOuvert === i;
+        blocs += '<div class="et et-ok'+(ouvertFait?' open':'')+'">'
+          + '<button type="button" class="et-ok-hd" data-action="step-expand" data-i="'+i+'"'
+            + ' aria-expanded="'+(ouvertFait?'true':'false')+'">'
+            + '<span class="et-ok-c">✓</span>'
+            + '<span class="et-ok-illu">'+illustrationHtml(st.illu)+'</span>'
+            + '<span class="et-ok-t">'+esc(st.t)+'</span>'
+            + '<span class="et-ok-x">'+(ouvertFait?'Replier':'Revoir')+'</span>'
+          + '</button>'
+          + '<div class="step-wrap"><div class="step-inner"><div class="et-ok-in">'
+            + contenu
+            + '<button class="et-defaire" data-action="step-check" data-i="'+i+'">'
+              + 'Finalement, ce n’est pas fait</button>'
+          + '</div></div></div>'
         + '</div>';
-    }).join('');
+        return;
+      }
+
+      // L'étape du moment : le bloc principal de la page.
+      blocs += '<div class="et et-now" style="--c:'+dd.c+';--s:'+dd.soft+'">'
+        + '<div class="et-now-top">'
+          + '<span class="et-now-pos">Étape '+(i+1)+' sur '+total+'</span>'
+          + (st.duree ? '<span class="et-now-duree">'+esc(st.duree)+'</span>' : '')
+        + '</div>'
+        + '<div class="et-now-hd">'
+          + '<span class="et-illu-b">'+illustrationHtml(st.illu)+'</span>'
+          + '<div class="et-now-ht">'
+            + '<div class="et-now-t">'+esc(st.t)+'</div>'
+            + '<div class="et-now-h">'+esc(st.h)+'</div>'
+          + '</div>'
+        + '</div>'
+        + (contenu ? '<div class="et-now-body">'+contenu+'</div>' : '')
+        + '<button class="et-fait" data-action="step-check" data-i="'+i+'">'
+          + '<span class="et-fait-c">✓</span>C’est fait, étape suivante</button>'
+      + '</div>';
+    });
+
+    // La suite du parcours, réduite à des titres : on sait où on va sans se
+    // faire écraser par tout ce qui reste.
+    if(aVenir.length){
+      blocs += '<div class="et-apres">'
+        + '<div class="et-apres-t">Ensuite</div>'
+        + aVenir.map(function(x){
+            return '<div class="et-apres-i"><span class="et-apres-n">'+(x.i+1)+'</span>'
+              + '<span class="et-apres-illu">'+illustrationHtml(x.st.illu)+'</span>'
+              + esc(x.st.t)+'</div>';
+          }).join('')
+      + '</div>';
+    }
+
+    var steps = blocs;
 
     // Échéance légale, uniquement si l'objectif en a une réelle.
     var ech = '';
@@ -2716,19 +3110,77 @@
     return '<button class="retour" data-action="obj-close">← Tous mes objectifs</button>'
       + '<div class="detail" data-key="'+curId+'" style="--c:'+dd.c+';border-top:4px solid '+dd.c+'">'
       + '<div class="detail-head">'
-        + '<div><div class="detail-tag"><span class="detail-ico" style="background:'+dd.soft+'">'
-          + dd.ico+'</span>'
-          + '<span class="tag" style="color:'+dd.c+'">'+esc(dd.l)+'</span></div>'
+        + '<div class="detail-head-l">'
+          + '<div class="detail-tag"><span class="detail-ico" style="background:'+dd.soft+'">'
+            + dd.ico+'</span>'
+            + '<span class="tag" style="color:'+dd.c+'">'+esc(dd.l)+'</span></div>'
           + '<div class="detail-title">'+esc(cur.title)+'</div>'
-          + '<div class="detail-desc">'+esc(cur.desc)+'</div></div>'
-        + '<div class="detail-ring">'+anneauSection(cp.pct, dd.c, 74)
-          + '<div class="detail-ring-l">'+cp.done+' / '+cp.total+' étapes</div></div>'
+          + '<div class="detail-desc">'+esc(cur.desc)+'</div>'
+        + '</div>'
+        + '<div class="detail-head-r">'
+          + '<img class="detail-illu" src="'+illusObjectif(curId)+'" alt="" decoding="async">'
+          + jaugeEtapesHtml(cur, cp, premiereNonFaite, dd)
+        + '</div>'
       + '</div>'
       + ech
       + (cp.pct === 100
-          ? '<div class="obj-fini">🎉 Objectif bouclé — bien joué.</div>' : '')
+          ? '<div class="obj-fini">'
+            + '<img src="assets/illus/objectif-boucle.svg" alt="" class="obj-fini-illu">'
+            + '<span><span class="obj-fini-t">Objectif bouclé</span>'
+            + '<span class="obj-fini-d">Tu peux repasser sur n’importe quelle étape quand tu veux</span>'
+            + '</span></div>' : '')
       + '<div class="steps">'+steps+'</div>'
+      + suiteHtml(cur, cp.pct === 100)
       + '</div>';
+  }
+
+  // Un segment par étape, coloré comme les blocs plus bas : vert pour ce qui est
+  // fait, couleur du domaine pour l'étape en cours, gris pour ce qui reste. On
+  // lit le nombre d'étapes et l'avancement sans avoir à lire un pourcentage.
+  function jaugeEtapesHtml(cur, cp, enCours, dd){
+    var reste = cp.total - cp.done;
+    var segs = cur.steps.map(function(_, i){
+      var done = !!state.checks[cur.id+':'+i];
+      var cls = done ? 'ok' : (i === enCours ? 'now' : '');
+      var st = done ? '' : (i === enCours ? ' style="background:'+dd.c+'"' : '');
+      return '<i class="'+cls+'"'+st+'></i>';
+    }).join('');
+    var l = cp.done === 0
+      ? cp.total+' étapes en tout'
+      : (reste === 0
+          ? 'Les '+cp.total+' étapes sont faites'
+          : cp.done+' faite'+(cp.done>1?'s':'')+', '
+            + (reste === 1 ? 'plus qu’une étape' : 'plus que '+reste+' étapes'));
+    return '<div class="detail-prog'+(reste===0?' fini':'')+'">'
+      + '<div class="dp-segs">'+segs+'</div>'
+      + '<div class="dp-l">'+l+'</div>'
+    + '</div>';
+  }
+
+  // Ce qui vient après : on enchaîne au lieu de laisser l'utilisateur chercher
+  // seul quel est le prochain sujet à traiter.
+  function suiteHtml(cur, fini){
+    // On ne propose que ce qui colle au profil : suggérer une démarche de
+    // société à un micro-entrepreneur serait pire que de ne rien suggérer.
+    var ids = (cur.suite || []).filter(function(id){
+      var o = obj(id);
+      return !!o && !(o.pertinent && !o.pertinent(state.profil));
+    });
+    if(!ids.length) return '';
+    return '<div class="obj-suite'+(fini?' pret':'')+'">'
+      + '<div class="obj-suite-t">'+(fini ? 'Et maintenant ?' : 'La suite logique')+'</div>'
+      + '<div class="obj-suite-l">'+ ids.map(function(id){
+          var o = obj(id), d = dom(o), pc = pctOf(id);
+          var pris = state.added.indexOf(id) >= 0;
+          return '<button class="obj-suite-c" data-action="suite-add" data-id="'+id+'"'
+            + ' style="--c:'+d.c+';--s:'+d.soft+'">'
+            + '<span class="obj-suite-ico" style="background:'+d.soft+'">'+d.ico+'</span>'
+            + '<span class="obj-suite-txt">'
+              + '<span class="obj-suite-n">'+esc(o.title)+'</span>'
+              + '<span class="obj-suite-d">'+esc(o.desc)+'</span></span>'
+            + '<span class="obj-suite-b">'+(pris ? (pc===100?'Terminé':'Ouvrir') : 'Ajouter')+'</span>'
+            + '</button>';
+        }).join('') + '</div></div>';
   }
 
 
@@ -6491,87 +6943,205 @@
   // On rassemble les échéances des objectifs que l'utilisateur a pris ET de ceux
   // que son profil rend pertinents (même non pris) : c'est le « selon ton statut ».
   // Aucune date inventée : on ne prend que ce qui est déjà encodé dans le catalog.
-  function evenementsCalendrier(){
-    var p = state.profil;
-    var now = new Date();
-    var evts = catalog.filter(function(o){
+  var JOURS_COURTS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  var MOIS_COURTS = ['janv.','févr.','mars','avr.','mai','juin',
+                     'juil.','août','sept.','oct.','nov.','déc.'];
+
+  // Les échéances d'une année donnée. Contrairement à l'ancienne version qui
+  // faisait rouler les dates passées sur l'année suivante, on date ici dans
+  // l'année demandée : c'est ce qui permet de naviguer de 2026 à 2027.
+  function evenementsAnnee(annee){
+    var p = state.profil, now = new Date();
+    return catalog.filter(function(o){
       if(!o.echeance) return false;
       return state.added.indexOf(o.id) >= 0 || (o.pertinent && o.pertinent(p)) || !o.pertinent;
     }).map(function(o){
       var e = o.echeance, dd = dom(o);
+      var pris = state.added.indexOf(o.id) >= 0;
       if(e.periode){
-        return { objId:o.id, titre:o.title, quoi:e.quoi, dom:dd, periode:e.periode,
-                 moisTri:(e.moisDebut || 1) - 1, date:null, jours:null,
-                 pris:state.added.indexOf(o.id) >= 0 };
+        return { objId:o.id, quoi:e.quoi, dom:dd, periode:e.periode,
+                 mois:(e.moisDebut || 1) - 1, jour:null, date:null, jours:null, pris:pris };
       }
-      var d = new Date(now.getFullYear(), e.mois - 1, e.jour);
-      if(d < now) d = new Date(now.getFullYear() + 1, e.mois - 1, e.jour);
-      return { objId:o.id, titre:o.title, quoi:e.quoi, dom:dd, periode:null,
-               moisTri:e.mois - 1, date:d, jours:Math.ceil((d - now) / 86400000),
-               pris:state.added.indexOf(o.id) >= 0 };
+      var d = new Date(annee, e.mois - 1, e.jour);
+      return { objId:o.id, quoi:e.quoi, dom:dd, periode:null,
+               mois:e.mois - 1, jour:e.jour, date:d,
+               jours:Math.ceil((d - now) / 86400000), pris:pris };
+    }).sort(function(a, b){
+      return a.mois - b.mois || ((a.jour || 0) - (b.jour || 0));
     });
-    // Tri : d'abord par proximité réelle (dates fixes), périodes intercalées par mois.
-    evts.sort(function(a, b){
-      if(a.date && b.date) return a.date - b.date;
-      return a.moisTri - b.moisTri;
-    });
-    return evts;
+  }
+
+  // La prochaine échéance à venir, quelle que soit l'année affichée.
+  // Nom distinct de prochaineEcheance() (accueil) : les deux coexistent dans la
+  // même portée et la seconde déclaration écraserait la première.
+  function prochaineEcheanceCal(){
+    var now = new Date();
+    var liste = evenementsAnnee(now.getFullYear())
+      .concat(evenementsAnnee(now.getFullYear() + 1))
+      .filter(function(e){ return e.date && e.date >= now; });
+    liste.sort(function(a, b){ return a.date - b.date; });
+    return liste[0] || null;
+  }
+
+  // --- Vue année : douze mois, chacun avec ses bulles colorées ---------------
+  function calAnneeHtml(evts, annee){
+    var now = new Date();
+    var cases = [];
+    for(var m = 0; m < 12; m++){
+      var duMois = evts.filter(function(e){ return e.mois === m; });
+      var courant = annee === now.getFullYear() && m === now.getMonth();
+      cases.push('<button class="cal-m'+(duMois.length ? ' actif' : '')
+        + (courant ? ' present' : '')+'" data-action="cal-mois" data-m="'+m+'">'
+        + '<span class="cal-m-n">'+esc(MOIS[m])+'</span>'
+        + (duMois.length
+            ? '<span class="cal-m-pts">'+duMois.map(function(e){
+                return '<span class="cal-pt" style="background:'+e.dom.c+'"></span>'; }).join('')+'</span>'
+              + '<span class="cal-m-l">'+duMois.map(function(e){
+                  return '<span class="cal-m-e" style="--c:'+e.dom.c+'">'+esc(e.quoi)+'</span>';
+                }).join('')+'</span>'
+            : '<span class="cal-m-vide">Rien de prévu</span>')
+      + '</button>');
+    }
+    return '<div class="cal-annee">'+cases.join('')+'</div>';
+  }
+
+  // --- Vue mois : une vraie grille de sept colonnes --------------------------
+  function calMoisHtml(evts, annee, mois){
+    var now = new Date();
+    var premier = new Date(annee, mois, 1);
+    // getDay() renvoie 0 pour dimanche : on décale pour démarrer le lundi.
+    var decalage = (premier.getDay() + 6) % 7;
+    var nbJours = new Date(annee, mois + 1, 0).getDate();
+    var duMois = evts.filter(function(e){ return e.mois === mois; });
+    var periodes = duMois.filter(function(e){ return e.periode; });
+
+    var entete = JOURS_COURTS.map(function(j){
+      return '<div class="cal-jn">'+j+'</div>'; }).join('');
+
+    var cellules = '';
+    for(var i = 0; i < decalage; i++) cellules += '<div class="cal-c hors"></div>';
+    for(var d = 1; d <= nbJours; d++){
+      var duJour = duMois.filter(function(e){ return e.jour === d; });
+      var auj = annee === now.getFullYear() && mois === now.getMonth() && d === now.getDate();
+      cellules += '<div class="cal-c'+(duJour.length ? ' plein' : '')+(auj ? ' auj' : '')+'">'
+        + '<span class="cal-c-n">'+d+'</span>'
+        + duJour.map(function(e){
+            return '<button class="cal-c-e" style="--c:'+e.dom.c+';--s:'+e.dom.soft+'"'
+              + ' data-action="view" data-id="'+e.objId+'">'+esc(e.quoi)+'</button>';
+          }).join('')
+      + '</div>';
+    }
+    var reste = (7 - ((decalage + nbJours) % 7)) % 7;
+    for(var k = 0; k < reste; k++) cellules += '<div class="cal-c hors"></div>';
+
+    return (periodes.length
+        ? '<div class="cal-periodes">'+periodes.map(function(e){
+            return '<button class="cal-per" style="--c:'+e.dom.c+';--s:'+e.dom.soft+'"'
+              + ' data-action="view" data-id="'+e.objId+'">'
+              + '<span class="cal-per-t">'+esc(e.quoi)+'</span>'
+              + '<span class="cal-per-d">sur toute la période '+esc(e.periode)+'</span>'
+            + '</button>'; }).join('')+'</div>'
+        : '')
+      + '<div class="cal-grille"><div class="cal-jns">'+entete+'</div>'
+      + '<div class="cal-cs">'+cellules+'</div></div>';
+  }
+
+  // --- Vue semaine : sept colonnes, du lundi au dimanche ---------------------
+  function calSemaineHtml(evts, debut){
+    var now = new Date();
+    var cols = '';
+    for(var i = 0; i < 7; i++){
+      var d = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate() + i);
+      var duJour = evts.filter(function(e){
+        return e.jour === d.getDate() && e.mois === d.getMonth(); });
+      var auj = d.toDateString() === now.toDateString();
+      cols += '<div class="cal-sj'+(auj ? ' auj' : '')+(duJour.length ? ' plein' : '')+'">'
+        + '<div class="cal-sj-h"><span class="cal-sj-n">'+JOURS_COURTS[i]+'</span>'
+          + '<span class="cal-sj-d">'+d.getDate()+'</span></div>'
+        + '<div class="cal-sj-b">'
+          + duJour.map(function(e){
+              return '<button class="cal-c-e" style="--c:'+e.dom.c+';--s:'+e.dom.soft+'"'
+                + ' data-action="view" data-id="'+e.objId+'">'+esc(e.quoi)+'</button>';
+            }).join('')
+        + '</div>'
+      + '</div>';
+    }
+    return '<div class="cal-semaine">'+cols+'</div>';
   }
 
   function calendrierHtml(){
-    var evts = evenementsCalendrier();
+    var c = state.cal, now = new Date();
+    var evts = evenementsAnnee(c.annee);
+    var prochaine = prochaineEcheanceCal();
 
-    if(!evts.length){
-      return '<div class="view"><div class="obj-vide">Aucune échéance à afficher pour l’instant. '
-        + 'Elles apparaîtront selon ton statut et les objectifs que tu ajoutes '
-        + '(la CFE, le versement libératoire, la déclaration de revenus…).</div></div>';
-    }
-
-    // Bandeau : la prochaine échéance datée.
-    var prochaine = evts.filter(function(e){ return e.date; })[0];
+    // --- Bandeau : le compte à rebours est l'information principale ---
     var hero = '';
     if(prochaine){
+      var j = prochaine.jours;
+      var grand = j <= 0 ? 'Auj.' : String(j);
+      var petit = j <= 0 ? '' : (j > 1 ? 'jours' : 'jour');
       hero = '<div class="cal-hero" style="--c:'+prochaine.dom.c+'">'
-        + '<div class="cal-hero-l">Prochaine échéance</div>'
-        + '<div class="cal-hero-t">'+esc(prochaine.quoi)+'</div>'
-        + '<div class="cal-hero-d">'+prochaine.date.toLocaleDateString('fr-FR',
-            { day:'numeric', month:'long' })+' · dans '+prochaine.jours+' jour'
-            +(prochaine.jours>1?'s':'')+'</div>'
+        + '<div class="cal-hero-compte">'
+          + '<span class="cal-hero-nb">'+grand+'</span>'
+          + (petit ? '<span class="cal-hero-u">'+petit+'</span>' : '')
+        + '</div>'
+        + '<div class="cal-hero-txt">'
+          + '<div class="cal-hero-l">Prochaine échéance</div>'
+          + '<div class="cal-hero-t">'+esc(prochaine.quoi)+'</div>'
+          + '<div class="cal-hero-d">'+prochaine.date.toLocaleDateString('fr-FR',
+              { weekday:'long', day:'numeric', month:'long', year:'numeric' })+'</div>'
+        + '</div>'
         + '<button class="cal-hero-cta" data-action="view" data-id="'+prochaine.objId+'">'
           + 'Voir l’objectif →</button>'
       + '</div>';
     }
 
-    // Frise : un bloc par mois qui a au moins une échéance.
-    var parMois = {};
-    evts.forEach(function(e){ (parMois[e.moisTri] = parMois[e.moisTri] || []).push(e); });
-    var moisAffiches = Object.keys(parMois).map(Number).sort(function(a, b){ return a - b; });
+    // --- Barre de navigation : période, vue, retour à aujourd'hui ---
+    var libelle = c.vue === 'annee' ? String(c.annee)
+      : (c.vue === 'mois' ? MOIS[c.mois] + ' ' + c.annee
+        : (function(){
+            var d = new Date(c.semaine);
+            var f = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 6);
+            return d.getDate()+' '+MOIS_COURTS[d.getMonth()]
+                 + ' → '+f.getDate()+' '+MOIS_COURTS[f.getMonth()]+' '+f.getFullYear();
+          })());
 
-    var frise = moisAffiches.map(function(m){
-      var cartes = parMois[m].map(function(e){
-        var quand = e.periode ? 'période ' + e.periode
-          : (e.date.toLocaleDateString('fr-FR', { day:'numeric', month:'long' })
-             + ' · dans ' + e.jours + ' j');
-        return '<button class="cal-evt" style="--c:'+e.dom.c+';--s:'+e.dom.soft+'"'
-          + ' data-action="view" data-id="'+e.objId+'">'
-          + '<span class="cal-evt-dom">'+e.dom.ico+' '+esc(e.dom.l)+'</span>'
-          + '<span class="cal-evt-t">'+esc(e.quoi)+'</span>'
-          + '<span class="cal-evt-d">'+esc(quand)+'</span>'
-          + (e.pris ? '' : '<span class="cal-evt-tag">selon ton statut</span>')
-          + '</button>';
-      }).join('');
-      return '<div class="cal-mois">'
-        + '<div class="cal-mois-h"><span class="cal-mois-p"></span>'
-          + '<span class="cal-mois-n">'+esc(MOIS[m])+'</span></div>'
-        + '<div class="cal-mois-evts">'+cartes+'</div>'
-      + '</div>';
+    var vues = [['annee','Année'], ['mois','Mois'], ['semaine','Semaine']].map(function(v){
+      return '<button class="cal-vue'+(c.vue === v[0] ? ' on' : '')+'"'
+        + ' data-action="cal-vue" data-v="'+v[0]+'">'+v[1]+'</button>';
     }).join('');
 
+    var surAujourdhui = c.vue === 'annee' ? c.annee === now.getFullYear()
+      : (c.vue === 'mois' ? (c.annee === now.getFullYear() && c.mois === now.getMonth())
+        : (function(){
+            var d = new Date(c.semaine);
+            var f = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7);
+            return now >= d && now < f;
+          })());
+
+    var barre = '<div class="cal-barre">'
+      + '<div class="cal-nav">'
+        + '<button class="cal-fl" data-action="cal-prec" aria-label="Précédent">‹</button>'
+        + '<span class="cal-periode">'+esc(libelle)+'</span>'
+        + '<button class="cal-fl" data-action="cal-suiv" aria-label="Suivant">›</button>'
+      + '</div>'
+      + '<div class="cal-vues">'+vues+'</div>'
+      + (surAujourdhui ? '' : '<button class="cal-auj" data-action="cal-auj">Aujourd’hui</button>')
+    + '</div>';
+
+    var corps = c.vue === 'annee' ? calAnneeHtml(evts, c.annee)
+              : (c.vue === 'mois' ? calMoisHtml(evts, c.annee, c.mois)
+                : calSemaineHtml(evts, new Date(c.semaine)));
+
+    var rien = !evts.length
+      ? '<div class="cal-rien">Aucune échéance connue pour '+c.annee+'. '
+        + 'Elles apparaissent selon ton statut et les objectifs que tu suis.</div>'
+      : '';
+
     return '<div class="view">'
-      + hero
+      + hero + barre + rien + corps
       + '<div class="cal-note">Ces dates viennent de ton statut et des objectifs que tu suis. '
         + 'Les dates limites exactes (déclarations, département) sont sur les sites officiels.</div>'
-      + '<div class="cal-frise">'+frise+'</div>'
       + '</div>';
   }
 
@@ -6995,13 +7565,12 @@
         + '</div>'
       + '</aside>'
       + '<main>'
-        + '<header><div>'
-          + '<div class="kicker"></div><div class="title"></div><div class="subtitle"></div>'
-        + '</div></header>'
+        + '<div class="ptitre-zone"></div>'
         + '<div class="content"></div>'
       + '</main>'
       + '</div>'
       + '<div id="modal-root"></div>'
+      + '<div id="cat-root"></div>'
       + '<div id="onb-root"></div>'
       + '<div id="tvo-root"></div>'
       + '<div id="dgo-root"></div>'
@@ -7063,12 +7632,11 @@
         : '🙂';
     }
 
-    // En-tête : sur l'onglet Simulateur, il reflète le simulateur ouvert.
-    var t = (state.tab === 'simulateur' && TITRES_SIM[state.sim.open])
-          ? TITRES_SIM[state.sim.open] : titles[state.tab];
-    app.querySelector('.kicker').textContent = t[0];
-    app.querySelector('.title').textContent = t[1];
-    app.querySelector('.subtitle').textContent = t[2];
+    // Titre de page : masqué quand un objectif est ouvert, où le titre de
+    // l'objectif et le bouton retour suffisent.
+    var barre = app.querySelector('.ptitre-zone');
+    barre.innerHTML = (state.tab === 'objectifs' && state.objectifOuvert)
+                    ? '' : titrePageHtml();
 
     // Contenu.
     var content = app.querySelector('.content');
@@ -7096,10 +7664,13 @@
 
     document.getElementById('modal-root').innerHTML =
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
-      + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml() + badgeCelebreHtml();
+      + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml()
+      + finisModalHtml() + suiteAjoutHtml() + badgeCelebreHtml();
 
-    // L'onboarding vit dans son propre root persistant : on ne remplace que le
-    // contenu de sa carte, sans recréer l'overlay ni rejouer son animation.
+    // L'onboarding et le catalogue vivent dans leur propre root persistant : on
+    // ne remplace que le contenu de leur carte, sans recréer l'overlay ni
+    // rejouer leur animation.
+    majCatalogue();
     majOnboarding();
     majTvaOnb();
     majDepOnb();
@@ -7107,7 +7678,7 @@
 
     // Une pop-up ouverte fige le défilement de la page derrière.
     document.body.classList.toggle('pop-ouverte',
-      !!document.querySelector('#modal-root .overlay, #onb-root .tvo-overlay,'
+      !!document.querySelector('#modal-root .overlay, #cat-root .overlay, #onb-root .tvo-overlay,'
                              + ' #tvo-root .tvo-overlay, #dgo-root .tvo-overlay,'
                              + ' #vlo-root .tvo-overlay'));
   }
@@ -7132,6 +7703,111 @@
     if(btn){ e.preventDefault(); btn.click(); }
   });
 
+  // ---------------------------------------------------------------------------
+  // Glisser-déposer des cartes d'objectifs
+  // ---------------------------------------------------------------------------
+  // Deux zones (« En avant » et le reste) et un ordre libre dans chacune. On
+  // s'appuie sur l'API native : pas de dépendance, et le comportement reste
+  // celui que le navigateur connaît déjà.
+  (function brancherGlisser(){
+    var app = document.getElementById('app');
+    if(!app) return;
+
+    // Pendant tout le glissement on ne touche qu'aux classes : un render() à
+    // chaque survol reconstruisait la grille sous le curseur, d'où les à-coups.
+    function marquer(zoneActive){
+      var zones = app.querySelectorAll('.zone');
+      for(var i = 0; i < zones.length; i++){
+        zones[i].classList.toggle('survol', zones[i] === zoneActive);
+      }
+    }
+    function reposer(){
+      var d = app.querySelector('.tui.drag');
+      if(d) d.classList.remove('drag');
+      marquer(null);
+      var z = app.querySelector('.zone-avant');
+      if(z) z.classList.remove('provisoire', 'plein');
+      var slots = app.querySelectorAll('.tui-slot.avant-ici');
+      for(var i = 0; i < slots.length; i++) slots[i].classList.remove('avant-ici');
+    }
+
+    app.addEventListener('dragstart', function(e){
+      var tui = e.target.closest && e.target.closest('.tui[draggable="true"]');
+      if(!tui) return;
+      state.drag = tui.getAttribute('data-id');
+      e.dataTransfer.effectAllowed = 'move';
+      // Firefox exige une donnée pour démarrer le glissement.
+      try { e.dataTransfer.setData('text/plain', state.drag); } catch(err){}
+      // La classe est posée au cycle suivant, sinon le navigateur capture
+      // l'aperçu de la carte déjà estompée. setTimeout plutôt que
+      // requestAnimationFrame : rAF est suspendu quand l'onglet n'est pas visible.
+      var cible = tui;
+      setTimeout(function(){ if(state.drag) cible.classList.add('drag'); }, 0);
+      // La zone d'accueil apparaît le temps du glissement, sans re-render.
+      var z = app.querySelector('.zone-avant');
+      if(z && !z.querySelector('.tui')) z.classList.add('provisoire');
+      if(z && state.avant.length >= MAX_AVANT && state.avant.indexOf(state.drag) < 0){
+        z.classList.add('plein');
+      }
+    });
+
+    app.addEventListener('dragend', function(){
+      if(!state.drag) return;
+      state.drag = null;
+      reposer();
+    });
+
+    app.addEventListener('dragover', function(e){
+      if(!state.drag) return;
+      var zone = e.target.closest && e.target.closest('.zone');
+      if(!zone) return;
+      var nom = zone.getAttribute('data-zone');
+      var complet = nom === 'avant'
+        && state.avant.length >= MAX_AVANT && state.avant.indexOf(state.drag) < 0;
+      if(complet){ e.dataTransfer.dropEffect = 'none'; marquer(null); return; }
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      marquer(zone);
+      // Repère d'insertion sur la carte visée.
+      var slots = app.querySelectorAll('.tui-slot.avant-ici');
+      for(var i = 0; i < slots.length; i++) slots[i].classList.remove('avant-ici');
+      var slot = e.target.closest('.tui-slot');
+      if(nom === 'avant' && slot) slot.classList.add('avant-ici');
+    });
+
+    app.addEventListener('drop', function(e){
+      if(!state.drag) return;
+      var zone = e.target.closest && e.target.closest('.zone');
+      if(!zone) return;
+      e.preventDefault();
+      var id = state.drag, nom = zone.getAttribute('data-zone');
+      var avant = state.avant.filter(function(x){ return x !== id; });
+
+      if(nom === 'avant'){
+        if(avant.length >= MAX_AVANT){ state.drag = null; reposer(); return; }
+        // Position d'insertion : avant la carte survolée, sinon à la fin.
+        var slot = e.target.closest('.tui-slot');
+        var cible = slot && slot.getAttribute('data-zone') === 'avant'
+                  ? slot.getAttribute('data-id') : null;
+        var i = cible ? avant.indexOf(cible) : -1;
+        if(i >= 0){
+          // À gauche de la carte visée, ou à droite si on a dépassé son milieu.
+          var r = slot.getBoundingClientRect();
+          if(e.clientX > r.left + r.width / 2) i++;
+          avant.splice(i, 0, id);
+        } else {
+          avant.push(id);
+        }
+      }
+      // Déposer dans « le reste » revient simplement à retirer des favoris.
+      state.avant = avant;
+      state.drag = null;
+      reposer();
+      saveObjectifs();
+      render();
+    });
+  })();
+
   document.getElementById('app').addEventListener('click', function(e){
     var el = e.target.closest('[data-action]');
     if(!el) return;
@@ -7147,6 +7823,8 @@
         break;
       }
       case 'view': {
+        // Un clic qui termine un glissement ne doit pas ouvrir l'objectif.
+        if(state.drag) break;
         // Depuis l'accueil on peut viser un objectif pas encore choisi : on
         // l'ajoute au passage plutôt que d'ouvrir un écran vide.
         var vid = el.getAttribute('data-id');
@@ -7154,7 +7832,8 @@
           state.added = state.added.concat([vid]);
           saveObjectifs();
         }
-        setState({ tab:'objectifs', objectifOuvert: vid, stepOuvert: null });
+        setState({ tab:'objectifs', objectifOuvert: vid, stepOuvert: null,
+                   catOpen: false, objVoirFinis: false });
         break;
       }
       case 'obj-close':
@@ -7178,21 +7857,92 @@
         var aid = el.getAttribute('data-id');
         if(state.added.indexOf(aid) < 0) state.added = state.added.concat([aid]);
         saveObjectifs();
+        // Depuis le catalogue, la tuile disparaît de la liste : on y reste pour
+        // pouvoir en prendre plusieurs d'affilée.
         // On reste sur la liste : l'objectif remonte simplement dans « mes
         // objectifs ». Pour l'ouvrir, on clique une fois qu'il y est.
         render();
         break;
       }
+      // Ajouter un objectif suggéré ne doit pas éjecter de la page en cours :
+      // on confirme, puis c'est l'utilisateur qui choisit où il va.
+      case 'suite-add': {
+        e.stopPropagation();
+        var sid = el.getAttribute('data-id');
+        if(!obj(sid)) break;
+        if(state.added.indexOf(sid) >= 0){
+          // Déjà pris : rien à confirmer, on y va.
+          setState({ tab:'objectifs', objectifOuvert: sid, stepOuvert: null });
+          break;
+        }
+        state.added = state.added.concat([sid]);
+        saveObjectifs();
+        setState({ suiteAjout: { id: sid, retour: state.objectifOuvert } });
+        break;
+      }
+      case 'suite-go': {
+        var g = state.suiteAjout;
+        setState({ suiteAjout: null, tab:'objectifs',
+                   objectifOuvert: g ? g.id : state.objectifOuvert, stepOuvert: null });
+        break;
+      }
+      case 'suite-rester':
+        setState({ suiteAjout: null });
+        break;
       case 'obj-remove': {
         e.stopPropagation();
         var rid = el.getAttribute('data-id');
         state.added = state.added.filter(function(x){ return x !== rid; });
+        state.avant = state.avant.filter(function(x){ return x !== rid; });
         saveObjectifs();
         render();
         break;
       }
+      case 'cat-open':
+        setState({ catOpen: true, objFiltre: null });
+        break;
+      case 'cat-close':
+        setState({ catOpen: false });
+        break;
       case 'obj-filtre':
         setState({ objFiltre: el.getAttribute('data-dom') || null });
+        break;
+      case 'cal-vue':
+        setState({ cal: Object.assign({}, state.cal, { vue: el.getAttribute('data-v') }) });
+        break;
+      case 'cal-mois':
+        // Depuis la vue année, cliquer un mois l'ouvre en grand.
+        setState({ cal: Object.assign({}, state.cal,
+          { vue:'mois', mois: parseInt(el.getAttribute('data-m'), 10) }) });
+        break;
+      case 'cal-prec':
+      case 'cal-suiv': {
+        var pas = action === 'cal-suiv' ? 1 : -1;
+        var c = Object.assign({}, state.cal);
+        if(c.vue === 'annee'){
+          c.annee += pas;
+        } else if(c.vue === 'mois'){
+          var m = c.mois + pas;
+          if(m < 0){ m = 11; c.annee--; } else if(m > 11){ m = 0; c.annee++; }
+          c.mois = m;
+        } else {
+          var d = new Date(c.semaine);
+          d.setDate(d.getDate() + 7 * pas);
+          c.semaine = d.getTime();
+          c.annee = d.getFullYear(); c.mois = d.getMonth();
+        }
+        setState({ cal: c });
+        break;
+      }
+      case 'cal-auj': {
+        var n = new Date();
+        var lundi = new Date(n.getFullYear(), n.getMonth(), n.getDate() - ((n.getDay() + 6) % 7));
+        setState({ cal: Object.assign({}, state.cal,
+          { annee:n.getFullYear(), mois:n.getMonth(), semaine:lundi.getTime() }) });
+        break;
+      }
+      case 'obj-filtre-page':
+        setState({ objFiltrePage: el.getAttribute('data-dom') || null });
         break;
       case 'obj-voir-finis':
         setState({ objVoirFinis: !state.objVoirFinis });

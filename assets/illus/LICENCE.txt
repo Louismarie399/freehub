@@ -1,0 +1,8 @@
+Illustrations : Open Doodles (https://www.opendoodles.com/) par Pablo Stanley.
+Licence CC0 1.0 — domaine public. Usage commercial et personnel libre,
+aucune attribution requise. Ce fichier est conservé pour mémoire de la source.
+
+Les fichiers ont été recolorisés aux couleurs de FreeHub :
+  noir  #000000 -> #0f1b33 (encre)
+  rose  #FF788F -> #2f6bff (bleu FreeHub)
+et allégés (commentaires et métadonnées d'export retirés).
