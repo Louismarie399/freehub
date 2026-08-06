@@ -34,6 +34,40 @@ PHP);
 }
 putenv('FH_DATA_DIR=' . $devdata);
 
+// L'environnement local doit être une copie conforme de la production : sans
+// compte admin ni code d'accès, l'onglet « Dashboard admin » et l'inscription
+// restent invisibles en local, et on ne peut pas tester ce qui est en ligne.
+// Cet amorçage ne touche QUE ./devdata/ — jamais la base de production, qui
+// vit hors du dépôt sur le serveur.
+(function () use ($devdata) {
+    $temoin = $devdata . '/.amorce';
+    if (is_file($temoin)) return;
+    require_once __DIR__ . '/api/bootstrap.php';
+    $pdo = db();
+
+    $email = 'louismarie54000@gmail.com';
+    $mdp   = 'devlocal';                       // local uniquement, jamais en ligne
+    $st = $pdo->prepare('SELECT id FROM users WHERE email = ?');
+    $st->execute([$email]);
+    if (!$st->fetch()) {
+        $sel = sel_aleatoire();
+        $pdo->prepare(
+            "INSERT INTO users(email, pw_hash, pw_salt, created, prenom, nom, is_admin, beta,
+                               invite_code, google_sub) VALUES (?,?,?,?,?,?,1,1,'','')")
+            ->execute([$email, hash_pw($mdp, $sel), $sel, maintenant(), 'Louis', '']);
+    }
+    // Code d'accès alpha, identique à celui de la production.
+    $st = $pdo->prepare('SELECT 1 FROM invite_codes WHERE code = ?');
+    $st->execute(['ALPHA-2026']);
+    if (!$st->fetch()) {
+        $pdo->prepare('INSERT INTO invite_codes(code, note, max_uses, uses, actif, created)
+                       VALUES (?,?,0,0,1,?)')
+            ->execute(['ALPHA-2026', 'Amorçage local', maintenant()]);
+    }
+    file_put_contents($temoin, "amorcé\n");
+    error_log("[FreeHub dev] Compte admin local : $email / $mdp — code d'accès ALPHA-2026");
+})();
+
 $chemin = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 
 if (str_starts_with($chemin, '/api/') || $chemin === '/api') {

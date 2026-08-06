@@ -118,7 +118,7 @@
   /* Illustration de la carte : en filigrane dans le coin bas droit. Elle habille
      sans jamais passer devant le texte. */
   .tui-illu{position:absolute;right:-10px;bottom:-6px;width:96px;height:auto;
-    opacity:.09;pointer-events:none;user-select:none;
+    opacity:.09;pointer-events:none;user-select:none;-webkit-user-drag:none;
     transition:opacity .22s var(--ease),transform .22s var(--ease)}
   .tui:hover .tui-illu{opacity:.16;transform:translateY(-3px) scale(1.04)}
   .tui.fait .tui-illu,.tui.done .tui-illu{opacity:.07}
@@ -165,12 +165,19 @@
   .zone-avant.plein{border-color:#e6ccb0;background:#faf3ea;opacity:.75}
   .zone-avant.plein .zone-h::after{content:" · c’est complet";color:#c2410c;font-weight:800}
   .zone-avant.plein.survol{background:#faf3ea;box-shadow:0 0 0 2px #e6ccb0 inset}
-  .tui-slot{display:flex;min-width:0;transition:transform .16s var(--ease)}
+  .tui-slot{position:relative;display:flex;min-width:0;cursor:grab;
+    transition:transform .16s var(--ease)}
   .tui-slot > .tui{width:100%}
+  .tui-slot:active{cursor:grabbing}
+  /* Poignée : sans elle, rien n'indique qu'une carte peut se déplacer. */
+  .tui-grip{position:absolute;top:9px;right:9px;z-index:3;display:grid;
+    grid-template-columns:repeat(2,3px);gap:3px;padding:5px;border-radius:7px;
+    opacity:0;transition:opacity .18s var(--ease),background .18s var(--ease)}
+  .tui-grip span{width:3px;height:3px;border-radius:50%;background:#a9b3c6}
+  .tui-slot:hover .tui-grip{opacity:1;background:rgba(15,27,51,.05)}
   /* Repère d'insertion : la carte visée s'écarte pour montrer la place libre. */
   .tui-slot.avant-ici{transform:translateX(9px)}
-  .tui[draggable="true"]{cursor:grab}
-  .tui.drag{opacity:.35;cursor:grabbing;transform:scale(.98)}
+  .tui-slot.drag{opacity:.35;transform:scale(.98)}
   .zone-avant .tui{border-color:#f0d3a0}
 
   /* Pop-up des objectifs bouclés : verte de bout en bout, comme une étagère */
@@ -1128,68 +1135,88 @@
   .onb-dots span.on{background:var(--blue);width:20px;border-radius:4px}
 
   /* ---------- Calendrier ---------- */
-  /* ---------- Calendrier ---------- */
-  /* Bandeau : le compte à rebours passe devant tout le reste. C'est la seule
-     chose qu'on veut lire de loin. */
-  .cal-hero{position:relative;overflow:hidden;border-radius:20px;padding:22px 26px;
-    margin-bottom:16px;color:#fff;display:flex;align-items:center;gap:22px;
-    background:linear-gradient(120deg,color-mix(in srgb,var(--c) 82%,#0f1b33) 0%,
-      color-mix(in srgb,var(--c) 96%,#000) 55%,var(--c) 130%)}
-  .cal-hero::after{content:"";position:absolute;right:-50px;top:-70px;width:220px;height:220px;
-    border-radius:50%;background:rgba(255,255,255,.07)}
+  /* Le calendrier a sa propre couleur, une framboise absente du reste du
+     dashboard : le bandeau ne prend plus la teinte du domaine de l'échéance,
+     qui donnait un brun peu engageant. */
+  .cal-hero{--cal:#db2777;position:relative;overflow:hidden;border-radius:20px;
+    padding:22px 26px 18px;margin-bottom:16px;color:#fff;
+    background:linear-gradient(125deg,#8c1d4b 0%,var(--cal) 62%,#f0568f 130%)}
+  .cal-hero::after{content:"";position:absolute;right:-60px;top:-80px;width:240px;height:240px;
+    border-radius:50%;background:rgba(255,255,255,.08)}
   .cal-hero > *{position:relative;z-index:1}
-  .cal-hero-compte{flex:none;min-width:104px;padding:14px 18px;border-radius:18px;
-    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.22);
-    display:flex;flex-direction:column;align-items:center;line-height:1}
-  .cal-hero-nb{font-size:42px;font-weight:900;letter-spacing:-.04em}
-  .cal-hero-u{font-size:12.5px;font-weight:700;color:rgba(255,255,255,.75);margin-top:5px}
+  .cal-hero-haut{display:flex;align-items:center;gap:22px}
   .cal-hero-txt{flex:1;min-width:0}
-  .cal-hero-l{font-size:12px;font-weight:800;color:rgba(255,255,255,.68)}
-  .cal-hero-t{font-size:23px;font-weight:800;letter-spacing:-.016em;margin-top:3px;line-height:1.15}
-  .cal-hero-d{font-size:13.5px;font-weight:600;color:rgba(255,255,255,.8);margin-top:5px}
-  .cal-hero-cta{flex:none;background:#fff;color:var(--c);border:none;border-radius:12px;
+  .cal-hero-l{font-size:12px;font-weight:800;color:rgba(255,255,255,.66)}
+  .cal-hero-t{font-size:26px;font-weight:800;letter-spacing:-.018em;line-height:1.2;margin-top:3px}
+  .cal-hero-t strong{font-weight:900;border-bottom:3px solid rgba(255,255,255,.45)}
+  .cal-hero-d{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;
+    color:rgba(255,255,255,.78);margin-top:7px}
+  .cal-hero-pt{width:8px;height:8px;border-radius:50%;flex:none;
+    box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+  .cal-hero-cta{flex:none;background:#fff;color:#a41a55;border:none;border-radius:12px;
     padding:12px 18px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;
     transition:transform .18s var(--ease)}
   .cal-hero-cta:hover{transform:translateY(-2px)}
+  /* Les années, en pastilles dans le bandeau */
+  .cal-annees{display:flex;gap:7px;flex-wrap:wrap;margin-top:18px;
+    padding-top:15px;border-top:1px solid rgba(255,255,255,.18)}
+  .cal-an{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.13);
+    border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 12px;
+    font-family:inherit;font-size:13px;font-weight:700;color:rgba(255,255,255,.8);
+    cursor:pointer;transition:.18s var(--ease)}
+  .cal-an:hover{background:rgba(255,255,255,.24);color:#fff}
+  .cal-an.on{background:#fff;border-color:transparent;color:#a41a55;font-weight:800}
+  .cal-an-n{padding:0 6px;border-radius:999px;background:rgba(255,255,255,.22);
+    font-size:11px;font-weight:800}
+  .cal-an.on .cal-an-n{background:rgba(164,26,85,.12);color:#a41a55}
 
-  /* Barre de navigation : période à gauche, sélecteur de vue à droite */
+  /* Barre : vue, puis période quand elle a du sens */
   .cal-barre{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
   .cal-nav{display:flex;align-items:center;gap:4px}
   .cal-fl{width:32px;height:32px;border-radius:10px;border:1px solid var(--border);background:#fff;
     color:var(--muted2);font-size:17px;line-height:1;cursor:pointer;font-family:inherit;
     transition:.18s var(--ease)}
-  .cal-fl:hover{border-color:var(--blue);color:var(--blue)}
-  .cal-periode{min-width:190px;text-align:center;font-size:17px;font-weight:800;
+  .cal-fl:hover{border-color:#db2777;color:#db2777}
+  .cal-periode{min-width:180px;text-align:center;font-size:16px;font-weight:800;
     letter-spacing:-.014em;color:var(--ink);text-transform:capitalize}
   .cal-vues{display:flex;gap:4px;background:#eef1f7;border-radius:11px;padding:3px}
   .cal-vue{border:none;background:none;border-radius:9px;padding:6px 14px;cursor:pointer;
     font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted2);
     transition:.18s var(--ease)}
   .cal-vue:hover{color:var(--ink)}
-  .cal-vue.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(15,27,51,.12)}
+  .cal-vue.on{background:#fff;color:#db2777;box-shadow:0 1px 3px rgba(15,27,51,.12)}
   .cal-auj{margin-left:auto;background:none;border:1px solid var(--border);border-radius:10px;
     padding:7px 14px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted2);
     cursor:pointer;transition:.18s var(--ease)}
-  .cal-auj:hover{border-color:var(--blue);color:var(--blue)}
+  .cal-auj:hover{border-color:#db2777;color:#db2777}
 
-  /* Vue année : douze blocs, une bulle par échéance */
-  .cal-annee{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-  .cal-m{position:relative;display:flex;flex-direction:column;gap:8px;min-height:118px;
-    text-align:left;font-family:inherit;cursor:pointer;padding:14px 16px;border-radius:16px;
-    background:#fff;border:1px solid var(--border);transition:.2s var(--ease)}
-  .cal-m:hover{border-color:var(--blue);transform:translateY(-2px);
+  /* Vue année : douze vrais mini-calendriers */
+  .cal-annee{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px}
+  .cal-m{display:flex;flex-direction:column;gap:9px;text-align:left;font-family:inherit;
+    cursor:pointer;padding:13px 15px 15px;border-radius:16px;background:#fff;
+    border:1px solid var(--border);transition:.2s var(--ease)}
+  .cal-m:hover{border-color:#db2777;transform:translateY(-2px);
     box-shadow:0 14px 30px -20px rgba(15,27,51,.4)}
-  .cal-m.present{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset}
-  .cal-m-n{font-size:14.5px;font-weight:800;color:var(--ink);text-transform:capitalize}
+  .cal-m.present{border-color:#db2777;box-shadow:0 0 0 1px #db2777 inset}
+  .cal-m-h{display:flex;align-items:center;gap:8px}
+  .cal-m-n{font-size:14px;font-weight:800;color:var(--ink);text-transform:capitalize}
   .cal-m:not(.actif) .cal-m-n{color:var(--muted2)}
-  .cal-m-pts{display:flex;gap:5px;flex-wrap:wrap}
-  .cal-pt{width:9px;height:9px;border-radius:50%;flex:none}
-  .cal-m-l{display:flex;flex-direction:column;gap:4px}
-  .cal-m-e{position:relative;padding-left:11px;font-size:12.5px;font-weight:600;
+  .cal-m-nb{margin-left:auto;min-width:19px;height:19px;padding:0 5px;border-radius:999px;
+    background:#fce7f3;color:#a41a55;display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:800}
+  .cal-m-jn,.cal-m-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .cal-m-jn i{font-size:9px;font-weight:800;color:#b7c0cf;text-align:center;font-style:normal}
+  .cal-m-g i{aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+    border-radius:5px;font-size:9.5px;font-weight:600;color:var(--muted2);font-style:normal}
+  .cal-m-g i.vide{visibility:hidden}
+  .cal-m-g i.pt{font-weight:800}
+  .cal-m-g i.etale{font-weight:700}
+  .cal-m-g i.auj{box-shadow:0 0 0 1.5px #0f1b33 inset;color:var(--ink);font-weight:800}
+  .cal-m-l{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+  .cal-m-e{position:relative;padding-left:11px;font-size:12px;font-weight:600;
     color:var(--muted2);line-height:1.35}
-  .cal-m-e::before{content:"";position:absolute;left:0;top:6px;width:5px;height:5px;
+  .cal-m-e::before{content:"";position:absolute;left:0;top:5px;width:5px;height:5px;
     border-radius:50%;background:var(--c)}
-  .cal-m-vide{font-size:12.5px;color:#b7c0cf;font-weight:500}
 
   /* Vue mois : la grille de sept colonnes */
   .cal-grille{background:#fff;border:1px solid var(--border);border-radius:18px;overflow:hidden}
@@ -1203,30 +1230,31 @@
   .cal-c.hors{background:#fafbfd}
   .cal-c-n{font-size:12.5px;font-weight:700;color:var(--muted2)}
   .cal-c.plein .cal-c-n{color:var(--ink);font-weight:800}
-  .cal-c.auj .cal-c-n{width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;
+  .cal-c.auj .cal-c-n{width:24px;height:24px;border-radius:50%;background:#db2777;color:#fff;
     display:flex;align-items:center;justify-content:center}
   .cal-c-e{text-align:left;font-family:inherit;cursor:pointer;border:none;border-left:3px solid var(--c);
     background:var(--s);color:var(--ink);border-radius:7px;padding:5px 7px;
     font-size:11.5px;font-weight:700;line-height:1.25;transition:.18s var(--ease)}
   .cal-c-e:hover{background:var(--c);color:#fff}
 
-  /* Échéances sans date précise, posées au-dessus de la grille */
-  .cal-periodes{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
-  .cal-per{display:flex;flex-direction:column;gap:2px;text-align:left;font-family:inherit;
-    cursor:pointer;border:1px solid var(--border);border-left:4px solid var(--c);
-    background:var(--s);border-radius:12px;padding:10px 14px;transition:.18s var(--ease)}
-  .cal-per:hover{transform:translateY(-2px)}
-  .cal-per-t{font-size:13.5px;font-weight:800;color:var(--ink)}
-  .cal-per-d{font-size:12px;font-weight:600;color:var(--muted2)}
+  /* Période en cours : un simple rappel, la teinte est déjà sur les jours */
+  .cal-bande{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:12px}
+  .cal-bande-e{display:inline-flex;align-items:center;gap:8px;text-align:left;font-family:inherit;
+    cursor:pointer;border:1px solid var(--border);background:var(--s);border-radius:11px;
+    padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--ink);
+    transition:.18s var(--ease)}
+  .cal-bande-e:hover{border-color:var(--c)}
+  .cal-bande-p{width:9px;height:9px;border-radius:3px;background:var(--c);flex:none}
+  .cal-bande-d{font-weight:600;color:var(--muted2)}
 
   /* Vue semaine */
   .cal-semaine{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
   .cal-sj{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;
     min-height:190px;display:flex;flex-direction:column}
-  .cal-sj.auj{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset}
+  .cal-sj.auj{border-color:#db2777;box-shadow:0 0 0 1px #db2777 inset}
   .cal-sj-h{display:flex;flex-direction:column;align-items:center;gap:1px;padding:10px 0;
     background:#f6f8fc;border-bottom:1px solid var(--border)}
-  .cal-sj.auj .cal-sj-h{background:var(--soft)}
+  .cal-sj.auj .cal-sj-h{background:#fce7f3}
   .cal-sj-n{font-size:11.5px;font-weight:800;color:var(--muted2)}
   .cal-sj-d{font-size:17px;font-weight:800;color:var(--ink);letter-spacing:-.018em}
   .cal-sj-b{flex:1;display:flex;flex-direction:column;gap:6px;padding:9px}

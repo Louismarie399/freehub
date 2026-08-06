@@ -14,3 +14,8 @@ deployment:
   tasks:
     - /usr/bin/rsync -a --delete --chmod=D755,F644 --exclude-from=/home/rtym5189/repositories/freehub/.deployignore /home/rtym5189/repositories/freehub/ /home/rtym5189/free-hub.fr/
     - /bin/chmod 755 /home/rtym5189/free-hub.fr
+    # Empreinte du commit réellement déployé : c'est ce que le contrôle de santé
+    # compare, pour qu'un déploiement qui n'a pas eu lieu ne puisse pas passer
+    # pour un succès (l'ancien contrôle se contentait de /api/ping, qui répond
+    # « ok » même quand le code n'a pas bougé d'un octet).
+    - /bin/sh -c 'cd /home/rtym5189/repositories/freehub && /usr/bin/git rev-parse HEAD > /home/rtym5189/free-hub.fr/version.txt && /bin/chmod 644 /home/rtym5189/free-hub.fr/version.txt'

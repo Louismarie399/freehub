@@ -450,7 +450,7 @@
       suite:['cfe','vfl'],
       desc:'Reporter ton CA au bon endroit, sans erreur',
       pertinent:estMicro,
-      echeance:{ periode:'avril → juin', moisDebut:4, quoi:'Déclaration de revenus' },
+      echeance:{ periode:'avril → juin', moisDebut:4, moisFin:6, quoi:'Déclaration de revenus' },
       pourquoi:'Bien déclarer évite les erreurs, et parfois de payer trop d’impôt',
       steps:[
         {t:'Choisir ton mode d’imposition', h:'Versement libératoire ou barème progressif', sim:'vl', duree:'10 min', illu:'balance'},
@@ -462,7 +462,7 @@
       suite:['piloter','revenu-regulier'],
       desc:'Résultat, IS, rémunération, dividendes',
       pertinent:estSociete,
-      echeance:{ periode:'avril → juin', moisDebut:4, quoi:'Déclaration de revenus' },
+      echeance:{ periode:'avril → juin', moisDebut:4, moisFin:6, quoi:'Déclaration de revenus' },
       pourquoi:'La déclaration d’une société a ses règles : on les clarifie une par une',
       steps:[
         {t:'Établir ton résultat', h:'Produits moins charges de l’exercice', duree:'1 h', illu:'courbe'},
@@ -902,7 +902,7 @@
     objectifs:  ['Mes objectifs',   '🎯', '#2f6bff'],
     simulateur: ['Simulateur',      '📊', '#7c3aed'],
     lexique:    ['Lexique',         '📖', '#0891b2'],
-    calendrier: ['Calendrier',      '🗓', '#ea580c'],
+    calendrier: ['Calendrier',      '🗓', '#db2777'],
     partenaires:['Nos partenaires', '🤝', '#16a34a'],
     profil:     ['Mon profil',      '👤', '#475569'],
     admin:      ['Dashboard admin', '🛠', '#be123c'],
@@ -2675,7 +2675,7 @@
           : '<span class="tui-x" data-action="obj-remove" data-id="'+id+'" title="Retirer de mes objectifs">×</span>');
 
     return '<button class="tui '+etat+(dispo?' dispo':'')+(pertinent&&dispo?' reco':'')+'"'
-      + (dispo ? '' : ' draggable="true"')
+      + ' draggable="false"'
       + ' style="--c:'+d.c+';--s:'+d.soft+'" data-action="'+(dispo?'obj-add':'view')+'" data-id="'+id+'">'
       + '<span class="tui-h">'
         + '<span class="tui-ico">'+d.ico+'</span>'
@@ -2686,7 +2686,8 @@
       + '</span>'
       + '<span class="tui-t">'+esc(o.title)+'</span>'
       + '<span class="tui-d">'+esc(dispo ? (o.pourquoi || o.desc) : sous)+'</span>'
-      + '<img class="tui-illu" src="'+illusObjectif(id)+'" alt="" loading="lazy" decoding="async">'
+      + '<img class="tui-illu" src="'+illusObjectif(id)+'" alt="" draggable="false"'
+        + ' loading="lazy" decoding="async">'
       + liensTuileHtml(o)
       + '<span class="tui-f">'
         + (dispo ? '<span class="tui-nb">'+o.steps.length+' étapes</span>' : pointsEtapes(id, d.c))
@@ -2864,7 +2865,10 @@
     var reste = actifs.filter(function(id){ return enAvant.indexOf(id) < 0; });
     var grille = function(ids, zone){
       return ids.map(function(id){
-        return '<div class="tui-slot" data-zone="'+zone+'" data-id="'+id+'">'
+        return '<div class="tui-slot" draggable="true" data-zone="'+zone+'" data-id="'+id+'">'
+          + '<span class="tui-grip" aria-hidden="true">'
+            + '<span></span><span></span><span></span>'
+            + '<span></span><span></span><span></span></span>'
           + objectifTuileHtml(id, false)+'</div>';
       }).join('');
     };
@@ -6959,8 +6963,10 @@
       var e = o.echeance, dd = dom(o);
       var pris = state.added.indexOf(o.id) >= 0;
       if(e.periode){
+        var md = (e.moisDebut || 1) - 1;
         return { objId:o.id, quoi:e.quoi, dom:dd, periode:e.periode,
-                 mois:(e.moisDebut || 1) - 1, jour:null, date:null, jours:null, pris:pris };
+                 mois:md, moisFin:(e.moisFin ? e.moisFin - 1 : md),
+                 jour:null, date:null, jours:null, pris:pris };
       }
       var d = new Date(annee, e.mois - 1, e.jour);
       return { objId:o.id, quoi:e.quoi, dom:dd, periode:null,
@@ -6983,23 +6989,51 @@
     return liste[0] || null;
   }
 
-  // --- Vue année : douze mois, chacun avec ses bulles colorées ---------------
+  // Un événement concerne-t-il ce mois ? Les périodes s'étalent sur plusieurs.
+  function couvreMois(e, m){
+    return e.periode ? (m >= e.mois && m <= e.moisFin) : e.mois === m;
+  }
+
+  // --- Vue année : douze mini-calendriers ------------------------------------
   function calAnneeHtml(evts, annee){
     var now = new Date();
     var cases = [];
     for(var m = 0; m < 12; m++){
-      var duMois = evts.filter(function(e){ return e.mois === m; });
+      var duMois = evts.filter(function(e){ return couvreMois(e, m); });
       var courant = annee === now.getFullYear() && m === now.getMonth();
+      var premier = new Date(annee, m, 1);
+      var decalage = (premier.getDay() + 6) % 7;
+      var nbJours = new Date(annee, m + 1, 0).getDate();
+
+      // Une vraie petite grille de jours : c'est ce qui fait « calendrier ».
+      var jours = '';
+      for(var v = 0; v < decalage; v++) jours += '<i class="mj vide"></i>';
+      for(var d = 1; d <= nbJours; d++){
+        var dessus = duMois.filter(function(e){
+          if(e.periode) return true;
+          return e.jour === d;
+        });
+        var exact = dessus.filter(function(e){ return !e.periode; })[0];
+        var etale = !exact && dessus.length ? dessus[0] : null;
+        var auj = annee === now.getFullYear() && m === now.getMonth() && d === now.getDate();
+        var st = exact ? ' style="background:'+exact.dom.c+';color:#fff"'
+               : (etale ? ' style="background:'+etale.dom.soft+';color:'+etale.dom.c+'"' : '');
+        jours += '<i class="mj'+(exact ? ' pt' : (etale ? ' etale' : ''))
+          + (auj ? ' auj' : '')+'"'+st+'>'+d+'</i>';
+      }
+
       cases.push('<button class="cal-m'+(duMois.length ? ' actif' : '')
         + (courant ? ' present' : '')+'" data-action="cal-mois" data-m="'+m+'">'
-        + '<span class="cal-m-n">'+esc(MOIS[m])+'</span>'
+        + '<span class="cal-m-h"><span class="cal-m-n">'+esc(MOIS[m])+'</span>'
+          + (duMois.length ? '<span class="cal-m-nb">'+duMois.length+'</span>' : '')+'</span>'
+        + '<span class="cal-m-jn">'+JOURS_COURTS.map(function(j){
+            return '<i>'+j+'</i>'; }).join('')+'</span>'
+        + '<span class="cal-m-g">'+jours+'</span>'
         + (duMois.length
-            ? '<span class="cal-m-pts">'+duMois.map(function(e){
-                return '<span class="cal-pt" style="background:'+e.dom.c+'"></span>'; }).join('')+'</span>'
-              + '<span class="cal-m-l">'+duMois.map(function(e){
-                  return '<span class="cal-m-e" style="--c:'+e.dom.c+'">'+esc(e.quoi)+'</span>';
-                }).join('')+'</span>'
-            : '<span class="cal-m-vide">Rien de prévu</span>')
+            ? '<span class="cal-m-l">'+duMois.map(function(e){
+                return '<span class="cal-m-e" style="--c:'+e.dom.c+'">'+esc(e.quoi)+'</span>';
+              }).join('')+'</span>'
+            : '')
       + '</button>');
     }
     return '<div class="cal-annee">'+cases.join('')+'</div>';
@@ -7012,7 +7046,7 @@
     // getDay() renvoie 0 pour dimanche : on décale pour démarrer le lundi.
     var decalage = (premier.getDay() + 6) % 7;
     var nbJours = new Date(annee, mois + 1, 0).getDate();
-    var duMois = evts.filter(function(e){ return e.mois === mois; });
+    var duMois = evts.filter(function(e){ return couvreMois(e, mois); });
     var periodes = duMois.filter(function(e){ return e.periode; });
 
     var entete = JOURS_COURTS.map(function(j){
@@ -7021,9 +7055,14 @@
     var cellules = '';
     for(var i = 0; i < decalage; i++) cellules += '<div class="cal-c hors"></div>';
     for(var d = 1; d <= nbJours; d++){
-      var duJour = duMois.filter(function(e){ return e.jour === d; });
+      var duJour = duMois.filter(function(e){ return !e.periode && e.jour === d; });
       var auj = annee === now.getFullYear() && mois === now.getMonth() && d === now.getDate();
-      cellules += '<div class="cal-c'+(duJour.length ? ' plein' : '')+(auj ? ' auj' : '')+'">'
+      // Les périodes teintent tous les jours qu'elles couvrent, au lieu d'être
+      // reléguées dans un encart au-dessus de la grille.
+      var fond = periodes.length
+        ? ' style="background:'+periodes[0].dom.soft+'"' : '';
+      cellules += '<div class="cal-c'+(duJour.length ? ' plein' : '')
+        + (periodes.length ? ' etale' : '')+(auj ? ' auj' : '')+'"'+fond+'>'
         + '<span class="cal-c-n">'+d+'</span>'
         + duJour.map(function(e){
             return '<button class="cal-c-e" style="--c:'+e.dom.c+';--s:'+e.dom.soft+'"'
@@ -7034,12 +7073,14 @@
     var reste = (7 - ((decalage + nbJours) % 7)) % 7;
     for(var k = 0; k < reste; k++) cellules += '<div class="cal-c hors"></div>';
 
+    // Bandeau discret : il nomme la période qui teinte le mois, sans la sortir
+    // de la grille.
     return (periodes.length
-        ? '<div class="cal-periodes">'+periodes.map(function(e){
-            return '<button class="cal-per" style="--c:'+e.dom.c+';--s:'+e.dom.soft+'"'
+        ? '<div class="cal-bande">'+periodes.map(function(e){
+            return '<button class="cal-bande-e" style="--c:'+e.dom.c+';--s:'+e.dom.soft+'"'
               + ' data-action="view" data-id="'+e.objId+'">'
-              + '<span class="cal-per-t">'+esc(e.quoi)+'</span>'
-              + '<span class="cal-per-d">sur toute la période '+esc(e.periode)+'</span>'
+              + '<span class="cal-bande-p"></span>'+esc(e.quoi)
+              + '<span class="cal-bande-d">tout '+esc(e.periode)+'</span>'
             + '</button>'; }).join('')+'</div>'
         : '')
       + '<div class="cal-grille"><div class="cal-jns">'+entete+'</div>'
@@ -7053,9 +7094,12 @@
     for(var i = 0; i < 7; i++){
       var d = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate() + i);
       var duJour = evts.filter(function(e){
-        return e.jour === d.getDate() && e.mois === d.getMonth(); });
+        return !e.periode && e.jour === d.getDate() && e.mois === d.getMonth(); });
+      var per = evts.filter(function(e){ return couvreMois(e, d.getMonth()) && e.periode; });
       var auj = d.toDateString() === now.toDateString();
-      cols += '<div class="cal-sj'+(auj ? ' auj' : '')+(duJour.length ? ' plein' : '')+'">'
+      cols += '<div class="cal-sj'+(auj ? ' auj' : '')+(duJour.length ? ' plein' : '')
+        + (per.length ? ' etale' : '')+'"'
+        + (per.length ? ' style="background:'+per[0].dom.soft+'"' : '')+'>'
         + '<div class="cal-sj-h"><span class="cal-sj-n">'+JOURS_COURTS[i]+'</span>'
           + '<span class="cal-sj-d">'+d.getDate()+'</span></div>'
         + '<div class="cal-sj-b">'
@@ -7074,27 +7118,43 @@
     var evts = evenementsAnnee(c.annee);
     var prochaine = prochaineEcheanceCal();
 
-    // --- Bandeau : le compte à rebours est l'information principale ---
-    var hero = '';
+    // --- Bandeau : on lit la phrase, pas un nombre isolé ---
+    // Les années se choisissent ici, en pastilles, plutôt que dans une barre à
+    // flèches où elles n'étaient ni visibles ni jolies.
+    var annees = [];
+    for(var a = now.getFullYear() - 1; a <= now.getFullYear() + 3; a++) annees.push(a);
+    var chipsAnnees = annees.map(function(an){
+      var nb = evenementsAnnee(an).length;
+      return '<button class="cal-an'+(an === c.annee ? ' on' : '')+'"'
+        + ' data-action="cal-annee" data-a="'+an+'">'+an
+        + (nb ? '<span class="cal-an-n">'+nb+'</span>' : '')+'</button>';
+    }).join('');
+
+    var hero = '<div class="cal-hero">';
     if(prochaine){
       var j = prochaine.jours;
-      var grand = j <= 0 ? 'Auj.' : String(j);
-      var petit = j <= 0 ? '' : (j > 1 ? 'jours' : 'jour');
-      hero = '<div class="cal-hero" style="--c:'+prochaine.dom.c+'">'
-        + '<div class="cal-hero-compte">'
-          + '<span class="cal-hero-nb">'+grand+'</span>'
-          + (petit ? '<span class="cal-hero-u">'+petit+'</span>' : '')
-        + '</div>'
+      var quand = j <= 0 ? 'aujourd’hui'
+        : (j === 1 ? 'demain' : 'dans <strong>'+j+' jours</strong>');
+      hero += '<div class="cal-hero-haut">'
         + '<div class="cal-hero-txt">'
           + '<div class="cal-hero-l">Prochaine échéance</div>'
-          + '<div class="cal-hero-t">'+esc(prochaine.quoi)+'</div>'
-          + '<div class="cal-hero-d">'+prochaine.date.toLocaleDateString('fr-FR',
-              { weekday:'long', day:'numeric', month:'long', year:'numeric' })+'</div>'
+          + '<div class="cal-hero-t">'+esc(prochaine.quoi)+', '+quand+'</div>'
+          + '<div class="cal-hero-d">'
+            + '<span class="cal-hero-pt" style="background:'+prochaine.dom.c+'"></span>'
+            + prochaine.date.toLocaleDateString('fr-FR',
+                { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+            + ' · '+esc(prochaine.dom.l)+'</div>'
         + '</div>'
         + '<button class="cal-hero-cta" data-action="view" data-id="'+prochaine.objId+'">'
           + 'Voir l’objectif →</button>'
       + '</div>';
+    } else {
+      hero += '<div class="cal-hero-haut"><div class="cal-hero-txt">'
+        + '<div class="cal-hero-t">Aucune échéance en vue</div>'
+        + '<div class="cal-hero-d">Elles apparaîtront selon ton statut '
+          + 'et les objectifs que tu suis</div></div></div>';
     }
+    hero += '<div class="cal-annees">'+chipsAnnees+'</div></div>';
 
     // --- Barre de navigation : période, vue, retour à aujourd'hui ---
     var libelle = c.vue === 'annee' ? String(c.annee)
@@ -7120,12 +7180,13 @@
           })());
 
     var barre = '<div class="cal-barre">'
-      + '<div class="cal-nav">'
-        + '<button class="cal-fl" data-action="cal-prec" aria-label="Précédent">‹</button>'
-        + '<span class="cal-periode">'+esc(libelle)+'</span>'
-        + '<button class="cal-fl" data-action="cal-suiv" aria-label="Suivant">›</button>'
-      + '</div>'
       + '<div class="cal-vues">'+vues+'</div>'
+      + (c.vue === 'annee' ? ''
+          : '<div class="cal-nav">'
+            + '<button class="cal-fl" data-action="cal-prec" aria-label="Précédent">‹</button>'
+            + '<span class="cal-periode">'+esc(libelle)+'</span>'
+            + '<button class="cal-fl" data-action="cal-suiv" aria-label="Suivant">›</button>'
+          + '</div>')
       + (surAujourdhui ? '' : '<button class="cal-auj" data-action="cal-auj">Aujourd’hui</button>')
     + '</div>';
 
@@ -7722,7 +7783,7 @@
       }
     }
     function reposer(){
-      var d = app.querySelector('.tui.drag');
+      var d = app.querySelector('.tui-slot.drag');
       if(d) d.classList.remove('drag');
       marquer(null);
       var z = app.querySelector('.zone-avant');
@@ -7732,16 +7793,17 @@
     }
 
     app.addEventListener('dragstart', function(e){
-      var tui = e.target.closest && e.target.closest('.tui[draggable="true"]');
-      if(!tui) return;
-      state.drag = tui.getAttribute('data-id');
+      var slot = e.target.closest && e.target.closest('.tui-slot[draggable="true"]');
+      if(!slot) return;
+      var tui = slot.querySelector('.tui');
+      state.drag = slot.getAttribute('data-id');
       e.dataTransfer.effectAllowed = 'move';
       // Firefox exige une donnée pour démarrer le glissement.
       try { e.dataTransfer.setData('text/plain', state.drag); } catch(err){}
       // La classe est posée au cycle suivant, sinon le navigateur capture
       // l'aperçu de la carte déjà estompée. setTimeout plutôt que
       // requestAnimationFrame : rAF est suspendu quand l'onglet n'est pas visible.
-      var cible = tui;
+      var cible = slot;
       setTimeout(function(){ if(state.drag) cible.classList.add('drag'); }, 0);
       // La zone d'accueil apparaît le temps du glissement, sans re-render.
       var z = app.querySelector('.zone-avant');
@@ -7909,6 +7971,10 @@
         break;
       case 'cal-vue':
         setState({ cal: Object.assign({}, state.cal, { vue: el.getAttribute('data-v') }) });
+        break;
+      case 'cal-annee':
+        setState({ cal: Object.assign({}, state.cal,
+          { annee: parseInt(el.getAttribute('data-a'), 10) }) });
         break;
       case 'cal-mois':
         // Depuis la vue année, cliquer un mois l'ouvre en grand.

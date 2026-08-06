@@ -77,13 +77,19 @@ jobs:
       - name: Contrôle de santé
         if: steps.cfg.outputs.pret == 'oui'
         run: |
-          # Le rsync serveur est quasi instantané, mais on laisse quelques essais.
+          # On vérifie que le commit EN LIGNE est bien celui qu'on vient de
+          # pousser. Se contenter de /api/ping ne prouvait rien : l'API répond
+          # « ok » même quand le déploiement n'a pas eu lieu.
+          ATTENDU="${GITHUB_SHA}"
           for i in $(seq 1 12); do
-            if curl -s --max-time 15 "https://free-hub.fr/api/ping" | grep -q '"ok":true'; then
-              echo "✅ API en ligne — déploiement vérifié."
-              exit 0
+            EN_LIGNE=$(curl -s --max-time 15 "https://free-hub.fr/version.txt" | tr -d '[:space:]')
+            if [ "$EN_LIGNE" = "$ATTENDU" ]; then
+              curl -s --max-time 15 "https://free-hub.fr/api/ping" | grep -q '"ok":true' \
+                && { echo "✅ Commit $ATTENDU en ligne, API OK."; exit 0; }
+              echo "::error::Code déployé mais l'API ne répond pas."
+              exit 1
             fi
             sleep 5
           done
-          echo "::error::L'API ne répond pas après le déploiement."
+          echo "::error::Le site sert encore « ${EN_LIGNE:-rien} » au lieu de $ATTENDU."
           exit 1
