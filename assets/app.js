@@ -600,6 +600,17 @@
         {t:'Simuler l’intérêt du versement', h:'Compare avec l’imposition classique', sim:'vl', duree:'10 min', illu:'courbe'},
         {t:'Faire la demande', h:'Avant le 30 septembre pour l’année suivante', duree:'15 min', illu:'enveloppe'},
       ]},
+    { id:'mes-papiers', dom:'administratif', title:'Retrouver mes papiers officiels',
+      suite:['compte-pro','facture-elec'],
+      desc:'Kbis, attestation de vigilance, avis de situation : où les trouver',
+      pourquoi:'Un client ou une banque te les demandera : autant savoir où ils sont',
+      steps:[
+        {t:'Identifier le bon document', h:'Chacun prouve une chose différente', duree:'3 min', illu:'loupe'},
+        {t:'Récupérer ton avis de situation SIRENE', h:'La preuve que ton entreprise existe', duree:'2 min', illu:'dossier'},
+        {t:'Télécharger ton extrait d’immatriculation', h:'Le « Kbis », pour les sociétés', duree:'5 min', illu:'batiment'},
+        {t:'Obtenir ton attestation de vigilance', h:'Celle que tes clients réclament', duree:'5 min', illu:'bouclier'},
+        {t:'Les ranger une bonne fois', h:'Pour ne plus jamais les rechercher', duree:'5 min', illu:'tampon'},
+      ]},
     { id:'compte-pro', dom:'administratif', title:'Ouvrir un compte pro',
       suite:['facture-elec','piloter'],
       desc:'Séparer perso et pro proprement',
@@ -848,6 +859,31 @@
         astuce:'Note la date limite dans ton agenda tout de suite : une option ratée ne se rattrape que l’année suivante',
         faire:['Fais ta demande auprès de l’Urssaf, en respectant la date limite annuelle'],
         liens:[URSSAF] },
+    ],
+    'mes-papiers': [
+      { intro:'Trois documents reviennent sans arrêt, et on les confond tout le temps',
+        astuce:'Retiens la logique : l’avis SIRENE dit que tu existes, le Kbis dit que ta société existe, l’attestation de vigilance dit que tu paies bien tes cotisations',
+        faire:['Avis de situation SIRENE : pour tout le monde, c’est ta « carte d’identité » d’entreprise',
+               'Extrait d’immatriculation (le « Kbis ») : pour les sociétés inscrites au registre du commerce',
+               'Attestation de vigilance : celle que tes clients demandent quand tu factures beaucoup'],
+        liens:[SPUBLIC] },
+      { intro:'L’avis de situation SIRENE se télécharge en trente secondes, sans compte',
+        faire:['Va sur avis-situation-sirene.insee.fr','Entre ton SIREN ou ton SIRET, télécharge le PDF'],
+        astuce:'Il est daté du jour : regénère-le au moment de l’envoyer plutôt que d’envoyer un vieux fichier' },
+      { intro:'L’extrait d’immatriculation ne concerne que les sociétés et les commerçants',
+        faire:['Depuis 2023, il se récupère gratuitement sur le portail des formalités',
+               'En micro sans activité commerciale, tu n’en as pas : ton avis SIRENE fait foi'],
+        vigilance:['Certains sites facturent ce document alors qu’il est gratuit sur le canal officiel'],
+        liens:[GUICHET] },
+      { intro:'L’attestation de vigilance prouve que tu es à jour de tes cotisations',
+        faire:['Micro : depuis ton espace sur autoentrepreneur.urssaf.fr',
+               'Société : depuis ton espace employeur sur urssaf.fr',
+               'Elle est valable six mois, et ton client peut la vérifier en ligne'],
+        vigilance:['Elle n’est délivrée que si tu es à jour : un retard de déclaration la bloque'],
+        liens:[URSSAF] },
+      { intro:'Le vrai gain, c’est de ne plus jamais les rechercher dans l’urgence',
+        astuce:'Un dossier « Papiers officiels » dans ton cloud, et le réflexe de le mettre à jour à chaque nouvelle version',
+        faire:['Range les trois documents au même endroit','Note la date : l’attestation de vigilance se périme'] },
     ],
     'compte-pro': [
       { intro:'Un compte dédié n’est pas toujours obligatoire, mais il simplifie tout',
@@ -1170,10 +1206,48 @@
   function titrePageHtml(){
     var t = titles[state.tab];
     if(!t) return '';
+    // La pastille reprend l'icône SVG de la barre latérale quand elle existe :
+    // même trait, même famille. L'emoji ne sert que de repli.
+    var ico = NAV_ICONES[state.tab]
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" '
+        + 'stroke-linecap="round" stroke-linejoin="round">'+NAV_ICONES[state.tab]+'</svg>'
+      : t[1];
     return '<div class="ptitre" style="--c:'+t[2]+'">'
-      + '<span class="ptitre-i">'+t[1]+'</span>'
+      + '<span class="ptitre-i">'+ico+'</span>'
       + '<span class="ptitre-t">'+esc(t[0])+'</span>'
+      + titreOutilsHtml()
     + '</div>';
+  }
+
+  // À droite du titre : ce qui appartient à l'écran courant (les compteurs de
+  // l'Entraide, la modération) puis l'identité. Tout cela vivait auparavant
+  // dans le corps de la page et mangeait la hauteur du fil de discussion.
+  function titreOutilsHtml(){
+    var out = '';
+    if(state.tab === 'chat'){
+      var c = state.chat;
+      out += '<span class="ptitre-stats">'
+        + '<span class="ch-stat"><span class="ch-stat-pt"></span>'+(c.enLigne || 0)+' en ligne</span>'
+        + '<span class="ch-stat-sep">·</span>'
+        + '<span class="ch-stat">'+(c.total || 0)+' membre'+((c.total||0)>1?'s':'')+'</span>'
+      + '</span>';
+      if(c.admin){
+        out += '<button class="ch-mod" data-action="chat-moderation">Modération'
+          + (c.nbSignales ? '<span class="ch-mod-n">'+c.nbSignales+'</span>' : '')
+        + '</button>';
+      }
+    }
+    if(state.compte){
+      var p = state.profil;
+      var nom = ((p.prenom || '') + ' ' + (p.nom || '')).trim() || state.compte.email || '';
+      var ini = (p.prenom || state.compte.email || '?').trim().charAt(0).toUpperCase();
+      out += '<button class="ptitre-moi" data-action="open-profil" title="Mon profil">'
+        + (p.photo ? '<img src="'+esc(p.photo)+'" alt="">'
+                   : '<span class="ptitre-ini">'+esc(ini)+'</span>')
+        + '<span class="ptitre-nom">'+esc(nom)+'</span>'
+      + '</button>';
+    }
+    return out ? '<span class="ptitre-outils">'+out+'</span>' : '';
   }
 
   // Profil d'entreprise - centralisé, persisté dans le navigateur (localStorage),
@@ -2250,6 +2324,13 @@
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
     // Préférences de rappels : chargées à l'ouverture du profil.
     notif: { charge:false, genres:[], choix:{}, confirme:false, email:'', envoi:false, sauve:0 },
+    // Score de sérénité : le ressenti déclaré à l'onboarding, et le détail
+    // ouvert ou non sur l'accueil.
+    serenite: (function(){
+      try { return { reponses: JSON.parse(localStorage.getItem('freehub_serenite') || '{}'),
+                     detail:false, bilan:false }; }
+      catch(e){ return { reponses:{}, detail:false, bilan:false }; }
+    })(),
     // Sur mobile la barre latérale est un tiroir : elle démarre TOUJOURS fermée,
     // quelle que soit la préférence enregistrée sur ordinateur.
     sidePlie: (function(){
@@ -2307,6 +2388,7 @@
       consent: false,
       consentOpen: false,   // pop-up d'avertissement avant l'analyse
       depenses: [ { nom:'', montant:'', motif:'' } ],
+      coteMontant: '',      // « combien mettre de côté » : la somme encaissée
       formError: null,
       result: null,         // { depenses:[…], synthese:{…} }
       openResult: 0,        // index du résultat déplié
@@ -2966,6 +3048,7 @@
 
     return '<div class="view">'
       + hero
+      + sereniteCarteHtml()
       + repriseHtml()
       + carteEch
       + portesHtml()
@@ -5750,7 +5833,8 @@
 
   function notifBlocHtml(interieur){
     if(!state.notif.charge){
-      var vide = '<div class="notif-info">Chargement de tes préférences…</div>';
+      var vide = '<div class="notif-bloc">' + [0,1,2,3].map(function(){
+        return '<div class="sq sq-notif"></div>'; }).join('') + '</div>';
       return interieur ? vide : '<div data-notif-zone>'+vide+'</div>';
     }
     var lignes = (state.notif.genres || []).map(function(g){
@@ -6004,7 +6088,7 @@
   var CLES_SAUVEGARDE = ['freehub_profil','freehub_historique','freehub_hist_vl',
                          'freehub_hist_tva','freehub_scenarios','freehub_params',
                          'freehub_objectifs','freehub_lexique','freehub_dep_favoris','freehub_badges','freehub_faits',
-                         'freehub_badge_porte','freehub_onboarded'];
+                         'freehub_badge_porte','freehub_onboarded','freehub_serenite'];
 
   function exporterDonnees(){
     var paquet = { app:'FreeHub', version:1, date:new Date().toISOString(), donnees:{} };
@@ -6830,6 +6914,18 @@
       return '<span class="chip"><span class="dot" style="background:'+color+'"></span>'+esc(label)+'</span>';
     };
     return '<div class="sim-wrap"><div class="sim-list">'
+      + '<div class="sim-hero cote" data-action="sim-open" data-sim="cote"><div class="sim-hero-inner">'
+        + '<div class="sim-hero-emoji">🏦</div>'
+        + '<div class="sim-hero-title">Combien mettre de côté&nbsp;ce&nbsp;mois&nbsp;?</div>'
+        + '<div class="sim-hero-sub">Tu encaisses une somme, on te dit ce qui n’est pas à toi : '
+          + 'cotisations, impôt, TVA. Ce qui reste, tu peux le dépenser tranquille.</div>'
+        + '<div class="sim-hero-chips">'
+          + chip('#bae6fd', 'Sur ton régime')
+          + chip('#7dd3fc', 'Détail poste par poste')
+          + chip('#38bdf8', 'En 5 secondes')
+        + '</div>'
+        + '<div class="sim-hero-cta">Calculer ma part →</div>'
+      + '</div></div>'
       + '<div class="sim-hero" data-action="sim-open" data-sim="depenses"><div class="sim-hero-inner">'
         + '<div class="sim-hero-emoji">🧾</div>'
         + '<div class="sim-hero-title">Qu’est-ce qui peut passer sur&nbsp;ta&nbsp;société&nbsp;?</div>'
@@ -6892,6 +6988,140 @@
         + '<div class="sim-hero-cta">Piloter ma société →</div>'
       + '</div></div>'
       + '</div></div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // « Combien mettre de côté ce mois-ci ? »
+  // ---------------------------------------------------------------------------
+  // Le principe : sur une somme encaissée, une part n'a jamais été à toi. On la
+  // nomme poste par poste plutôt que de sortir un pourcentage magique.
+  function coteCalcul(encaisse){
+    var p = state.profil;
+    var ca = parseFloat(encaisse) || 0;
+    if(ca <= 0) return null;
+
+    var micro = estMicro(p);
+    var cat = p.categorieFiscale === 'inconnu' ? 'bnc' : (p.categorieFiscale || 'bnc');
+    var postes = [];
+
+    // La TVA se retire EN PREMIER : cotisations et impôt se calculent sur le
+    // chiffre d'affaires hors taxes, jamais sur l'encaissement TTC.
+    var assujetti = estAssujettiTVA(p);
+    var taux = parseFloat(p.tauxVente) || 0.2;
+    var tva = assujetti ? ca - (ca / (1 + taux)) : 0;
+    var ht = ca - tva;
+
+    if(assujetti){
+      postes.push({ l:'TVA collectée', v:tva, c:'#7c3aed',
+        d:'Elle ne t’a jamais appartenu : tu l’encaisses pour l’État et tu la '
+          + 'reverses. Tout le reste se calcule sur le montant hors taxes.' });
+    }
+
+    if(micro){
+      var tauxCot = STATUT_PARAMS.micro.cotisations[cat] || STATUT_PARAMS.micro.cotisations.bnc;
+      postes.push({ l:'Cotisations sociales', v:ht * tauxCot, c:'#2563eb',
+        d:'URSSAF, sur ton chiffre d’affaires hors taxes ('
+          + (tauxCot * 100).toFixed(1).replace('.', ',') + ' %)' });
+
+      if(p.versementLiberatoire === 'oui'){
+        var tvl = STATUT_PARAMS.micro.vlTaux[cat] || STATUT_PARAMS.micro.vlTaux.bnc;
+        postes.push({ l:'Impôt sur le revenu', v:ht * tvl, c:'#b45309',
+          d:'Versement libératoire ('+(tvl * 100).toFixed(1).replace('.', ',')
+            + ' %), prélevé en même temps que tes cotisations' });
+      } else {
+        // Sans versement libératoire, l'impôt dépend du foyer : on prend le taux
+        // moyen réel calculé par le simulateur plutôt qu'un forfait inventé.
+        var net = netEstime(ht * 12);
+        var tauxIr = net && net.res && net.ca
+          ? Math.max(0, Math.min(0.45, (net.res.ir || 0) / net.ca)) : 0;
+        if(tauxIr > 0){
+          postes.push({ l:'Impôt sur le revenu', v:ht * tauxIr, c:'#b45309',
+            d:'Estimé d’après ton foyer ('+(tauxIr * 100).toFixed(1).replace('.', ',')
+              + ' %). Il est prélevé à la source, mais autant l’avoir de côté.' });
+        }
+      }
+    } else {
+      postes.push({ l:'Charges et impôts de la société', v:ht * 0.45, c:'#2563eb',
+        d:'Ordre de grandeur : cotisations sur ta rémunération et impôt sur les '
+          + 'sociétés. Le simulateur « Optimiser ma société » calcule ton cas précis.' });
+    }
+
+    var aGarder = postes.reduce(function(a, x){ return a + x.v; }, 0);
+    return { ca:ca, postes:postes, aGarder:aGarder, dispo:ca - aGarder,
+             pct:Math.round(aGarder / ca * 100), micro:micro };
+  }
+
+  // Recalcule le résultat sans toucher au champ de saisie : la frappe n'est
+  // jamais interrompue.
+  function majCote(){
+    var zone = document.querySelector('[data-cote-res]');
+    if(zone) zone.innerHTML = coteResultatHtml();
+    [].forEach.call(document.querySelectorAll('[data-action="cote-montant"]'), function(b){
+      b.classList.toggle('on', String(state.sim.coteMontant) === b.getAttribute('data-v'));
+    });
+  }
+
+  function coteResultatHtml(){
+    var r = coteCalcul(state.sim.coteMontant);
+    var resultat = '';
+    if(r){
+      var barres = r.postes.map(function(x){
+        var part = Math.round(x.v / r.ca * 100);
+        return '<div class="cote-p" style="--c:'+x.c+'">'
+          + '<div class="cote-p-h"><span class="cote-p-l">'+esc(x.l)+'</span>'
+            + '<span class="cote-p-v">'+fmtEur(x.v)+'</span></div>'
+          + '<div class="cote-p-b"><i style="width:'+Math.min(100, part)+'%"></i></div>'
+          + '<div class="cote-p-d">'+esc(x.d)+'</div>'
+        + '</div>';
+      }).join('');
+
+      resultat = '<div class="cote-res">'
+        + '<div class="cote-grand">'
+          + '<div class="cote-g-k">À mettre de côté</div>'
+          + '<div class="cote-g-v">'+fmtEur(r.aGarder)+'</div>'
+          + '<div class="cote-g-s">soit '+r.pct+' % de ce que tu viens d’encaisser</div>'
+        + '</div>'
+        + '<div class="cote-reste">'
+          + '<div class="cote-r-k">Vraiment à toi</div>'
+          + '<div class="cote-r-v">'+fmtEur(r.dispo)+'</div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="cote-postes">'+barres+'</div>'
+      + '<div class="cote-note">Ce calcul part de ton profil (régime, catégorie, TVA). '
+        + 'Il donne un ordre de grandeur fiable pour provisionner, pas un montant à '
+        + 'déclarer : les dates et montants exacts restent ceux de tes espaces officiels.</div>';
+    } else {
+      resultat = '<div class="cote-vide">'
+        + '<img src="assets/illus/obj-piloter.svg" alt="" class="illu-img">'
+        + '<div class="obj-vide-t">Entre ce que tu viens d’encaisser</div>'
+        + '<div class="obj-vide-d">On te dit tout de suite quelle part n’est pas à toi.</div>'
+      + '</div>';
+    }
+    return resultat;
+  }
+
+  function coteHtml(){
+    var v = state.sim.coteMontant;
+    var raccourcis = [500, 1000, 2500, 5000].map(function(m){
+      return '<button class="cote-rac'+(String(v) === String(m) ? ' on' : '')
+        + '" data-action="cote-montant" data-v="'+m+'">'+fmtEur(m)+'</button>';
+    }).join('');
+
+    return '<div class="view"><div class="sim-wrap">'
+      + '<button class="btn-back" data-action="sim-close">← Tous les simulateurs</button>'
+      + '<div class="cote-tete">'
+        + '<div class="cote-t">Combien mettre de côté ce mois-ci ?</div>'
+        + '<div class="cote-s">Sur un encaissement, une partie ne t’appartient pas. '
+          + 'Provisionne-la, et dépense le reste sans arrière-pensée.</div>'
+      + '</div>'
+      + '<div class="cote-saisie">'
+        + '<label>J’ai encaissé</label>'
+        + '<div class="cote-champ"><input type="number" min="0" step="any" data-cote-input '
+          + 'value="'+esc(v || '')+'" placeholder="2 500" autofocus><span>€</span></div>'
+        + '<div class="cote-racs">'+raccourcis+'</div>'
+      + '</div>'
+      + '<div data-cote-res>'+coteResultatHtml()+'</div>'
+    + '</div></div>';
   }
 
   // ---------- Étape 2 : les dépenses ----------
@@ -7196,6 +7426,7 @@
 
   function simulateurHtml(){
     if(!state.sim.open) return simListHtml();      // liste des simulateurs
+    if(state.sim.open === 'cote') return coteHtml();          // combien mettre de côté
     if(state.sim.open === 'depenses') return guideDepHtml();  // guide visuel des dépenses
     if(state.sim.open === 'vl') return vlHtml();   // comparateur (calcul, sans IA)
     if(state.sim.open === 'tva') return tvaHtml(); // passage à la TVA (calcul, sans IA)
@@ -7335,9 +7566,9 @@
     var o = state.onboarding;
     var r = o.rep;
     var e = o.etape;
-    // 5 questions : activité, statut, CA, périodicité déclarative, rappels.
-    // Le prénom/nom est déjà saisi à la création du compte.
-    var total = 5;
+    // 5 étapes de profil, puis les 4 questions de ressenti : elles alimentent
+    // le score de sérénité affiché en fin de parcours.
+    var total = 5 + SERENITE_Q.length;
 
     var dots = '';
     if(e >= 1 && e <= total){
@@ -7420,16 +7651,64 @@
                 + '<span class="onb-notif-d">'+esc(x.desc)+'</span></span>'
               + '<span class="notif-sw"><i></i></span></button>';
           }).join('') + '</div>'
-        + onbNav(true, 'Terminer');
+        + onbNav(true);
+    } else if(e >= 6 && e <= 5 + SERENITE_Q.length){
+      // Les questions de ressenti : une échelle de 1 à 10, un clic par réponse.
+      var qs = SERENITE_Q[e - 6];
+      var val = (r.serenite || {})[qs.id];
+      corps = dots + '<div class="onb-q">'+esc(qs.q)+'</div>'
+        + '<div class="onb-sub">Réponds au feeling, il n’y a pas de bonne réponse. '
+          + 'Ça nous sert à mesurer tes progrès.</div>'
+        + '<div class="onb-echelle">'
+          + Array.apply(null, {length:10}).map(function(_, i){
+              var v = i + 1;
+              return '<button class="onb-ech'+(val === v ? ' on' : '')+'"'
+                + ' data-action="onb-serenite" data-id="'+qs.id+'" data-v="'+v+'">'+v+'</button>';
+            }).join('')
+        + '</div>'
+        + '<div class="onb-echelle-l"><span>'+esc(qs.bas)+'</span><span>'+esc(qs.haut)+'</span></div>'
+        + onbNav(false);
     } else {
-      corps = '<div class="onb-emoji">🎉</div>'
-        + '<div class="onb-q">'+(prenom ? 'Parfait, '+esc(prenom)+' !' : 'Parfait !')+'</div>'
-        + '<div class="onb-sub">Ton espace est prêt. Complète ton profil quand tu veux pour '
-          + 'des résultats encore plus justes.</div>'
-        + '<div class="onb-actions"><button class="onb-primary" data-action="onb-finish">Découvrir FreeHub →</button></div>';
+      // Le bilan : le score calculé, et le premier pas à faire tout de suite.
+      var s = serenite();
+      var niv = sereniteNiveau(s.score);
+      var reco = objectifRecommande();
+      corps = '<div class="onb-score" style="--c:'+niv.c+'">'
+          + anneauSection(s.score, niv.c, 116) + '</div>'
+        + '<div class="onb-q">'+niv.em+' '+esc(niv.l)+'</div>'
+        + '<div class="onb-sub">Voilà ton score de sérénité de départ. '
+          + 'Il montera à chaque chose que tu mettras en place — '
+          + 'tu le retrouveras sur ton accueil.</div>'
+        + (reco
+            ? '<button class="onb-reco" data-action="onb-lancer" data-id="'+esc(reco.id)+'">'
+              + '<span class="onb-reco-k">Le meilleur premier pas pour toi</span>'
+              + '<span class="onb-reco-t">'+esc(reco.title)+'</span>'
+              + '<span class="onb-reco-d">'+esc(reco.desc || '')+' · '
+                + reco.steps.length+' étapes</span>'
+            + '</button>'
+            : '')
+        + '<div class="onb-actions"><button class="onb-primary" data-action="onb-finish">'
+          + (reco ? 'Plus tard, voir mon espace' : 'Découvrir FreeHub →')+'</button></div>';
     }
 
     return corps;
+  }
+
+  // Le parcours le plus utile à proposer en sortie d'onboarding : le premier du
+  // catalogue que le profil rend pertinent et qui n'est pas déjà pris.
+  function objectifRecommande(){
+    var p = state.profil;
+    var candidats = catalog.filter(function(o){
+      return state.added.indexOf(o.id) < 0 && (!o.pertinent || o.pertinent(p));
+    });
+    // Un débutant sans statut commence par en choisir un ; sinon, le premier
+    // parcours pertinent de la liste (elle est déjà ordonnée par priorité).
+    var sansStatut = !p.forme || /je ne sais pas/i.test(p.forme);
+    if(sansStatut){
+      var choix = candidats.filter(function(o){ return o.id === 'statut' || o.id === 'creer-ae'; })[0];
+      if(choix) return choix;
+    }
+    return candidats[0] || null;
   }
 
   // Met à jour l'onboarding sans recréer l'overlay : on ne remplace que le contenu
@@ -7486,6 +7765,12 @@
     if(r.notif && state.compte){
       state.notif.choix = r.notif;
       notifEnregistrer();
+    }
+    // Le ressenti déclaré nourrit la moitié du score de sérénité.
+    if(r.serenite){
+      state.serenite.reponses = r.serenite;
+      try { localStorage.setItem('freehub_serenite', JSON.stringify(r.serenite)); } catch(e){}
+      pousserServeur();
     }
     try { localStorage.setItem('freehub_onboarded', '1'); } catch(e){}
     state.onboarding.actif = false;
@@ -8096,6 +8381,123 @@
     + '</span>';
   }
 
+  // ---------------------------------------------------------------------------
+  // Score de sérénité - un seul chiffre qui résume « où j'en suis »
+  // ---------------------------------------------------------------------------
+  // Deux moitiés : le ressenti (ce que la personne déclare à l'onboarding) et
+  // le concret (ce qu'elle a réellement mis en place). Le ressenti se répare en
+  // agissant : c'est tout l'intérêt de le mesurer au départ.
+  var SERENITE_Q = [
+    { id:'confiance', q:'Aujourd’hui, tu te sens comment face à l’administratif ?',
+      bas:'Complètement perdu', haut:'Parfaitement à l’aise' },
+    { id:'charge', q:'À quel point l’administratif t’occupe l’esprit ?',
+      bas:'Ça me hante', haut:'Je n’y pense jamais' },
+    { id:'dates', q:'Tu sais quelles échéances t’attendent cette année ?',
+      bas:'Aucune idée', haut:'Je les connais toutes' },
+    { id:'argent', q:'Tu sais ce qu’il te restera vraiment sur ce que tu encaisses ?',
+      bas:'Pas du tout', haut:'Au centime près' },
+  ];
+
+  // Ce que la plateforme sait, sans rien demander.
+  function serenitePreuves(){
+    var p = state.profil;
+    var secs = sectionsProfil();
+    var faits = secs.reduce(function(a, x){ return a + x.faits; }, 0);
+    var totalCh = secs.reduce(function(a, x){ return a + x.total; }, 0);
+    var pctProfil = totalCh ? Math.round(faits / totalCh * 100) : 0;
+    var objPris = state.added.length;
+    var etapesFaites = Object.keys(state.checks || {}).filter(function(k){
+      return state.checks[k]; }).length;
+    var periodicite = !!(p.periodeUrssaf || p.periodeTva);
+    var rappels = !!(state.notif.choix && Object.keys(state.notif.choix)
+      .some(function(k){ return state.notif.choix[k]; }));
+
+    return [
+      { id:'profil', l:'Ton profil est renseigné', pct:pctProfil, poids:10,
+        aide:'Chaque champ rend tes simulateurs plus justes' },
+      { id:'objectifs', l:'Tu as pris des parcours en main',
+        pct:Math.min(100, objPris * 34), poids:10,
+        aide:'Trois parcours suffisent à couvrir l’essentiel' },
+      { id:'etapes', l:'Tu avances concrètement',
+        pct:Math.min(100, etapesFaites * 10), poids:10,
+        aide:'Chaque étape cochée, c’est une chose de réglée' },
+      { id:'dates', l:'Tes échéances sont dans ton calendrier',
+        pct:periodicite ? 100 : 0, poids:10,
+        aide:'Renseigne ta périodicité de déclaration dans ton profil' },
+      { id:'rappels', l:'Tu es prévenu avant chaque date',
+        pct:rappels ? 100 : 0, poids:10,
+        aide:'Active les rappels par e-mail dans ton profil' },
+    ];
+  }
+
+  // Le score : 50 % de ressenti déclaré, 50 % de preuves d'usage.
+  function serenite(){
+    var r = state.serenite.reponses || {};
+    var repondu = SERENITE_Q.filter(function(q){ return r[q.id] != null; });
+    // Sans questionnaire, on note uniquement le concret (sur 100).
+    var preuves = serenitePreuves();
+    var poidsTotal = preuves.reduce(function(a, x){ return a + x.poids; }, 0);
+    var concret = preuves.reduce(function(a, x){ return a + x.pct * x.poids; }, 0) / poidsTotal;
+
+    if(!repondu.length){
+      return { score:Math.round(concret), concret:Math.round(concret),
+               ressenti:null, preuves:preuves, repondu:false };
+    }
+    var ressenti = repondu.reduce(function(a, q){ return a + (r[q.id] - 1) / 9 * 100; }, 0)
+                 / repondu.length;
+    return { score:Math.round(ressenti * 0.5 + concret * 0.5),
+             concret:Math.round(concret), ressenti:Math.round(ressenti),
+             preuves:preuves, repondu:true };
+  }
+
+  // La carte de l'accueil : le chiffre, la jauge, et ce qui le ferait monter.
+  function sereniteCarteHtml(){
+    var s = serenite();
+    var n = sereniteNiveau(s.score);
+    // On ne montre que les leviers non acquis : une liste de choses à faire,
+    // pas un tableau de bord de plus.
+    var leviers = s.preuves.filter(function(x){ return x.pct < 100; })
+      .sort(function(a, b){ return a.pct - b.pct; }).slice(0, 3);
+
+    return '<div class="ser" style="--c:'+n.c+'">'
+      + '<div class="ser-h">'
+        + '<div class="ser-jauge">'+anneauSection(s.score, n.c, 92)+'</div>'
+        + '<div class="ser-x">'
+          + '<div class="ser-k">Ton score de sérénité</div>'
+          + '<div class="ser-t">'+n.em+' '+n.l+'</div>'
+          + '<div class="ser-d">'
+            + (s.repondu
+                ? 'Moitié ce que tu ressens, moitié ce que tu as mis en place.'
+                : 'Calculé sur ce que tu as mis en place. Réponds à 4 questions pour l’affiner.')
+          + '</div>'
+          + (s.repondu ? '' : '<button class="ser-cta" data-action="serenite-quiz">'
+              + 'Répondre aux 4 questions →</button>')
+        + '</div>'
+        + '<button class="ser-plus" data-action="serenite-detail">'
+          + (state.serenite.detail ? 'Masquer' : 'Ce qui le ferait monter')+'</button>'
+      + '</div>'
+      + (state.serenite.detail
+          ? '<div class="ser-liste">' + leviers.map(function(l){
+              return '<div class="ser-l">'
+                + '<div class="ser-l-x"><span class="ser-l-t">'+esc(l.l)+'</span>'
+                  + '<span class="ser-l-d">'+esc(l.aide)+'</span></div>'
+                + '<span class="ser-l-p">'+l.pct+' %</span>'
+              + '</div>'; }).join('')
+            + (leviers.length ? '' : '<div class="ser-l"><div class="ser-l-x">'
+                + '<span class="ser-l-t">Tout est en place, bravo</span></div></div>')
+          + '</div>'
+          : '')
+    + '</div>';
+  }
+
+  function sereniteNiveau(s){
+    if(s >= 80) return { l:'Serein', c:'#0f9d6e', em:'😌' };
+    if(s >= 60) return { l:'Sur de bons rails', c:'#2563eb', em:'🙂' };
+    if(s >= 40) return { l:'En chemin', c:'#b45309', em:'😐' };
+    if(s >= 20) return { l:'Encore flou', c:'#c2410c', em:'😕' };
+    return { l:'Dans le brouillard', c:'#b91c1c', em:'😰' };
+  }
+
   // Le seuil où la barre latérale devient un tiroir (aligné sur app.css).
   function surMobile(){
     try { return window.matchMedia('(max-width:860px)').matches; } catch(e){ return false; }
@@ -8155,10 +8557,22 @@
     + '</div>';
   }
 
+  // Un squelette plutôt qu'un « Chargement… » : la forme de ce qui arrive est
+  // déjà là, l'attente paraît plus courte et rien ne saute au remplissage.
+  function squeletteFilHtml(){
+    return [72, 54, 88, 46, 64].map(function(l, i){
+      return '<div class="sq-msg">'
+        + '<span class="sq sq-av"></span>'
+        + '<span class="sq-x"><span class="sq sq-n"></span>'
+          + '<span class="sq sq-b" style="width:'+l+'%"></span></span>'
+      + '</div>';
+    }).join('');
+  }
+
   function chatMessagesHtml(){
     var c = state.chat;
     if(c.erreur && !c.messages.length) return '<div class="ch-info erreur">'+esc(c.erreur)+'</div>';
-    if(!c.charge) return '<div class="ch-info">Chargement du fil…</div>';
+    if(!c.charge) return squeletteFilHtml();
     if(!c.messages.length){
       return '<div class="ch-vide">'
         + '<img src="assets/illus/en-route.svg" alt="" class="illu-img">'
@@ -8273,27 +8687,9 @@
         + 'Tu peux continuer à lire le fil.</div>'
       : '';
 
-    // Les compteurs disent qu'on n'est pas seul : c'est ça, l'espace communautaire.
-    var stats = '<div class="ch-stats">'
-      + '<span class="ch-stat"><span class="ch-stat-pt"></span>'
-        + (c.enLigne || 0)+' en ligne</span>'
-      + '<span class="ch-stat-sep">·</span>'
-      + '<span class="ch-stat">'+(c.total || 0)+' membre'+((c.total||0)>1?'s':'')
-        + ' déjà passé'+((c.total||0)>1?'s':'')+' ici</span>'
-    + '</div>';
-
-    return '<div class="view">'
-      + '<div class="ch-tete-b">'
-        + '<div class="ch-tete-x">'
-          + '<div class="ch-tete-t">L’entraide entre membres</div>'
-          + stats
-        + '</div>'
-        + (c.admin
-            ? '<button class="ch-mod" data-action="chat-moderation">Modération'
-              + (c.nbSignales ? '<span class="ch-mod-n">'+c.nbSignales+'</span>' : '')
-              + '</button>'
-            : '')
-      + '</div>'
+    // Le titre, les compteurs et la modération vivent maintenant dans la barre
+    // de titre (titreOutilsHtml) : tout l'espace vertical revient au fil.
+    return '<div class="view view-chat">'
       + '<div class="ch-corps'+(c.fil ? ' avec-aparte' : '')+'">'
         + '<div class="ch-principal">'
           + chatSondageHtml()
@@ -8438,6 +8834,7 @@
     'tva-comprendre':       ['franchise', 'tva-collectee', 'tva-deductible'],
     'tva-passer':           ['franchise', 'tva-intra', 'client-recup'],
     'vfl':                  ['vfl', 'rfr', 'bareme'],
+    'mes-papiers':          ['kbis', 'siret'],
     'compte-pro':           ['siret', 'tresorerie'],
     'piloter':              ['deductible', 'amortissement', 'dividendes'],
     'domicilier':           ['domiciliation', 'kbis'],
@@ -9872,6 +10269,43 @@
         majOnboarding();
         break;
       }
+      case 'onb-serenite': {
+        var sq = el.getAttribute('data-id');
+        state.onboarding.rep.serenite = state.onboarding.rep.serenite || {};
+        state.onboarding.rep.serenite[sq] = parseInt(el.getAttribute('data-v'), 10);
+        // Le ressenti est enregistré au fil de l'eau : le bilan final le lit.
+        state.serenite.reponses = state.onboarding.rep.serenite;
+        try { localStorage.setItem('freehub_serenite',
+          JSON.stringify(state.serenite.reponses)); } catch(err){}
+        state.onboarding.etape += 1;
+        majOnboarding();
+        break;
+      }
+      case 'cote-montant':
+        state.sim.coteMontant = el.getAttribute('data-v');
+        render();
+        break;
+      case 'serenite-detail':
+        setState({ serenite: Object.assign({}, state.serenite,
+          { detail: !state.serenite.detail }) });
+        break;
+      case 'serenite-quiz':
+        // Reprendre le questionnaire depuis l'accueil, sans refaire le profil.
+        state.onboarding.rep = Object.assign({}, state.onboarding.rep,
+          { serenite: state.serenite.reponses || {} });
+        state.onboarding.actif = true;
+        state.onboarding.etape = 6;
+        render();
+        break;
+      case 'onb-lancer': {
+        // Le quick win : on prend le parcours conseillé et on l'ouvre.
+        var oid = el.getAttribute('data-id');
+        if(state.added.indexOf(oid) < 0) state.added = state.added.concat([oid]);
+        saveObjectifs();
+        onbTerminer();
+        setState({ tab:'objectifs', objectifOuvert: oid, stepOuvert: 0 });
+        break;
+      }
       case 'onb-skip':
         try { localStorage.setItem('freehub_onboarded', '1'); } catch(err){}
         state.onboarding.actif = false;
@@ -10701,6 +11135,14 @@
     var ac = e.target.closest('[data-accueil-ca]');
     if(ac){ majAccueilProjection(parseFloat(ac.value)); return; }
     // Recherche du lexique : on met à jour la grille sans re-render (focus gardé).
+    // « Combien mettre de côté » : le résultat suit la frappe, sans re-render
+    // complet (sinon le champ perdrait le focus à chaque chiffre).
+    var cm = e.target.closest('[data-cote-input]');
+    if(cm){
+      state.sim.coteMontant = cm.value;
+      majCote();
+      return;
+    }
     var ci = e.target.closest('[data-chat-input]');
     if(ci){
       // Le champ grandit avec le texte, jusqu'à une limite raisonnable.
