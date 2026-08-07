@@ -15,6 +15,7 @@ require_once __DIR__ . '/routes_google.php';
 require_once __DIR__ . '/routes_data.php';
 require_once __DIR__ . '/routes_analyze.php';
 require_once __DIR__ . '/routes_chat.php';
+require_once __DIR__ . '/routes_sav.php';
 
 // Chemin demandé, sans query string ni préfixe /api.
 $chemin = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -49,6 +50,13 @@ $routes = [
     'POST /chat/supprimer'       => 'route_chat_supprimer',
     'POST /chat/muet'            => 'route_chat_muet',
     'GET /chat/moderation'       => 'route_chat_moderation',
+    'POST /chat/sondage'         => 'route_chat_sondage',
+    'POST /chat/voter'           => 'route_chat_voter',
+
+    // Retours, réclamations
+    'POST /sav'                  => 'route_sav',
+    'GET /admin/demandes'        => 'route_admin_demandes',
+    'POST /admin/demandes/traiter' => 'route_admin_demandes_traiter',
 
     // Public
     'POST /partenaire'           => 'route_partenaire',

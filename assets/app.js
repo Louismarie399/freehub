@@ -227,6 +227,9 @@
 
     { id:'salon', ico:'👋', t:'Entré dans le salon', d:'Un premier passage dans l’Entraide.',
       check:function(){ return !!state.faits['chat:visite']; } },
+    { id:'samaritain', ico:'🤲', t:'Bon samaritain',
+      d:'Cinq mercis reçus dans l’Entraide.',
+      check:function(){ return (state.chat.mesMercis || 0) >= 5; } },
     // Réservé à l'alpha : introuvable ensuite. La rareté fait le badge.
     { id:'pionnier', ico:'🚀', t:'Pionnier de l’alpha',
       d:'Membre pendant l’alpha privée. Ce badge ne reviendra jamais.',
@@ -336,6 +339,7 @@
     'assidu':       'Les étapes s’accumulent sans qu’on s’en rende compte.',
     'marathonien':  'Un chiffre qu’on n’atteint pas par hasard.',
     'salon':        'Là où les membres se parlent, il y a une porte.',
+    'samaritain':   'Aide vraiment quelqu’un, il te le dira avec les mains jointes.',
     'pionnier':     'Être là avant tout le monde. Ça ne se rattrape pas.',
     'secret':       'Aucun indice. C’est tout le principe.',
     'serie-5':      'Les récompenses appellent les récompenses.',
@@ -467,6 +471,7 @@
     var acquis = state.badges.indexOf(b.id) >= 0;
     var porte = state.badgePorte === b.id;
     var rang = b.rang ? ' rang-'+b.rang : '';
+    if(b.rang && BADGES_PALIERS.indexOf(b.id) >= 0) rang += ' fam-parcours';
     return '<div class="overlay" data-action="badge-fiche-close">'
       + '<div class="modal bf-modal'+rang+'" data-action="stop">'
         + '<div class="bf-haut">'
@@ -1147,8 +1152,9 @@
     partenaires:['Nos partenaires', '🤝', '#16a34a'],
     chat:       ['Entraide',        '💬', '#e11d48'],
     succes:     ['Récompenses',     '🏆', '#d97706'],
+    sav:        ['Réclamations',    '📮', '#be123c'],
     profil:     ['Mon profil',      '👤', '#475569'],
-    admin:      ['Dashboard admin', '🛠', '#be123c'],
+    admin:      ['Dashboard',       '🛠', '#be123c'],
   };
 
   // Bandeau de titre : une pastille colorée et le nom de l'écran. Assez présent
@@ -2203,6 +2209,9 @@
             enLigne:0, total:0,
             fil:null, filMessages:[], filCharge:false, filClos:false },
     chatCharte: false,      // charte d'accueil de l'Entraide (première visite)
+    sav: { ouvert:false, envoi:false, envoye:false, erreur:null },
+    demandes: { chargees:false, enCours:false, liste:[], filtre:null },
+    sondageForm: false,     // formulaire « question de la semaine » (admin)
     badgePorte: (function(){
       try { return localStorage.getItem('freehub_badge_porte') || null; } catch(e){ return null; }
     })(),
@@ -2624,6 +2633,7 @@
               + '<line x1="8" y1="3" x2="8" y2="6"/><line x1="16" y1="3" x2="16" y2="6"/>',
     chat:       '<path d="M20.5 12.2c0 4-3.8 7.2-8.5 7.2a10 10 0 0 1-2.7-.36L4.5 20.5l1.3-3.6'
               + 'A6.8 6.8 0 0 1 3.5 12.2C3.5 8.2 7.3 5 12 5s8.5 3.2 8.5 7.2z"/>',
+    sav:        '<path d="M4 6.5h16v11H4z"/><path d="M4 7l8 6 8-6"/>',
     succes:     '<path d="M7 4h10v3.6a5 5 0 0 1-10 0z"/>'
               + '<path d="M7 5H4.7a2.9 2.9 0 0 0 3 2.9M17 5h2.3a2.9 2.9 0 0 1-3 2.9"/>'
               + '<path d="M12 12.6V16M10 16h4l.7 3.5H9.3z"/><path d="M8.3 19.5h7.4"/>',
@@ -2642,11 +2652,15 @@
     tabs.push({ key:'succes', label:'Récompenses', alpha:true });
     // Espace admin : tout en bas, et seulement pour les comptes administrateurs.
     // (L'API vérifie de toute façon le rôle côté serveur.)
-    if(state.compte && state.compte.isAdmin) tabs.push({key:'admin', label:'Dashboard admin'});
+    if(state.compte && state.compte.isAdmin){
+      tabs.push({ key:'admin', label:'Dashboard', section:'Admin' });
+      tabs.push({ key:'sav', label:'Réclamations' });
+    }
     return tabs.map(function(t){
       var on = state.tab === t.key;
       return (t.section ? '<div class="nav-sec">'+esc(t.section)+'</div>' : '')
-        + '<button class="nav-row'+(on?' on':'')+(t.key==='admin'?' nav-admin':'')
+        + '<button class="nav-row'+(on?' on':'')
+        + (t.key==='admin' || t.key==='sav' ?' nav-admin':'')
         + (t.key==='chat'?' nav-chat':'')
         + '" data-action="tab" data-tab="'+t.key+'">'
         + '<span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -3486,7 +3500,14 @@
             + '<img src="assets/illus/objectif-boucle.svg" alt="" class="obj-fini-illu">'
             + '<span><span class="obj-fini-t">Objectif bouclé</span>'
             + '<span class="obj-fini-d">Tu peux repasser sur n’importe quelle étape quand tu veux</span>'
-            + '</span></div>' : '')
+            + '</span>'
+            + (state.compte
+                ? (state.faits['partage:'+curId]
+                    ? '<span class="obj-partage fait">✓ Partagé</span>'
+                    : '<button class="obj-partage" data-action="obj-partager" data-id="'+curId+'">'
+                      + 'Partager dans l’Entraide 🎉</button>')
+                : '')
+            + '</div>' : '')
       + '<div class="steps">'+steps+'</div>'
       + suiteHtml(cur, cp.pct === 100)
       + '</div>';
@@ -7575,8 +7596,9 @@
     // prétend (données importées d'un autre profil, par exemple).
     var porte = on && state.badgePorte === id;
     var pr = !on ? progresBadge(id) : null;
+    var fam = BADGES_PALIERS.indexOf(id) >= 0 ? ' fam-parcours' : '';
     return '<button class="med'+(on ? ' on' : ' verrou')+(grand ? ' grand' : '')
-      + (b.rang ? ' rang-'+b.rang : '')+(porte ? ' porte' : '')+'"'
+      + (b.rang ? ' rang-'+b.rang+fam : '')+(porte ? ' porte' : '')+'"'
       + ' data-action="badge-fiche" data-id="'+id+'">'
       + '<span class="med-coin"><span class="med-ico">'+(on ? b.ico : '🔒')+'</span></span>'
       + '<span class="med-n">'+(on ? esc(b.t) : '???')+'</span>'
@@ -7640,6 +7662,94 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Réclamations — la file des demandes, côté admin
+  // ---------------------------------------------------------------------------
+  function savAdminHtml(){
+    if(!(state.compte && state.compte.isAdmin)){
+      return '<div class="view"><div class="obj-vide">Réservé aux administrateurs.</div></div>';
+    }
+    var d = state.demandes;
+    if(!d.chargees && !d.enCours){
+      d.enCours = true;
+      apiJson('GET', '/api/admin/demandes').then(function(r){
+        setState({ demandes: Object.assign({}, state.demandes,
+          { chargees:true, enCours:false, liste:(r.ok && r.data.demandes) || [] }) });
+      });
+    }
+    var liste = (d.liste || []).filter(function(x){
+      if(d.filtre === 'partenaire') return x.type === 'partenaire';
+      if(d.filtre === 'sav') return x.type === 'sav';
+      if(d.filtre === 'afaire') return !x.traite;
+      return true;
+    });
+    var pastille = function(v, l){
+      var n = v === null ? (d.liste || []).length
+        : (d.liste || []).filter(function(x){
+            return v === 'afaire' ? !x.traite : x.type === v; }).length;
+      return '<button class="fpill'+(d.filtre === v ? ' on' : '')+'"'
+        + ' data-action="dem-filtre" data-f="'+(v || '')+'">'+l
+        + '<span class="fpill-n">'+n+'</span></button>';
+    };
+    var cartes = liste.map(function(x){
+      return '<div class="dem'+(x.traite ? ' fait' : '')+'">'
+        + '<div class="dem-h">'
+          + '<span class="dem-type '+x.type+'">'+(x.type === 'partenaire' ? '🤝 Partenariat' : '🛟 SAV')+'</span>'
+          + '<span class="dem-t">'+esc(x.titre)+'</span>'
+          + '<span class="ch-h">'+chatHeure(x.created)+'</span>'
+          + '<button class="dem-ok'+(x.traite ? ' on' : '')+'" data-action="dem-traiter"'
+            + ' data-type="'+x.type+'" data-id="'+x.id+'" data-v="'+(x.traite ? 0 : 1)+'">'
+            + (x.traite ? '✓ Traité' : 'Marquer traité')+'</button>'
+        + '</div>'
+        + (x.detail ? '<div class="dem-d">'+esc(x.detail)+'</div>' : '')
+        + '<div class="dem-m">'+esc(x.message || '')+'</div>'
+        + (x.email ? '<a class="dem-mail" href="mailto:'+esc(x.email)+'">✉ '+esc(x.email)+'</a>' : '')
+      + '</div>';
+    }).join('');
+
+    return '<div class="view">'
+      + '<div class="fpills">'
+        + pastille(null, 'Toutes') + pastille('afaire', 'À traiter')
+        + pastille('partenaire', 'Partenariats') + pastille('sav', 'SAV')
+      + '</div>'
+      + (d.chargees
+          ? (liste.length ? '<div class="dems">'+cartes+'</div>'
+              : '<div class="obj-vide">Rien ici pour l’instant — c’est calme</div>')
+          : '<div class="ch-info">Chargement…</div>')
+      + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // La bulle d'aide — toujours là, en bas à droite
+  // ---------------------------------------------------------------------------
+  function savBulleHtml(){
+    if(state.tab === 'chat') return '';   // le salon a déjà sa conversation
+    var o = state.sav;
+    if(!o.ouvert){
+      return '<button class="bulle-aide" data-action="sav-open" title="Un pépin, une idée ?">🛟</button>';
+    }
+    return '<div class="bulle-panneau">'
+      + '<div class="bulle-tete">'
+        + '<div class="bulle-t">Un pépin, une idée&nbsp;?</div>'
+        + '<div class="bulle-s">Retour sur l’alpha, question, bug : ça arrive direct chez Louis</div>'
+        + '<button class="cat-x" data-action="sav-close" aria-label="Fermer">✕</button>'
+      + '</div>'
+      + (o.envoye
+          ? '<div class="bulle-merci">🙌 Bien reçu — merci ! On te répond '
+            + (state.compte ? 'sur l’e-mail de ton compte' : 'sur l’adresse laissée')+'.'
+            + '<button class="btn-link" data-action="sav-encore">En envoyer un autre</button></div>'
+          : '<form class="bulle-form" data-sav-form>'
+            + (state.compte ? ''
+                : '<input type="email" data-sav-email placeholder="Ton e-mail pour la réponse" required>')
+            + '<textarea data-sav-texte rows="4" maxlength="2000" required'
+              + ' placeholder="Dis-nous tout…"></textarea>'
+            + (o.erreur ? '<div class="bulle-erreur">'+esc(o.erreur)+'</div>' : '')
+            + '<button type="submit" class="ch-envoi bulle-envoi"'
+              + (o.envoi ? ' disabled' : '')+'>'+(o.envoi ? 'Envoi…' : 'Envoyer')+'</button>'
+          + '</form>')
+    + '</div>';
+  }
+
+  // ---------------------------------------------------------------------------
   // Entraide — le seul écran où l'on croise d'autres membres
   // ---------------------------------------------------------------------------
   // Volontairement simple pour l'alpha : un fil unique, rafraîchi par sondage
@@ -7658,11 +7768,14 @@
   }
 
   function chatAuteurHtml(a){
-    var b = a.badge ? badge(a.badge) : null;
     var rang = chatRang(a);
-    return '<span class="ch-auteur'+(rang ? ' rang-'+rang : '')+'">'
+    // Les deux échelles ont chacune leur palette : un doré « collection » ne
+    // se confond pas avec un palier de parcours.
+    var fam = a.badge && BADGES_PALIERS.indexOf(a.badge) >= 0 ? ' fam-parcours' : '';
+    return '<span class="ch-auteur'+(rang ? ' rang-'+rang+fam : '')+'">'
       + esc(a.nom || 'Membre')
-      + (b ? '<span class="ch-badge" title="'+esc(b.t)+'">'+b.ico+'</span>' : '')
+      + (a.mercis ? '<span class="ch-mercis" title="Mercis reçus dans l’Entraide">🙏 '
+          + a.mercis+'</span>' : '')
       + (a.admin ? '<span class="ch-role admin">Admin</span>' : '')
     + '</span>';
   }
@@ -7712,14 +7825,22 @@
   // auteur, puis chaque relevé passe en mode léger. C'est ce qui fluidifie.
   var chatAvatars = {};
   function chatAvatarHtml(a){
+    var av;
     if(a && a.photo){
-      return '<span class="ch-av"><img src="'+esc(a.photo)+'" alt=""></span>';
+      av = '<span class="ch-av"><img src="'+esc(a.photo)+'" alt=""></span>';
+    } else {
+      var nom = (a && a.nom) || 'M';
+      var h = 0;
+      for(var i = 0; i < nom.length; i++) h = (h * 31 + nom.charCodeAt(i)) % 997;
+      var c = CH_AV_COULEURS[h % CH_AV_COULEURS.length];
+      av = '<span class="ch-av" style="background:'+c+'">'
+        + esc(nom.charAt(0).toUpperCase())+'</span>';
     }
-    var nom = (a && a.nom) || 'M';
-    var h = 0;
-    for(var i = 0; i < nom.length; i++) h = (h * 31 + nom.charCodeAt(i)) % 997;
-    var c = CH_AV_COULEURS[h % CH_AV_COULEURS.length];
-    return '<span class="ch-av" style="background:'+c+'">'+esc(nom.charAt(0).toUpperCase())+'</span>';
+    // Le badge porté vit dans une petite bulle accolée à la photo.
+    var b = a && a.badge ? badge(a.badge) : null;
+    return '<span class="ch-avw">'+av
+      + (b ? '<span class="ch-av-badge" title="'+esc(b.t)+'">'+b.ico+'</span>' : '')
+    + '</span>';
   }
 
   function chatMessageHtml(m, c, dansAparte){
@@ -7747,16 +7868,19 @@
         + '<div class="ch-tete">'+chatAuteurHtml(m.auteur)
           + '<span class="ch-h">'+chatHeure(m.created)+'</span>'
           + (m.signale ? '<span class="ch-tag signale">signalé</span>' : '')
-          + (actions ? '<span class="ch-survol">'+actions+'</span>' : '')
         + '</div>'
         + '<div class="ch-txt">'+esc(m.contenu).replace(/\n/g, '<br>')+'</div>'
         + '<div class="ch-pied">'
           + (!dansAparte && m.nbReponses
               ? '<button class="ch-fil-n" data-action="chat-aparte" data-id="'+m.id+'">'
                 + '💬 Aparté ouvert · '+m.nbReponses+' message'+(m.nbReponses>1?'s':'')
-                + ' <span class="ch-fil-go">rejoindre →</span></button>'
+                + ' <span class="ch-fil-go">'+(state.chat.fil === m.id ? 'fermer ×' : 'rejoindre →')
+                + '</span></button>'
               : '')
           + chatReactionsHtml(m)
+          // En bas à droite : la barre de réactions occupe le haut, les deux
+          // ne se marchent plus dessus.
+          + (actions ? '<span class="ch-survol">'+actions+'</span>' : '')
         + '</div>'
       + '</div>'
       + chatPopHtml(m)
@@ -7811,6 +7935,50 @@
     + '</aside>';
   }
 
+  // La question de la semaine : épinglée au-dessus du fil, un clic pour voter.
+  function chatSondageHtml(){
+    var c = state.chat, sg = c.sondage;
+    var formAdmin = c.admin && state.sondageForm
+      ? '<form class="sond-form" data-sondage-form>'
+        + '<input type="text" data-sond-q maxlength="140" placeholder="La question de la semaine…">'
+        + '<input type="text" data-sond-o maxlength="40" placeholder="Réponse 1">'
+        + '<input type="text" data-sond-o maxlength="40" placeholder="Réponse 2">'
+        + '<input type="text" data-sond-o maxlength="40" placeholder="Réponse 3 (optionnelle)">'
+        + '<input type="text" data-sond-o maxlength="40" placeholder="Réponse 4 (optionnelle)">'
+        + '<button type="submit" class="ch-envoi">Épingler la question</button>'
+      + '</form>' : '';
+    if(!sg){
+      return c.admin
+        ? '<div class="sond vide">'
+          + '<button class="btn-link" data-action="sondage-form">📊 Poser la question de la semaine</button>'
+          + formAdmin + '</div>'
+        : '';
+    }
+    var aVote = sg.mien !== null && sg.mien !== undefined;
+    var lignes = sg.options.map(function(opt, i){
+      var n = sg.votes[i] || 0;
+      var pct = sg.total ? Math.round(n / sg.total * 100) : 0;
+      if(aVote || !state.compte){
+        return '<div class="sond-l'+(sg.mien === i ? ' mien' : '')+'"'
+          + (state.compte ? ' data-action="sondage-voter" data-i="'+i+'" role="button"' : '')+'>'
+          + '<i style="width:'+pct+'%"></i>'
+          + '<span class="sond-o">'+esc(opt)+(sg.mien === i ? ' ✓' : '')+'</span>'
+          + '<span class="sond-n">'+pct+'%</span>'
+        + '</div>';
+      }
+      return '<button class="sond-b" data-action="sondage-voter" data-i="'+i+'">'
+        + esc(opt)+'</button>';
+    }).join('');
+    return '<div class="sond">'
+      + '<div class="sond-h"><span class="sond-pic">📊</span>'
+        + '<span class="sond-q">'+esc(sg.question)+'</span>'
+        + '<span class="sond-t">'+sg.total+' vote'+(sg.total>1?'s':'')+'</span>'
+        + (c.admin ? '<button class="ch-act sup" data-action="sondage-clore">Clore</button>' : '')
+      + '</div>'
+      + '<div class="sond-corps">'+lignes+'</div>'
+    + '</div>';
+  }
+
   function chatHtml(){
     var c = state.chat;
     var muet = c.muet
@@ -7841,6 +8009,7 @@
       + '</div>'
       + '<div class="ch-corps'+(c.fil ? ' avec-aparte' : '')+'">'
         + '<div class="ch-principal">'
+          + chatSondageHtml()
           + '<div class="ch-fil" data-chat-fil>'+chatMessagesHtml()+'</div>'
           + (c.erreur && c.messages.length ? '<div class="ch-alerte">'+esc(c.erreur)+'</div>' : '')
           + muet
@@ -7885,7 +8054,7 @@
       // vidait le champ de saisie en pleine frappe.
       var empreinte = JSON.stringify([neufs, filMsgs, r.data.muet || null,
         !!r.data.admin, r.data.enLigne, r.data.total,
-        rf && rf.ok ? !!rf.data.clos : null]);
+        rf && rf.ok ? !!rf.data.clos : null, r.data.sondage || null]);
       if(state.chat.charge && empreinte === state.chat.empreinte) return;
 
       var dernierAvant = state.chat.messages.length
@@ -7896,6 +8065,8 @@
         enLigne:r.data.enLigne || 0, total:r.data.total || 0,
         filMessages:filMsgs, filCharge:!!(rf && rf.ok) || state.chat.filCharge,
         filClos: rf && rf.ok ? !!rf.data.clos : state.chat.filClos,
+        sondage: r.data.sondage || null,
+        mesMercis: r.data.mesMercis || 0,
         nbSignales: neufs.filter(function(m){ return m.signale && !m.supprime; }).length,
       });
       if(state.tab !== 'chat' && dernierAvant){
@@ -8509,6 +8680,7 @@
       + '<div id="modal-root"></div>'
       + '<div id="cat-root"></div>'
       + '<div id="lex-root"></div>'
+      + '<div id="sav-root"></div>'
       + '<div id="onb-root"></div>'
       + '<div id="tvo-root"></div>'
       + '<div id="dgo-root"></div>'
@@ -8591,6 +8763,10 @@
     var cfVal = cfAvant ? cfAvant.value : '';
     var cfFocus = cfAvant && cfAvant === document.activeElement;
     var cfPos = cfFocus ? cfAvant.selectionStart : 0;
+    var filAv = document.querySelector('[data-chat-fil]');
+    var filScroll = filAv ? filAv.scrollTop : null;
+    var apAv = document.querySelector('[data-chat-fil-b]');
+    var apScroll = apAv ? apAv.scrollTop : null;
 
     content.innerHTML = state.tab === 'accueil' ? accueilHtml()
                       : state.tab === 'objectifs' ? objectifsHtml()
@@ -8600,6 +8776,7 @@
                       : state.tab === 'profil' ? profilHtml()
                       : state.tab === 'chat' ? chatHtml()
                       : state.tab === 'succes' ? succesHtml()
+                      : state.tab === 'sav' ? savAdminHtml()
                       : state.tab === 'admin' ? adminHtml()
                       : simulateurHtml();
 
@@ -8620,6 +8797,14 @@
         cfApres.focus();
         try { cfApres.setSelectionRange(cfPos, cfPos); } catch(e){}
       }
+    }
+    if(filScroll !== null){
+      var filAp = document.querySelector('[data-chat-fil]');
+      if(filAp) filAp.scrollTop = filScroll;
+    }
+    if(apScroll !== null){
+      var apAp = document.querySelector('[data-chat-fil-b]');
+      if(apAp) apAp.scrollTop = apScroll;
     }
 
     // Animation d'entrée uniquement quand on change réellement d'écran.
@@ -8646,6 +8831,8 @@
     // rejouer leur animation.
     majCatalogue();
     majLexTous();
+    var savRoot = document.getElementById('sav-root');
+    if(savRoot) savRoot.innerHTML = savBulleHtml();
     majOnboarding();
     majTvaOnb();
     majDepOnb();
@@ -8682,6 +8869,35 @@
   // Entraide : envoi du formulaire, et Entrée pour publier (Maj+Entrée = saut
   // de ligne, comme partout ailleurs).
   document.addEventListener('submit', function(e){
+    var qf = e.target.closest && e.target.closest('[data-sondage-form]');
+    if(qf){
+      e.preventDefault();
+      var q = (qf.querySelector('[data-sond-q]') || {}).value || '';
+      var opts = [...qf.querySelectorAll('[data-sond-o]')].map(function(x){ return x.value; });
+      apiJson('POST', '/api/chat/sondage', { question:q, options:opts }).then(function(r){
+        if(!r.ok) return;
+        state.chat.empreinte = null;
+        setState({ sondageForm:false });
+        chatCharger(true);
+      });
+      return;
+    }
+    var sf = e.target.closest && e.target.closest('[data-sav-form]');
+    if(sf){
+      e.preventDefault();
+      var texte = (sf.querySelector('[data-sav-texte]') || {}).value || '';
+      var mail = (sf.querySelector('[data-sav-email]') || {}).value || '';
+      if(!texte.trim()) return;
+      setState({ sav: Object.assign({}, state.sav, { envoi:true, erreur:null }) });
+      apiJson('POST', '/api/sav', { message:texte, email:mail }).then(function(r){
+        setState({ sav: Object.assign({}, state.sav, {
+          envoi:false,
+          envoye:r.ok,
+          erreur:r.ok ? null : ((r.data && r.data.error) || 'Envoi impossible.'),
+        }) });
+      });
+      return;
+    }
     var ff = e.target.closest && e.target.closest('[data-chat-form-fil]');
     if(ff){
       e.preventDefault();
@@ -8935,6 +9151,61 @@
       case 'suite-rester':
         setState({ suiteAjout: null });
         break;
+      case 'sav-open':
+        setState({ sav: Object.assign({}, state.sav, { ouvert:true, envoye:false, erreur:null }) });
+        break;
+      case 'sav-close':
+        setState({ sav: Object.assign({}, state.sav, { ouvert:false }) });
+        break;
+      case 'sav-encore':
+        setState({ sav: Object.assign({}, state.sav, { envoye:false, erreur:null }) });
+        break;
+      case 'dem-filtre':
+        setState({ demandes: Object.assign({}, state.demandes,
+          { filtre: el.getAttribute('data-f') || null }) });
+        break;
+      case 'dem-traiter': {
+        var dt = el.getAttribute('data-type'), di = parseInt(el.getAttribute('data-id'), 10);
+        var dv = el.getAttribute('data-v') === '1';
+        apiJson('POST', '/api/admin/demandes/traiter', { type:dt, id:di, traite:dv })
+          .then(function(r){
+            if(!r.ok) return;
+            var liste = state.demandes.liste.map(function(x){
+              return x.type === dt && x.id === di
+                ? Object.assign({}, x, { traite:dv }) : x;
+            });
+            setState({ demandes: Object.assign({}, state.demandes, { liste:liste }) });
+          });
+        break;
+      }
+      case 'sondage-form':
+        setState({ sondageForm: !state.sondageForm });
+        break;
+      case 'sondage-clore':
+        apiJson('POST', '/api/chat/sondage', { clore:true }).then(function(){
+          state.chat.empreinte = null; chatCharger(true);
+        });
+        break;
+      case 'sondage-voter':
+        apiJson('POST', '/api/chat/voter', { choix: parseInt(el.getAttribute('data-i'), 10) })
+          .then(function(r){
+            if(!r.ok) return;
+            state.chat.empreinte = null; chatCharger(true);
+          });
+        break;
+      case 'obj-partager': {
+        // Partager un objectif bouclé dans l'Entraide, une seule fois.
+        var oid2 = el.getAttribute('data-id');
+        var o2 = obj(oid2);
+        if(!o2 || state.faits['partage:'+oid2]) break;
+        marquerFait('partage:'+oid2);
+        chatEnvoyer('🎉 Je viens de boucler « '+o2.title+' » — '
+          + o2.steps.length+' étapes, fait !');
+        setState({ tab:'chat' });
+        chatSondage();
+        chatCharger(false);
+        break;
+      }
       case 'chat-charte-ok':
         try { localStorage.setItem('freehub_chat_onb', '1'); } catch(err){}
         marquerFait('chat:visite');
@@ -8943,7 +9214,12 @@
       case 'chat-aparte': {
         e.stopPropagation();
         var fid = parseInt(el.getAttribute('data-id'), 10);
-        // Un seul panneau à la fois : cliquer un autre message y bascule.
+        // Recliquer le même aparté le referme ; un autre y bascule.
+        if(state.chat.fil === fid){
+          setState({ chat: Object.assign({}, state.chat,
+            { fil: null, filMessages: [], filCharge: false, empreinte: null }) });
+          break;
+        }
         setState({ chat: Object.assign({}, state.chat,
           { fil: fid, filMessages: [], filCharge: false, empreinte: null }) });
         chatCharger(true);
@@ -9007,6 +9283,10 @@
         try { neuf ? localStorage.setItem('freehub_badge_porte', neuf)
                    : localStorage.removeItem('freehub_badge_porte'); } catch(err){}
         setState({ badgePorte: neuf });
+        // Sans cette poussée, le serveur garde l'ancien badge et le salon
+        // continue d'afficher celui d'avant.
+        pousserServeur();
+        state.chat.empreinte = null;
         break;
       }
       case 'obj-epingle': {

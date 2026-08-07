@@ -165,6 +165,18 @@ function init_db(PDO $pdo): void
         -- compteurs « en ligne » (vu < 2 min) et « membres passés par ici ».
         CREATE TABLE IF NOT EXISTS chat_presence(
             user_id INTEGER PRIMARY KEY, vu TEXT NOT NULL);
+        -- Retours et réclamations (la bulle d'aide) ; `identite` sert au débit.
+        CREATE TABLE IF NOT EXISTS sav_requests(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
+            identite TEXT NOT NULL, email TEXT DEFAULT '',
+            message TEXT NOT NULL, created TEXT NOT NULL, traite INTEGER DEFAULT 0);
+        -- La question de la semaine, et une voix par membre.
+        CREATE TABLE IF NOT EXISTS chat_sondages(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, question TEXT NOT NULL,
+            options TEXT NOT NULL, created TEXT NOT NULL, actif INTEGER DEFAULT 1);
+        CREATE TABLE IF NOT EXISTS chat_votes(
+            sondage_id INTEGER NOT NULL, user_id INTEGER NOT NULL, choix INTEGER NOT NULL,
+            PRIMARY KEY(sondage_id, user_id));
     ");
     // Migration douce, comme en Python : ajoute les colonnes manquantes.
     $cols = array_column($pdo->query('PRAGMA table_info(users)')->fetchAll(), 'name');
@@ -177,6 +189,11 @@ function init_db(PDO $pdo): void
     $colsChat = array_column($pdo->query('PRAGMA table_info(chat_messages)')->fetchAll(), 'name');
     if (!in_array('parent_id', $colsChat, true)) {
         $pdo->exec('ALTER TABLE chat_messages ADD COLUMN parent_id INTEGER DEFAULT NULL');
+    }
+    // Les demandes de partenariat rejoignent la file admin : état « traité ».
+    $colsPart = array_column($pdo->query('PRAGMA table_info(partner_requests)')->fetchAll(), 'name');
+    if (!in_array('traite', $colsPart, true)) {
+        $pdo->exec('ALTER TABLE partner_requests ADD COLUMN traite INTEGER DEFAULT 0');
     }
 }
 

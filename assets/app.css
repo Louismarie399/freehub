@@ -240,9 +240,6 @@
   .ch-tag{padding:1px 7px;border-radius:999px;background:#f1f5f9;color:var(--muted2);
     font-size:9.5px;font-weight:800}
   .ch-tag.signale{background:#fef3c7;color:#b45309}
-  .ch-survol{display:inline-flex;gap:9px;margin-left:auto;opacity:0;
-    transition:opacity .15s var(--ease)}
-  .ch-msg:hover .ch-survol{opacity:1}
   .ch-txt{font-size:13.5px;line-height:1.5;color:var(--ink);overflow-wrap:break-word;margin-top:1px}
   /* Le pied ne prend de la place que s'il a quelque chose à montrer */
   .ch-pied{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -277,6 +274,71 @@
   .ch-form.ap{margin:0;padding:10px;border-top:1px solid var(--border)}
   .ch-form.ap textarea{min-height:40px;padding:9px 12px;font-size:12.5px}
   .ch-form.ap .ch-envoi{padding:10px 14px;font-size:12.5px}
+
+  /* L'avatar et sa bulle de badge accolée */
+  .ch-avw{position:relative;flex:none;margin-top:2px}
+  .ch-avw .ch-av{margin-top:0}
+  .ch-av-badge{position:absolute;right:-5px;bottom:-4px;width:17px;height:17px;
+    border-radius:50%;background:#fff;border:1.5px solid #e6eaf2;
+    display:flex;align-items:center;justify-content:center;font-size:9.5px}
+  .ch-mercis{margin-left:2px;padding:1px 7px;border-radius:999px;background:#fef9c3;
+    color:#a16207;font-size:9.5px;font-weight:800}
+
+  /* Les actions de modération vivent en bas à droite, loin de la barre de
+     réactions qui occupe le coin haut. */
+  .ch-survol{display:inline-flex;gap:9px;margin-left:auto;opacity:0;
+    transition:opacity .15s var(--ease)}
+  .ch-msg:hover .ch-survol{opacity:1}
+
+  /* Les deux échelles ont chacune leur palette : parcours en mer, collection
+     en métaux chauds. */
+  .med.on.rang-bronze.fam-parcours .med-coin{border-color:#0f766e;
+    background:radial-gradient(circle at 32% 26%,#c8fff4 0%,#2dd4bf 55%,#0f766e 100%)}
+  .med.on.rang-argent.fam-parcours .med-coin{border-color:#0369a1;
+    background:radial-gradient(circle at 32% 26%,#e0f2fe 0%,#38bdf8 55%,#075985 100%)}
+  .med.on.rang-or.fam-parcours .med-coin{border-color:#4338ca;
+    background:radial-gradient(circle at 32% 26%,#e0e7ff 0%,#818cf8 55%,#3730a3 100%);
+    box-shadow:inset 0 2px 4px rgba(255,255,255,.9),inset 0 -4px 8px rgba(15,27,51,.16),
+      0 7px 20px -6px rgba(99,102,241,.6)}
+  .med.on.rang-royal.fam-parcours .med-coin{border-color:#0e7490;
+    background:radial-gradient(circle at 32% 26%,#cffafe 0%,#22d3ee 50%,#155e75 100%);
+    box-shadow:inset 0 2px 4px rgba(255,255,255,.85),inset 0 -4px 8px rgba(15,27,51,.2),
+      0 7px 22px -6px rgba(34,211,238,.65)}
+  .med.on.rang-bronze.fam-parcours .med-n{color:#0f766e}
+  .med.on.rang-argent.fam-parcours .med-n{color:#075985}
+  .med.on.rang-or.fam-parcours .med-n{color:#4338ca}
+  .med.on.rang-royal.fam-parcours .med-n{background:linear-gradient(90deg,#0891b2,#6366f1);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .ch-auteur.rang-bronze.fam-parcours{color:#0f766e;text-shadow:none}
+  .ch-auteur.rang-argent.fam-parcours{color:#075985}
+  .ch-auteur.rang-or.fam-parcours{color:#4338ca;text-shadow:0 0 12px rgba(99,102,241,.35)}
+  .ch-auteur.rang-royal.fam-parcours{background:linear-gradient(90deg,#0891b2,#6366f1);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .bf-modal.fam-parcours{--rg:#0e7490;--rgs:#ecfeff}
+
+  /* La question de la semaine, épinglée */
+  .sond{margin-bottom:12px;padding:14px 16px;border-radius:16px;background:#fff;
+    border:1.5px solid #dbe4f2}
+  .sond.vide{padding:8px 12px;border-style:dashed;background:none}
+  .sond-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+  .sond-pic{font-size:15px}
+  .sond-q{font-size:14px;font-weight:800;letter-spacing:-.012em;flex:1;min-width:0}
+  .sond-t{font-size:11.5px;font-weight:700;color:var(--muted)}
+  .sond-corps{display:flex;flex-direction:column;gap:6px}
+  .sond-b{text-align:left;font-family:inherit;font-size:13px;font-weight:700;color:var(--ink);
+    background:#f4f7fc;border:1px solid var(--border);border-radius:10px;padding:9px 13px;
+    cursor:pointer;transition:.16s var(--ease)}
+  .sond-b:hover{border-color:var(--blue);background:var(--soft)}
+  .sond-l{position:relative;overflow:hidden;display:flex;align-items:center;gap:8px;
+    border-radius:10px;background:#f4f7fc;padding:8px 13px;cursor:pointer}
+  .sond-l i{position:absolute;inset:0 auto 0 0;background:#dbeafe;transition:width .4s var(--ease)}
+  .sond-l.mien i{background:#bfdbfe}
+  .sond-l .sond-o{position:relative;flex:1;font-size:13px;font-weight:700}
+  .sond-l .sond-n{position:relative;font-size:12px;font-weight:800;color:var(--blue)}
+  .sond-form{display:flex;flex-direction:column;gap:7px;margin-top:9px}
+  .sond-form input{padding:9px 12px;border:1px solid var(--border);border-radius:10px;
+    font-family:inherit;font-size:13px}
+  .sond-form input:focus{outline:none;border-color:var(--blue)}
 
   .ch-muet{margin-top:12px;padding:11px 15px;border-radius:12px;background:#fef3c7;
     color:#92400e;font-size:13px;font-weight:600}
@@ -1639,6 +1701,56 @@
   .cal-sj-n{font-size:11.5px;font-weight:800;color:var(--muted2)}
   .cal-sj-d{font-size:17px;font-weight:800;color:var(--ink);letter-spacing:-.018em}
   .cal-sj-b{flex:1;display:flex;flex-direction:column;gap:6px;padding:9px}
+
+  /* File des réclamations */
+  .dems{display:flex;flex-direction:column;gap:10px}
+  .dem{background:#fff;border:1px solid var(--border);border-radius:15px;padding:13px 16px}
+  .dem.fait{opacity:.55}
+  .dem-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .dem-type{padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:800}
+  .dem-type.partenaire{background:#ecfdf5;color:#047857}
+  .dem-type.sav{background:#fff1f2;color:#be123c}
+  .dem-t{font-size:14px;font-weight:800}
+  .dem-ok{margin-left:auto;background:none;border:1px solid var(--border);border-radius:9px;
+    padding:5px 11px;font-family:inherit;font-size:11.5px;font-weight:800;color:var(--muted2);
+    cursor:pointer;transition:.16s var(--ease)}
+  .dem-ok:hover{border-color:#16a34a;color:#16a34a}
+  .dem-ok.on{background:#f0fdf4;border-color:#bbf7d0;color:#15803d}
+  .dem-d{font-size:12px;color:var(--muted2);font-weight:600;margin-top:4px}
+  .dem-m{font-size:13.5px;line-height:1.55;color:var(--ink);margin-top:7px;white-space:pre-wrap}
+  .dem-mail{display:inline-block;margin-top:8px;font-size:12px;font-weight:700;color:var(--blue)}
+
+  /* La bulle d'aide, toujours en bas à droite */
+  .bulle-aide{position:fixed;right:22px;bottom:22px;z-index:90;width:52px;height:52px;
+    border:none;border-radius:50%;background:var(--blue);color:#fff;font-size:22px;
+    cursor:pointer;box-shadow:0 12px 28px -8px rgba(47,107,255,.65);
+    transition:transform .18s var(--ease)}
+  .bulle-aide:hover{transform:translateY(-3px) scale(1.05)}
+  .bulle-panneau{position:fixed;right:22px;bottom:22px;z-index:95;width:330px;
+    background:#fff;border:1px solid var(--border);border-radius:20px;overflow:hidden;
+    box-shadow:0 30px 70px -25px rgba(15,27,51,.5);animation:fhpop .25s var(--ease)}
+  .bulle-tete{position:relative;padding:16px 18px 13px;
+    background:linear-gradient(135deg,#0f1b33 0%,#2f6bff 130%)}
+  .bulle-t{font-size:15.5px;font-weight:800;color:#fff}
+  .bulle-s{font-size:11.5px;color:rgba(255,255,255,.72);margin-top:2px;max-width:250px}
+  .bulle-tete .cat-x{position:absolute;top:10px;right:10px;width:28px;height:28px;
+    background:rgba(255,255,255,.16);color:#fff}
+  .bulle-form{display:flex;flex-direction:column;gap:8px;padding:14px}
+  .bulle-form input,.bulle-form textarea{padding:10px 13px;border:1px solid var(--border);
+    border-radius:11px;font-family:inherit;font-size:13px;resize:none}
+  .bulle-form input:focus,.bulle-form textarea:focus{outline:none;border-color:var(--blue)}
+  .bulle-envoi{width:100%}
+  .bulle-erreur{font-size:12px;font-weight:700;color:#b91c1c}
+  .bulle-merci{padding:20px 18px;font-size:13.5px;line-height:1.55;color:var(--ink);
+    font-weight:600}
+  .bulle-merci .btn-link{display:block;margin-top:8px;padding:0}
+
+  /* Partager un objectif bouclé */
+  .obj-partage{margin-left:auto;flex:none;background:#16a34a;color:#fff;border:none;
+    border-radius:11px;padding:10px 15px;font-family:inherit;font-size:12.5px;font-weight:800;
+    cursor:pointer;transition:.18s var(--ease)}
+  .obj-partage:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .obj-partage.fait{background:none;color:#15803d;cursor:default;font-weight:800}
 
   .cal-rien{background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px 22px;
     margin-bottom:14px;font-size:13.5px;color:var(--muted2);font-weight:500;line-height:1.5}

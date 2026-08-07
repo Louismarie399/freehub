@@ -83,6 +83,14 @@ function chat_auteurs(array $ids): array
                 }
             }
         }
+        // Les mercis reçus : la monnaie sociale de l'Entraide.
+        $stM = db()->prepare(
+            "SELECT COUNT(*) FROM chat_reactions cr
+              JOIN chat_messages cm ON cm.id = cr.message_id
+             WHERE cm.user_id = ? AND cr.emoji = '🙏' AND cr.user_id != cm.user_id");
+        $stM->execute([(int) $r['id']]);
+        $mercis = (int) $stM->fetchColumn();
+
         $prenom = trim((string) $r['prenom']);
         $out[(int) $r['id']] = [
             'id'      => (int) $r['id'],
@@ -94,6 +102,7 @@ function chat_auteurs(array $ids): array
             'badge'   => $badge,
             'nbBadges' => $nbBadges,
             'photo'   => $photo,
+            'mercis'  => $mercis,
         ];
     }
     return $out;
@@ -219,6 +228,16 @@ function route_chat_liste(): void
         'enLigne'  => $enLigne,
         'total'    => $total,
         'clos'     => $clos,
+        'sondage'  => $fil > 0 ? null : chat_sondage_etat($u),
+        'mesMercis' => (function () use ($u) {
+            if (!$u) return 0;
+            $st = db()->prepare(
+                "SELECT COUNT(*) FROM chat_reactions cr
+                  JOIN chat_messages cm ON cm.id = cr.message_id
+                 WHERE cm.user_id = ? AND cr.emoji = '🙏' AND cr.user_id != cm.user_id");
+            $st->execute([(int) $u['id']]);
+            return (int) $st->fetchColumn();
+        })(),
     ]);
 }
 
