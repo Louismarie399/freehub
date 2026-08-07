@@ -18,4 +18,10 @@ return [
     'google_client_id'     => '',                      // vide = bouton Google masqué
     'google_client_secret' => '',
     'model'                => 'claude-sonnet-5',
+
+    // --- Rappels par e-mail (notifier.php, lancé par le cron) ---
+    'base_url'             => 'https://free-hub.fr',   // liens dans les e-mails
+    'mail_from'            => 'notifications@free-hub.fr',
+    // Décommenter pour NE RIEN envoyer et déposer les messages en fichiers :
+    // 'mail_fichier'      => '/home/rtym5189/freehub_data/mails',
 ];

@@ -29,6 +29,10 @@ return [
     'open_signup'       => false,
     'anthropic_api_key' => '',                 // à remplir pour tester /api/analyze
     'model'             => 'claude-sonnet-5',
+    'base_url'          => 'http://127.0.0.1:8123',
+    // En local, AUCUN e-mail ne part : chaque message est déposé en HTML ici,
+    // pour être relu dans le navigateur.
+    'mail_fichier'      => __DIR__ . '/mails',
 ];
 PHP);
 }

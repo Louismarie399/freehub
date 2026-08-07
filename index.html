@@ -52,6 +52,10 @@
   /* Nav flottante en pilule - halo bleu, se réduit au défilement        */
   /* ------------------------------------------------------------------ */
   .navwrap{position:sticky;top:14px;z-index:50;padding:0 16px}
+  /* Repère pour le tiroir mobile, qui se pose SOUS la pilule sans occuper
+     de place dans le flux (sinon il repousserait tout le hero). */
+  .navwrap{isolation:isolate}
+  .nav-zone{position:relative;max-width:1080px;margin:0 auto}
   /* Grille en 3 colonnes égales : les liens sont centrés sur la page, pas
      poussés par la largeur du logo ou des boutons. */
   .nav{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;
@@ -79,6 +83,30 @@
   .nav-cta:hover{transform:translateY(-1px);box-shadow:0 0 30px -4px rgba(47,107,255,.8)}
   .nav.mini .nav-cta{padding:10px 17px}
 
+  /* Menu mobile : un burger dans la pilule, un tiroir juste dessous. */
+  .nav-burger{display:none;flex-direction:column;justify-content:center;gap:4.5px;
+    width:40px;height:40px;padding:0 10px;border:none;border-radius:12px;background:transparent;
+    cursor:pointer;transition:background .2s}
+  .nav-burger:hover{background:#f0f4fb}
+  .nav-burger span{display:block;height:2px;border-radius:2px;background:#0f1b33;
+    transition:transform .3s cubic-bezier(.3,.7,.3,1),opacity .2s}
+  .nav-burger.ouvert span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+  .nav-burger.ouvert span:nth-child(2){opacity:0}
+  .nav-burger.ouvert span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+  .nav-tiroir{display:none;position:absolute;left:0;right:0;top:100%;margin-top:10px;padding:10px;
+    background:rgba(255,255,255,.96);backdrop-filter:blur(14px);
+    border:1px solid rgba(47,107,255,.12);border-radius:22px;
+    box-shadow:0 18px 44px -22px rgba(15,27,51,.45), 0 0 30px -10px rgba(47,107,255,.4);
+    opacity:0;transform:translateY(-10px);transition:opacity .25s,transform .25s}
+  .nav-tiroir.ouvert{opacity:1;transform:none}
+  .nav-tiroir a{display:block;padding:13px 16px;border-radius:14px;
+    font-size:15.5px;font-weight:700;color:#0f1b33}
+  .nav-tiroir a:hover{background:#f4f7fd}
+  .nav-tiroir-cta{width:100%;margin-top:6px;padding:13px;border:1.5px solid rgba(15,27,51,.12);
+    border-radius:100px;background:#fff;font-size:15px;font-weight:700;color:#0f1b33;cursor:pointer}
+  .nav-tiroir-cta.primaire{margin-top:8px;border-color:transparent;background:#0f1b33;color:#fff;
+    box-shadow:0 0 22px -8px rgba(47,107,255,.7)}
+
   /* ------------------------------------------------------------------ */
   /* Hero - épuré, quadrillage discret + jeux de lumière bleus           */
   /* ------------------------------------------------------------------ */
@@ -86,7 +114,7 @@
     background:linear-gradient(180deg,#f6f9ff 0%,#fff 82%);overflow:hidden;margin-top:-76px;
     /* La nav flottante mange le haut : on redescend le contenu d'autant pour
        qu'il soit optiquement centré dans l'espace réellement libre. */
-    padding-top:clamp(168px,18.5vw,238px)}
+    padding-top:clamp(150px,16.5vw,214px)}
   .hero::before{content:'';position:absolute;inset:0;pointer-events:none;
     background-image:linear-gradient(rgba(47,107,255,.06) 1px,transparent 1px),
                      linear-gradient(90deg,rgba(47,107,255,.06) 1px,transparent 1px);
@@ -389,7 +417,19 @@
     .promesses{grid-template-columns:1fr 1fr;max-width:660px}
   }
   @media (max-width:820px){
-    .nav-liens{display:none}
+    /* Les liens et les boutons cèdent la place au burger + tiroir. */
+    .nav-liens,.nav-login,.nav-cta{display:none}
+    .nav-burger{display:flex}
+    .nav{grid-template-columns:1fr auto}
+    .nav-tiroir{display:block}
+    .nav-tiroir:not(.ouvert){pointer-events:none;visibility:hidden}
+
+    /* Le hero garde ses étiquettes : une au-dessus du titre, une en dessous
+       des boutons. Tout tient sur un écran, rien n'est perdu. */
+    .hero{padding-top:clamp(112px,26vw,150px)}
+    .hero-flot{display:block;position:static;max-width:none;width:100%;
+      margin:0 auto 22px;animation:none;transform:rotate(-1.2deg)}
+    .hero-flot.bas{margin:26px auto 0;transform:rotate(1.2deg)}
   }
   @media (max-width:600px){
     .navwrap{top:10px;padding:0 10px}
@@ -473,6 +513,7 @@
 <div id="top">
   <!-- ============ NAV FLOTTANTE ============ -->
   <div class="navwrap">
+    <div class="nav-zone">
     <nav id="fhnav" class="nav">
       <div class="nav-marque"><a href="#top"><img src="assets/freehub-logo.png" alt="Freehub" class="nav-logo"></a></div>
       <div class="nav-liens">
@@ -482,32 +523,81 @@
       <div class="nav-actions">
         <button class="nav-login" onclick="openAuth('login')">Se connecter</button>
         <button class="nav-cta" onclick="openAuth('signup')">Rejoindre l'alpha</button>
+        <button class="nav-burger" onclick="basculerMenu()" aria-label="Ouvrir le menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </nav>
+    <!-- Le menu déroulant mobile, sous la pilule de navigation -->
+    <div class="nav-tiroir" id="navTiroir">
+      <a href="#probleme" onclick="fermerMenu()">Toi aussi ?</a>
+      <a href="#outil" onclick="fermerMenu()">Nos outils</a>
+      <button class="nav-tiroir-cta" onclick="fermerMenu();openAuth('login')">Se connecter</button>
+      <button class="nav-tiroir-cta primaire" onclick="fermerMenu();openAuth('signup')">Rejoindre l'alpha</button>
+    </div>
+    </div>
   </div>
 
   <!-- ============ HERO ============ -->
   <section class="hero">
-    <!-- Aperçus flottants : de vraies bribes du produit, pas du décor. -->
-    <div class="hero-flot" style="left:calc(50% - 710px);top:38%;--r:-2deg">
-      <div style="display:flex;align-items:center;gap:9px">
-        <span style="width:20px;height:20px;border-radius:50%;background:#22a355;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">✓</span>
-        Récupérer ton SIRET
-      </div>
-      <div style="font-size:11.5px;color:#8a97ad;margin-top:4px;font-weight:600">Étape terminée · parcours auto-entreprise</div>
-    </div>
-    <div class="hero-flot" style="right:calc(50% - 710px);top:50%;--r:2deg;animation-delay:.8s">
-      <div style="display:flex;align-items:center;gap:9px">📬 La CFE arrive dans 15 jours</div>
-      <div style="font-size:11.5px;color:#8a97ad;margin-top:4px;font-weight:600">On t'explique comment la payer, en 3 étapes</div>
-    </div>
-
     <div class="hero-inner">
       <div class="hero-badge" data-reveal><span class="pt"></span> Alpha privée · Accès sur invitation</div>
+
+      <!-- Aperçus du produit : flottants de part et d'autre sur grand écran,
+           empilés au-dessus et en dessous du bloc sur téléphone. -->
+      <div class="hero-flot haut" data-reveal style="left:calc(50% - 710px);top:38%;--r:-2deg">
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="width:20px;height:20px;border-radius:50%;background:#22a355;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">✓</span>
+          Récupérer ton SIRET
+        </div>
+        <div style="font-size:11.5px;color:#8a97ad;margin-top:4px;font-weight:600">Étape terminée · parcours auto-entreprise</div>
+      </div>
+
       <h1 data-reveal data-reveal-delay="90">Ton métier, tu gères.<br><span class="grad">L'administratif</span>, tu pries.</h1>
       <p class="hero-sub" data-reveal data-reveal-delay="180">Freehub rassemble au même endroit tout ce qu'il faut pour comprendre l'administratif et la fiscalité de ton activité. <strong style="color:#0f1b33">On t'explique, tu décides.</strong></p>
       <div class="hero-ctas" data-reveal data-reveal-delay="280">
         <button class="btn-dark" onclick="openAuth('signup')">Rejoindre l'alpha</button>
         <button class="btn-ghost" onclick="document.getElementById('outil').scrollIntoView({behavior:'smooth'})">Voir ce qu'il y a dedans</button>
+      </div>
+
+      <div class="hero-flot bas" data-reveal data-reveal-delay="360" style="right:calc(50% - 710px);top:50%;--r:2deg;animation-delay:.8s">
+        <div style="display:flex;align-items:center;gap:9px">📬 La CFE arrive dans 15 jours</div>
+        <div style="font-size:11.5px;color:#8a97ad;margin-top:4px;font-weight:600">On t'explique comment la payer, en 3 étapes</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 100 % GRATUIT ============ -->
+  <!-- Volontairement seule à l'écran : le vide autour est ce qui donne au
+       chiffre sa force. Ne pas resserrer ces marges. -->
+  <section id="gratuit">
+    <div class="gratuit" data-reveal>
+      <h2 class="gratuit-titre">100 % gratuit.</h2>
+    </div>
+  </section>
+
+  <!-- ============ LES PEURS ============ -->
+  <section id="probleme" class="sec">
+    <div class="sec-head" data-reveal style="max-width:920px">
+      <h2>Le problème, ce n'est pas la paperasse.<br>C'est la peur.</h2>
+      <p>L'erreur, tu la découvres des années plus tard, avec les pénalités. Alors un jour, tout le monde se dit…</p>
+    </div>
+    <div class="scenes">
+      <div class="scene" data-reveal>
+        <img src="assets/illus/obj-statut.svg" alt="" class="scene-illu">
+        <div class="scene-bulle" style="--r:-1.5deg">« Est-ce que j'ai le droit&nbsp;? »</div>
+      </div>
+      <div class="scene inv" data-reveal data-reveal-delay="120">
+        <img src="assets/illus/rien-en-cours.svg" alt="" class="scene-illu">
+        <div class="scene-bulle" style="--r:1.5deg;animation-delay:.6s">« J'ai forcément oublié un truc. »</div>
+      </div>
+      <div class="scene" data-reveal data-reveal-delay="80">
+        <img src="assets/illus/obj-tva-comprendre.svg" alt="" class="scene-illu">
+        <div class="scene-bulle" style="--r:1deg;animation-delay:.3s">« Tout le monde comprend sauf moi. »</div>
+      </div>
+      <div class="scene inv" data-reveal data-reveal-delay="200">
+        <img src="assets/illus/en-route.svg" alt="" class="scene-illu">
+        <div class="scene-bulle" style="--r:-1deg;animation-delay:.9s">« Je paie trop. Mais où&nbsp;? »</div>
       </div>
     </div>
   </section>
@@ -558,41 +648,6 @@
     </div>
   </section>
 
-  <!-- ============ 100 % GRATUIT ============ -->
-  <!-- Volontairement seule à l'écran : le vide autour est ce qui donne au
-       chiffre sa force. Ne pas resserrer ces marges. -->
-  <section id="gratuit">
-    <div class="gratuit" data-reveal>
-      <h2 class="gratuit-titre">100 % gratuit.</h2>
-    </div>
-  </section>
-
-  <!-- ============ LES PEURS ============ -->
-  <section id="probleme" class="sec">
-    <div class="sec-head" data-reveal style="max-width:920px">
-      <h2>Le problème, ce n'est pas la paperasse.<br>C'est la peur.</h2>
-      <p>L'erreur, tu la découvres des années plus tard, avec les pénalités. Alors un jour, tout le monde se dit…</p>
-    </div>
-    <div class="scenes">
-      <div class="scene" data-reveal>
-        <img src="assets/illus/obj-statut.svg" alt="" class="scene-illu">
-        <div class="scene-bulle" style="--r:-1.5deg">« Est-ce que j'ai le droit&nbsp;? »</div>
-      </div>
-      <div class="scene inv" data-reveal data-reveal-delay="120">
-        <img src="assets/illus/rien-en-cours.svg" alt="" class="scene-illu">
-        <div class="scene-bulle" style="--r:1.5deg;animation-delay:.6s">« J'ai forcément oublié un truc. »</div>
-      </div>
-      <div class="scene" data-reveal data-reveal-delay="80">
-        <img src="assets/illus/obj-tva-comprendre.svg" alt="" class="scene-illu">
-        <div class="scene-bulle" style="--r:1deg;animation-delay:.3s">« Tout le monde comprend sauf moi. »</div>
-      </div>
-      <div class="scene inv" data-reveal data-reveal-delay="200">
-        <img src="assets/illus/en-route.svg" alt="" class="scene-illu">
-        <div class="scene-bulle" style="--r:-1deg;animation-delay:.9s">« Je paie trop. Mais où&nbsp;? »</div>
-      </div>
-    </div>
-  </section>
-
   <!-- ============ LE RETOURNEMENT ============ -->
   <section class="sec" style="padding-top:clamp(10px,2vw,24px)">
     <div class="flip-boite">
@@ -632,7 +687,7 @@
           <div class="rv-tampon">Tu paies. Tu ne comprends pas toujours.</div>
         </div>
         <div class="flip-texte" data-reveal data-reveal-delay="120">
-          <h2>Les autres font à ta place.<br><span class="accent">Chez nous, tu comprends, pour faire.</span></h2>
+          <h2>Les autres font à ta place.<br><span class="accent">Ici, tu comprends et tu décides après.</span></h2>
           <p>Déléguer sans comprendre, c'est rester dépendant, et garder la peur. Freehub est le premier espace où tout est rassemblé pour comprendre l'administratif et la fiscalité selon ton activité et ton niveau.</p>
           <div class="flip-pts">
             <span class="flip-pt"><span class="ck">✓</span> On t'explique, tu décides</span>
@@ -1019,6 +1074,27 @@
       ? 'Crée ton compte en 30 secondes. On personnalise ton espace juste après, ensemble.'
       : 'Retrouve ton hub, tes simulateurs et tes conseils personnalisés en un clin d’œil.';
   }
+
+  // ---- Menu mobile ----
+  function basculerMenu(){
+    var t = document.getElementById('navTiroir');
+    var b = document.querySelector('.nav-burger');
+    var ouvert = t.classList.toggle('ouvert');
+    b.classList.toggle('ouvert', ouvert);
+    b.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
+  }
+  function fermerMenu(){
+    var t = document.getElementById('navTiroir');
+    if(!t || !t.classList.contains('ouvert')) return;
+    t.classList.remove('ouvert');
+    var b = document.querySelector('.nav-burger');
+    b.classList.remove('ouvert');
+    b.setAttribute('aria-expanded', 'false');
+  }
+  // Un clic ailleurs referme le tiroir, comme n'importe quel menu.
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('.nav-tiroir') && !e.target.closest('.nav-burger')) fermerMenu();
+  });
 
   function openAuth(mode){
     mode = mode || 'signup';

@@ -177,6 +177,19 @@ function init_db(PDO $pdo): void
         CREATE TABLE IF NOT EXISTS chat_votes(
             sondage_id INTEGER NOT NULL, user_id INTEGER NOT NULL, choix INTEGER NOT NULL,
             PRIMARY KEY(sondage_id, user_id));
+        -- Préférences de notification, une ligne par membre. `cles` est un
+        -- objet JSON { echeances:1, recap:0, … } ; `jeton` sert au lien de
+        -- désinscription en un clic, sans connexion.
+        CREATE TABLE IF NOT EXISTS notif_prefs(
+            user_id INTEGER PRIMARY KEY, cles TEXT NOT NULL DEFAULT '{}',
+            jeton TEXT NOT NULL DEFAULT '', maj TEXT NOT NULL DEFAULT '');
+        -- Journal des envois : garantit qu'une même échéance n'est notifiée
+        -- qu'une fois, même si le cron passe plusieurs fois par jour.
+        CREATE TABLE IF NOT EXISTS notif_envois(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+            genre TEXT NOT NULL, reference TEXT NOT NULL, envoye TEXT NOT NULL);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_notif_unique
+            ON notif_envois(user_id, genre, reference);
     ");
     // Migration douce, comme en Python : ajoute les colonnes manquantes.
     $cols = array_column($pdo->query('PRAGMA table_info(users)')->fetchAll(), 'name');

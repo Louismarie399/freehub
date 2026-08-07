@@ -15,6 +15,7 @@ require_once __DIR__ . '/routes_google.php';
 require_once __DIR__ . '/routes_data.php';
 require_once __DIR__ . '/routes_analyze.php';
 require_once __DIR__ . '/routes_chat.php';
+require_once __DIR__ . '/routes_notif.php';
 require_once __DIR__ . '/routes_sav.php';
 
 // Chemin demandé, sans query string ni préfixe /api.
@@ -52,6 +53,12 @@ $routes = [
     'GET /chat/moderation'       => 'route_chat_moderation',
     'POST /chat/sondage'         => 'route_chat_sondage',
     'POST /chat/voter'           => 'route_chat_voter',
+
+    // Notifications par e-mail
+    'GET /notifications'         => 'route_notif_lire',
+    'POST /notifications'        => 'route_notif_ecrire',
+    'GET /notifications/stop'    => 'route_notif_stop',
+    'GET /admin/notifications/test' => 'route_notif_test',
 
     // Retours, réclamations
     'POST /sav'                  => 'route_sav',

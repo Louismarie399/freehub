@@ -108,6 +108,38 @@ Voir `config.exemple.php`. Clés notables :
   URI de redirection à déclarer côté Google : `https://free-hub.fr/api/auth/google/callback`.
   (Écran de consentement en mode « Test » = seuls les comptes déclarés passent.)
 
+## Rappels par e-mail (`notifier.php`)
+
+Le membre choisit ses rappels à l'onboarding ou dans son profil (section
+« Rappels par e-mail »). **Rien ne part tant que personne n'a coché** : la table
+`notif_prefs` est vide au départ, et le script ne s'adresse qu'aux membres qui y
+figurent avec `echeances` à 1.
+
+**Reste à faire pour activer en production** — une tâche cron cPanel, une fois
+par jour, par exemple à 8 h :
+
+```
+/usr/local/bin/php /home/rtym5189/free-hub.fr/notifier.php
+```
+
+Avant de l'activer, vérifier ce qui partirait, sans rien envoyer :
+
+```
+/usr/local/bin/php /home/rtym5189/free-hub.fr/notifier.php --simulation
+```
+
+- Préavis : **J-15 et J-3** (`NOTIF_PREAVIS` dans `api/routes_notif.php`).
+- `notif_envois` garantit qu'un même rappel ne part qu'une fois, même si le cron
+  passe plusieurs fois par jour.
+- Chaque e-mail porte un lien de désinscription en un clic
+  (`/api/notifications/stop?j=…`), qui coupe tout sans connexion.
+- Config : `mail_from` (expéditeur) et `base_url` (liens). En local,
+  `mail_fichier` détourne les envois vers `devdata/mails/*.html` — aucun e-mail
+  ne quitte la machine en développement.
+- Les échéances viennent des périodicités déclarées dans le profil
+  (`periodeUrssaf`, `periodeTva`). Non renseignées = aucune échéance générée :
+  on n'invente pas de date.
+
 ## Développement local
 
 ```

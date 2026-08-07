@@ -1197,6 +1197,10 @@
     forme: 'SASU',
     regime: 'Impôt sur les sociétés',
     versementLiberatoire: 'non',
+    // Périodicités déclaratives : elles nourrissent le calendrier et les
+    // rappels. Vide = on ne sait pas, donc on n'invente aucune échéance.
+    periodeUrssaf: '',
+    periodeTva: '',
     // 3 · Chiffre d'affaires
     ca: '60000',
     periodeCa: 'annuel',
@@ -2075,6 +2079,11 @@
         { k:'regime', l:'Régime d’imposition', options:SIM_OPTIONS.regime.map(function(x){ return {v:x,l:x}; }) },
         { k:'versementLiberatoire', l:'Versement libératoire', lex:'vfl', si:estMicro, options:[
             {v:'non', l:'Non - barème progressif'}, {v:'oui', l:'Oui'} ] },
+        { k:'periodeUrssaf', l:'Déclaration URSSAF', si:estMicro, large:true, options:[
+            {v:'', l:'- je ne sais pas encore -'},
+            {v:'mensuel', l:'Tous les mois'},
+            {v:'trimestriel', l:'Tous les trimestres'} ],
+          aide:'Tu l’as choisie à l’inscription. Elle est rappelée sur ton espace autoentrepreneur.urssaf.fr, et sert à placer tes échéances dans le calendrier.' },
       ],
     },
     {
@@ -2097,6 +2106,12 @@
         { k:'regimeTva', l:'Ton régime de TVA', large:true, si:estAssujettiTVA,
           options:SIM_OPTIONS.regimeTva.map(function(x){ return {v:x,l:x}; }),
           aide:'Il détermine la fréquence de tes déclarations. En cas de doute, regarde ton avis de situation ou demande à ton comptable.' },
+        { k:'periodeTva', l:'Fréquence de tes déclarations de TVA', large:true, si:estAssujettiTVA,
+          options:[
+            {v:'', l:'- je ne sais pas encore -'},
+            {v:'mensuel', l:'Tous les mois'},
+            {v:'trimestriel', l:'Tous les trimestres'} ],
+          aide:'Elle place tes déclarations dans le calendrier. La date limite exacte figure sur ton espace professionnel impots.gouv.fr : elle varie selon ton dossier.' },
         { k:'tauxVente', l:'Taux de TVA', large:true, options:TVA_PARAMS.tauxVente },
         { k:'clientRecup', l:'Clients qui récupèrent la TVA', type:'number', suffixe:'%',
           lex:'client-recup', aide:'En général, les entreprises assujetties à la TVA.' },
@@ -2105,6 +2120,18 @@
       ],
       total:{ cles:['clientRecup','clientProNon'], attendu:100,
               l:'Répartition de ta clientèle' },
+    },
+    {
+      id:'notifications', titre:'Rappels par e-mail', ico:'📬', color:'#0f9d6e', soft:'#effdf6',
+      resume:function(){
+        var n = state.notif.choix ? Object.keys(state.notif.choix)
+          .filter(function(k){ return state.notif.choix[k]; }).length : 0;
+        if(!state.notif.charge) return 'Chargement…';
+        return n ? n + ' rappel' + (n > 1 ? 's activés' : ' activé') : 'Aucun rappel activé';
+      },
+      note:'On ne t’écrit que si tu l’as demandé. Tu peux tout couper en un clic.',
+      champs:[],
+      extra:'notifications',
     },
     {
       id:'foyer', titre:'Foyer fiscal', ico:'🏠', color:'#ca8a04', soft:'#fefce8',
@@ -2221,6 +2248,8 @@
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
+    // Préférences de rappels : chargées à l'ouverture du profil.
+    notif: { charge:false, genres:[], choix:{}, confirme:false, email:'', envoi:false, sauve:0 },
     // Sur mobile la barre latérale est un tiroir : elle démarre TOUJOURS fermée,
     // quelle que soit la préférence enregistrée sur ordinateur.
     sidePlie: (function(){
@@ -5671,12 +5700,90 @@
       + '</div></div>';
   }
 
+  // ---------------------------------------------------------------------------
+  // Rappels par e-mail - préférences
+  // ---------------------------------------------------------------------------
+  // Rien n'est envoyé tant que le membre n'a pas coché : le serveur ne connaît
+  // personne tant qu'aucune préférence n'a été enregistrée.
+  function notifCharger(force){
+    if(!state.compte) return;
+    if(state.notif.charge && !force) return;
+    fetch('api/notifications', { credentials:'same-origin' })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(!d) return;
+        state.notif = { charge:true, genres:d.genres || [], choix:d.choix || {},
+                        confirme:!!d.confirme, email:d.email || '' };
+        majProfilNotif();
+      }, function(){});
+  }
+
+  function notifEnregistrer(){
+    if(!state.compte) return;
+    state.notif.envoi = true;
+    majProfilNotif();
+    fetch('api/notifications', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      credentials:'same-origin', body: JSON.stringify({ choix: state.notif.choix }),
+    }).then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        state.notif.envoi = false;
+        state.notif.confirme = true;
+        if(d && d.choix) state.notif.choix = d.choix;
+        state.notif.sauve = Date.now();
+        majProfilNotif();
+      }, function(){ state.notif.envoi = false; majProfilNotif(); });
+  }
+
+  // Rendu chirurgical : on ne re-render pas toute la modale pour une case.
+  function majProfilNotif(){
+    var zone = document.querySelector('[data-notif-zone]');
+    if(zone) zone.innerHTML = notifBlocHtml(true);
+    var res = document.querySelector('.prow[data-sid="notifications"] .prow-r');
+    if(res){
+      var n = Object.keys(state.notif.choix || {})
+        .filter(function(k){ return state.notif.choix[k]; }).length;
+      res.textContent = n ? n + ' rappel' + (n > 1 ? 's activés' : ' activé')
+                          : 'Aucun rappel activé';
+    }
+  }
+
+  function notifBlocHtml(interieur){
+    if(!state.notif.charge){
+      var vide = '<div class="notif-info">Chargement de tes préférences…</div>';
+      return interieur ? vide : '<div data-notif-zone>'+vide+'</div>';
+    }
+    var lignes = (state.notif.genres || []).map(function(g){
+      var on = !!state.notif.choix[g.id];
+      return '<button class="notif-l'+(on ? ' on' : '')+'" data-action="notif-bascule"'
+        + ' data-id="'+esc(g.id)+'" role="switch" aria-checked="'+(on?'true':'false')+'">'
+        + '<span class="notif-ico">'+g.ico+'</span>'
+        + '<span class="notif-x"><span class="notif-t">'+esc(g.titre)+'</span>'
+          + '<span class="notif-d">'+esc(g.desc)+'</span></span>'
+        + '<span class="notif-sw"><i></i></span>'
+      + '</button>';
+    }).join('');
+
+    var etat = state.notif.envoi ? 'Enregistrement…'
+             : (state.notif.sauve && Date.now() - state.notif.sauve < 4000 ? 'Enregistré ✓' : '');
+    var html = '<div class="notif-bloc">'
+      + '<div class="notif-dest">Les rappels partiront à <strong>'+esc(state.notif.email)+'</strong></div>'
+      + lignes
+      + '<div class="notif-pied">'
+        + '<span class="notif-etat">'+etat+'</span>'
+        + '<span class="notif-aide">Un lien de désinscription est joint à chaque e-mail.</span>'
+      + '</div>'
+    + '</div>';
+    return interieur ? html : '<div data-notif-zone>'+html+'</div>';
+  }
+
   function profilBlocHtml(s, p){
     var ouvert = state.profilSection === s.id;
     var etat = etatSection(s.id);
     var champs = s.champs.filter(function(c){ return !c.si || c.si(p); })
                          .map(function(c){ return pfield(c, p); }).join('');
     if(s.extra === 'identite') champs += profilIdentiteExtra(p);
+    if(s.extra === 'notifications') champs += notifBlocHtml();
 
     var total = '';
     if(s.total){
@@ -5686,7 +5793,8 @@
         + Math.round(somme)+' %</strong>'+(ok ? ' ✓' : ' - doit faire 100 %')+'</div>';
     }
 
-    return '<section class="prow'+(ouvert?' open':'')+'" style="--c:'+s.color+';--s:'+s.soft+'">'
+    return '<section class="prow'+(ouvert?' open':'')+'" data-sid="'+s.id+'"'
+      + ' style="--c:'+s.color+';--s:'+s.soft+'">'
       + '<button class="prow-head" data-action="profil-section" data-id="'+s.id+'">'
         + '<span class="prow-ico">'+s.ico+'</span>'
         + '<span class="prow-t">'+esc(s.titre)+'</span>'
@@ -7227,9 +7335,9 @@
     var o = state.onboarding;
     var r = o.rep;
     var e = o.etape;
-    // 3 questions : activité, statut, CA. Le prénom/nom est déjà saisi à la
-    // création du compte - on ne le redemande pas ici.
-    var total = 3;
+    // 5 questions : activité, statut, CA, périodicité déclarative, rappels.
+    // Le prénom/nom est déjà saisi à la création du compte.
+    var total = 5;
 
     var dots = '';
     if(e >= 1 && e <= total){
@@ -7270,6 +7378,48 @@
             + '<button class="onb-seg-b'+(r.periodeCa==='mensuel'?' on':'')+'" data-action="onb-periode" data-v="mensuel">par mois</button>'
           + '</div>'
         + '</div>'
+        + onbNav(true);
+    } else if(e === 4){
+      // La périodicité conditionne tout le calendrier : sans elle, on n'invente
+      // aucune échéance. « Je ne sais pas » est une réponse acceptable.
+      var micro = /micro|auto/i.test(r.forme || '');
+      corps = dots + '<div class="onb-q">'
+          + (micro ? 'Tu déclares à l’URSSAF…' : 'Tu déclares ta TVA…')+'</div>'
+        + '<div class="onb-sub">'+(micro
+            ? 'C’est le choix fait à ton immatriculation. Il place tes échéances dans le calendrier.'
+            : 'Pour placer tes déclarations dans ton calendrier. Si tu n’y es pas encore, passe.')+'</div>'
+        + '<div class="onb-choix">'
+          + ['mensuel','trimestriel'].map(function(v){
+              var actif = (micro ? r.periodeUrssaf : r.periodeTva) === v;
+              return '<button class="onb-opt'+(actif?' on':'')+'" data-action="onb-periodicite"'
+                + ' data-v="'+v+'">'+(v === 'mensuel' ? 'Tous les mois' : 'Tous les trimestres')
+                + '</button>';
+            }).join('')
+          + '<button class="onb-opt'+((micro ? r.periodeUrssaf : r.periodeTva) === 'nsp' ? ' on' : '')
+            + '" data-action="onb-periodicite" data-v="nsp">Je ne sais pas encore</button>'
+        + '</div>'
+        + onbNav(false);
+    } else if(e === 5){
+      var g = state.notif.genres && state.notif.genres.length
+        ? state.notif.genres
+        : [{id:'echeances', ico:'📅', titre:'Mes échéances',
+            desc:'Un rappel avant chaque date qui te concerne'},
+           {id:'entraide', ico:'💬', titre:'Les réponses à mes messages',
+            desc:'Quand quelqu’un te répond dans l’Entraide'},
+           {id:'recap', ico:'📮', titre:'Le récap du mois',
+            desc:'Ce qui t’attend le mois prochain, en un e-mail'}];
+      corps = dots + '<div class="onb-q">On te prévient de quoi ?</div>'
+        + '<div class="onb-sub">Par e-mail, seulement si tu le demandes. '
+          + 'Modifiable à tout moment dans ton profil.</div>'
+        + '<div class="onb-notifs">' + g.map(function(x){
+            var on = !!(r.notif || {})[x.id];
+            return '<button class="onb-notif'+(on?' on':'')+'" data-action="onb-notif"'
+              + ' data-id="'+esc(x.id)+'">'
+              + '<span class="onb-notif-i">'+x.ico+'</span>'
+              + '<span class="onb-notif-x"><span class="onb-notif-t">'+esc(x.titre)+'</span>'
+                + '<span class="onb-notif-d">'+esc(x.desc)+'</span></span>'
+              + '<span class="notif-sw"><i></i></span></button>';
+          }).join('') + '</div>'
         + onbNav(true, 'Terminer');
     } else {
       corps = '<div class="onb-emoji">🎉</div>'
@@ -7324,8 +7474,19 @@
     if((r.activite||'').trim()) p.activite = r.activite.trim();
     if(r.forme && r.forme !== 'Je ne sais pas encore') p.forme = r.forme;
     if((r.ca||'').toString().trim()){ p.ca = r.ca; p.periodeCa = r.periodeCa || 'annuel'; }
+    // « nsp » n'est pas une périodicité : on laisse vide plutôt que d'inventer.
+    var micro = /micro|auto/i.test(p.forme || r.forme || '');
+    var per = micro ? r.periodeUrssaf : r.periodeTva;
+    if(per && per !== 'nsp'){
+      if(micro) p.periodeUrssaf = per; else p.periodeTva = per;
+    }
     saveProfil(p);
     appliquerProfil();
+    // Les rappels choisis ici sont enregistrés côté serveur, comme depuis le profil.
+    if(r.notif && state.compte){
+      state.notif.choix = r.notif;
+      notifEnregistrer();
+    }
     try { localStorage.setItem('freehub_onboarded', '1'); } catch(e){}
     state.onboarding.actif = false;
     setState({ tab: 'accueil' });
@@ -7347,9 +7508,48 @@
   // Les échéances d'une année donnée. Contrairement à l'ancienne version qui
   // faisait rouler les dates passées sur l'année suivante, on date ici dans
   // l'année demandée : c'est ce qui permet de naviguer de 2026 à 2027.
+  // Les déclarations récurrentes, déduites UNIQUEMENT de la périodicité que
+  // l'utilisateur a renseignée. Rien de renseigné = rien d'affiché.
+  function echeancesRecurrentes(annee){
+    var p = state.profil, now = new Date(), out = [];
+    var micro = estMicro(p);
+    var pousse = function(mois, jour, quoi, domaine, note){
+      var d = new Date(annee, mois, jour);
+      out.push({ objId:null, quoi:quoi, dom:domaine, periode:null,
+                 mois:mois, jour:jour, date:d,
+                 jours:Math.ceil((d - now) / 86400000), pris:true, note:note });
+    };
+    var dUrssaf = DOMAINES.administratif, dTva = DOMAINES.tva;
+
+    if(micro && p.periodeUrssaf === 'mensuel'){
+      for(var m = 0; m < 12; m++){
+        var fin = new Date(annee, m + 1, 0).getDate();
+        pousse(m, fin, 'Déclaration URSSAF', dUrssaf,
+          'Chiffre d’affaires du mois précédent, sur autoentrepreneur.urssaf.fr');
+      }
+    } else if(micro && p.periodeUrssaf === 'trimestriel'){
+      [[3,30,1],[6,31,2],[9,31,3],[0,31,4]].forEach(function(t){
+        pousse(t[0], t[1], 'Déclaration URSSAF · trimestre ' + t[2], dUrssaf,
+          'Chiffre d’affaires du trimestre écoulé, sur autoentrepreneur.urssaf.fr');
+      });
+    }
+    if(p.periodeTva === 'mensuel'){
+      for(var k = 0; k < 12; k++){
+        pousse(k, 21, 'Déclaration de TVA', dTva,
+          'Formulaire CA3 sur impots.gouv.fr. Ta date limite exacte y figure.');
+      }
+    } else if(p.periodeTva === 'trimestriel'){
+      [[3,1],[6,2],[9,3],[0,4]].forEach(function(t){
+        pousse(t[0], 21, 'Déclaration de TVA · trimestre ' + t[1], dTva,
+          'Formulaire CA3 sur impots.gouv.fr. Ta date limite exacte y figure.');
+      });
+    }
+    return out;
+  }
+
   function evenementsAnnee(annee){
     var p = state.profil, now = new Date();
-    return catalog.filter(function(o){
+    return echeancesRecurrentes(annee).concat(catalog.filter(function(o){
       if(!o.echeance) return false;
       return state.added.indexOf(o.id) >= 0 || (o.pertinent && o.pertinent(p)) || !o.pertinent;
     }).map(function(o){
@@ -7365,7 +7565,7 @@
       return { objId:o.id, quoi:e.quoi, dom:dd, periode:null,
                mois:e.mois - 1, jour:e.jour, date:d,
                jours:Math.ceil((d - now) / 86400000), pris:pris };
-    }).sort(function(a, b){
+    })).sort(function(a, b){
       return a.mois - b.mois || ((a.jour || 0) - (b.jour || 0));
     });
   }
@@ -8026,9 +8226,14 @@
     }
     // Replié par défaut : une ligne au-dessus du fil, pas un pavé.
     if(!state.sondageOuvert){
+      // Sur mobile, la question elle-même attend le dépliage : la ligne se
+      // réduit à une invitation, et le fil récupère la hauteur gagnée.
+      var titreReplie = surMobile()
+        ? '<span class="sond-q">La question de la semaine</span>'
+        : '<span class="sond-q">'+esc(sg.question)+'</span>';
       return '<div class="sond plie" data-action="sondage-deplier" role="button">'
         + '<div class="sond-h"><span class="sond-pic">📊</span>'
-          + '<span class="sond-q">'+esc(sg.question)+'</span>'
+          + titreReplie
           + '<span class="sond-t">'+sg.total+' vote'+(sg.total>1?'s':'')+'</span>'
           + '<span class="sond-dep">'+(sg.mien !== null && sg.mien !== undefined
               ? 'voir ▾' : 'voter ▾')+'</span>'
@@ -8105,6 +8310,8 @@
         + '</div>'
         + chatAparteHtml()
       + '</div>'
+      // Les règles sont masquées sur mobile (CSS) : la charte d'accueil les a
+      // déjà données, et l'espace vertical est précieux.
       + '<div class="ch-regles">Les messages sont publics et visibles par tous les membres. '
         + 'La modération peut retirer un message ou suspendre l’accès à l’écriture</div>'
       + '</div>';
@@ -9649,6 +9856,22 @@
         state.onboarding.rep.periodeCa = el.getAttribute('data-v');
         majOnboarding();
         break;
+      case 'onb-periodicite': {
+        var rep = state.onboarding.rep;
+        var estMicroOnb = /micro|auto/i.test(rep.forme || '');
+        var v = el.getAttribute('data-v');
+        if(estMicroOnb) rep.periodeUrssaf = v; else rep.periodeTva = v;
+        state.onboarding.etape += 1;
+        majOnboarding();
+        break;
+      }
+      case 'onb-notif': {
+        var nid = el.getAttribute('data-id');
+        state.onboarding.rep.notif = state.onboarding.rep.notif || {};
+        state.onboarding.rep.notif[nid] = !state.onboarding.rep.notif[nid];
+        majOnboarding();
+        break;
+      }
       case 'onb-skip':
         try { localStorage.setItem('freehub_onboarded', '1'); } catch(err){}
         state.onboarding.actif = false;
@@ -10139,8 +10362,15 @@
         if(state.tab !== 'profil') state.profilReturn = state.tab;
         state.profilSaved = false;
         state.tab = 'profil';
+        notifCharger(false);
         render();
         break;
+      case 'notif-bascule': {
+        var gid = el.getAttribute('data-id');
+        state.notif.choix[gid] = !state.notif.choix[gid];
+        notifEnregistrer();
+        break;
+      }
       case 'profil-back':
         state.tab = state.profilReturn || 'simulateur';
         render();

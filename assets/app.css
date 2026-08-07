@@ -274,9 +274,10 @@
   .ch-principal{flex:1;min-width:0}
   .ch-corps.avec-aparte .ch-principal{max-width:calc(100% - 354px)}
 
-  /* Le fil : un fond doux, des lignes légères - un salon, pas un formulaire */
+  /* Le fil : fond teinté et uniforme - c'est le contraste avec lui qui fait
+     ressortir les bulles blanches, comme dans une vraie messagerie. */
   .ch-fil{height:min(58vh, 640px);overflow-y:auto;display:flex;flex-direction:column;gap:2px;
-    background:linear-gradient(180deg,#eef2f9 0%,#f6f8fc 130px);
+    background:#e9edf5;
     border:1px solid var(--border);border-radius:18px;padding:14px}
   .ch-info{padding:14px;text-align:center;font-size:13px;color:var(--muted2);font-weight:600}
   .ch-info.erreur{color:#b91c1c}
@@ -286,8 +287,8 @@
      l'entête et n'apparaissent qu'au survol - plus de bloc qui gonfle. */
   .ch-msg{position:relative;display:flex;gap:10px;padding:7px 10px;border-radius:12px;
     transition:background .15s var(--ease)}
-  .ch-msg:hover{background:rgba(255,255,255,.5)}
-  .ch-msg.moi:hover{background:rgba(47,107,255,.04)}
+  .ch-msg:hover{background:rgba(255,255,255,.4)}
+  .ch-msg.moi:hover{background:rgba(255,255,255,.4)}
   /* Un objectif bouclé partagé : une carte de fête, pas un message ordinaire */
   .ch-msg.celebration{background:linear-gradient(120deg,#f0fdf4 0%,#fefce8 100%);
     border:1px solid #bbf7d0;border-radius:14px;margin:4px 0}
@@ -319,10 +320,12 @@
   .ch-tag.signale{background:#fef3c7;color:#b45309}
   /* Le texte vit dans sa propre bulle, dimensionnée par son contenu (façon
      messagerie) : l'avatar reste dehors, à gauche. */
-  .ch-txt{display:inline-block;max-width:min(100%,540px);margin-top:4px;padding:10px 13px;
-    background:#f1f4f9;border-radius:4px 14px 14px 14px;
-    font-size:13.5px;line-height:1.5;color:var(--ink);overflow-wrap:break-word}
-  .ch-msg.moi .ch-txt{background:var(--soft);border-radius:14px 4px 14px 14px}
+  .ch-txt{display:inline-block;max-width:min(100%,540px);margin-top:4px;padding:11px 15px;
+    background:#fff;border:1px solid #e4e9f2;border-radius:4px 16px 16px 16px;
+    font-size:13.5px;line-height:1.5;color:var(--ink);overflow-wrap:break-word;
+    box-shadow:0 6px 16px -10px rgba(15,27,51,.45)}
+  .ch-msg.moi .ch-txt{background:var(--blue);border-color:transparent;color:#fff;
+    border-radius:16px 4px 16px 16px;box-shadow:0 8px 18px -10px rgba(47,107,255,.75)}
   /* Le pied ne prend de la place que s'il a quelque chose à montrer */
   .ch-pied{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .ch-pied:not(:has(*)){display:none}
@@ -2712,6 +2715,44 @@
     .res-topbar h2{font-size:19px}
   }
 
+  /* ---------- Rappels par e-mail ---------- */
+  .notif-bloc{grid-column:1/-1;display:flex;flex-direction:column;gap:9px}
+  .notif-info{grid-column:1/-1;font-size:13px;color:var(--muted);font-weight:600;padding:8px 2px}
+  .notif-dest{font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:2px}
+  .notif-dest strong{color:var(--ink)}
+  .notif-l{display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+    padding:13px 15px;border:1.5px solid var(--border);border-radius:15px;background:#fff;
+    font-family:inherit;cursor:pointer;transition:.18s var(--ease)}
+  .notif-l:hover{border-color:#c7d7ff;background:#fbfcff}
+  .notif-l.on{border-color:#0f9d6e;background:#f2fdf8}
+  .notif-ico{font-size:19px;flex:none}
+  .notif-x{flex:1;min-width:0}
+  .notif-t{display:block;font-size:14px;font-weight:800;letter-spacing:-.012em;color:var(--ink)}
+  .notif-d{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-top:2px;line-height:1.45}
+  /* L'interrupteur : la pastille glisse quand c'est actif. */
+  .notif-sw{flex:none;width:42px;height:24px;border-radius:999px;background:#dbe2ec;
+    position:relative;transition:background .2s var(--ease)}
+  .notif-sw i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
+    background:#fff;box-shadow:0 2px 5px rgba(15,27,51,.3);transition:transform .2s var(--ease)}
+  .notif-l.on .notif-sw,.onb-notif.on .notif-sw{background:#0f9d6e}
+  .notif-l.on .notif-sw i,.onb-notif.on .notif-sw i{transform:translateX(18px)}
+  .notif-pied{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    flex-wrap:wrap;margin-top:2px}
+  .notif-etat{font-size:12px;font-weight:800;color:#0f9d6e}
+  .notif-aide{font-size:11.5px;color:var(--muted);font-weight:600}
+
+  /* Les mêmes interrupteurs dans l'onboarding */
+  .onb-notifs{display:flex;flex-direction:column;gap:9px;margin:4px 0 6px}
+  .onb-notif{display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+    padding:13px 15px;border:1.5px solid var(--border);border-radius:15px;background:#fff;
+    font-family:inherit;cursor:pointer;transition:.18s var(--ease)}
+  .onb-notif:hover{border-color:#c7d7ff}
+  .onb-notif.on{border-color:#0f9d6e;background:#f2fdf8}
+  .onb-notif-i{font-size:19px;flex:none}
+  .onb-notif-x{flex:1;min-width:0}
+  .onb-notif-t{display:block;font-size:14px;font-weight:800;color:var(--ink)}
+  .onb-notif-d{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-top:2px;line-height:1.4}
+
   /* ------------------------------------------------------------------ */
   /* Téléphones - la barre latérale devient un tiroir                    */
   /* ------------------------------------------------------------------ */
@@ -2762,7 +2803,12 @@
     /* L'entraide : le fil prend l'écran, l'aparté passe en plein écran. */
     .ch-corps{flex-direction:column}
     .ch-corps.avec-aparte .ch-principal{max-width:100%}
-    .ch-fil{height:auto;min-height:46vh;max-height:58vh}
+    /* Le fil prend toute la hauteur disponible : on retire le superflu autour
+       (règles, sous-titre) pour lui laisser la place. */
+    .ch-fil{height:auto;min-height:56vh;max-height:66vh;padding:10px}
+    .ch-regles{display:none}
+    .ch-tete-b{margin-bottom:10px}
+    .sond{margin-bottom:8px}
     .ch-aparte{position:fixed;inset:0;width:auto;border-radius:0;z-index:70}
     .ch-tete-b{flex-wrap:wrap;gap:10px}
     .ch-msg{padding:6px 4px}
