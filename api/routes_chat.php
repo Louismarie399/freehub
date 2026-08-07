@@ -312,9 +312,10 @@ function route_chat_envoyer(): void
         }
 
         // Ouvrir un aparté (première réponse) : un seul par membre et par jour.
+        // Les admins en sont exemptés — animer le salon fait partie du rôle.
         $st = db()->prepare('SELECT COUNT(*) FROM chat_messages WHERE parent_id = ?');
         $st->execute([$fil]);
-        if ((int) $st->fetchColumn() === 0) {
+        if (!$u['is_admin'] && (int) $st->fetchColumn() === 0) {
             $debutJour = gmdate('Y-m-d\T00:00:00\Z');
             $st = db()->prepare(
                 "SELECT COUNT(*) FROM chat_messages m

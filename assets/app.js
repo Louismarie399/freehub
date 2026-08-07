@@ -2212,6 +2212,7 @@
     sav: { ouvert:false, envoi:false, envoye:false, erreur:null, type:null },
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
     sondageForm: false,     // formulaire « question de la semaine » (admin)
+    sondageOuvert: false,   // la carte du sondage, repliée par défaut
     badgePorte: (function(){
       try { return localStorage.getItem('freehub_badge_porte') || null; } catch(e){ return null; }
     })(),
@@ -7644,12 +7645,12 @@
 
     return '<div class="view">'
       + entete
-      + '<div class="suc-sec"><div class="suc-sec-t">La collection'
+      + '<div class="suc-sec"><div class="suc-sec-t">Collection'
         + '<span class="suc-sec-h">plus tu débloques, plus tu montes</span></div>'
         + '<div class="suc-paliers">'
           + BADGES_SERIE.map(function(id){ return medailleHtml(id, true); }).join('')
         + '</div></div>'
-      + '<div class="suc-sec"><div class="suc-sec-t">Les parcours'
+      + '<div class="suc-sec"><div class="suc-sec-t">Parcours'
         + '<span class="suc-sec-h">des objectifs bouclés, du premier au dernier</span></div>'
         + '<div class="suc-paliers">'
           + BADGES_PALIERS.map(function(id){ return medailleHtml(id, true); }).join('')
@@ -7897,7 +7898,9 @@
       + (c.admin && !m.moi && m.auteur.id
           ? '<button class="ch-act sup" data-action="chat-muet" data-id="'+m.auteur.id+'">Silence 24 h</button>'
           : '');
-    return '<div class="ch-msg'+(m.moi ? ' moi' : '')+'">'
+    // Un partage d'objectif bouclé : on le fête visuellement.
+    var celebration = m.contenu.indexOf('🎉 Je viens de boucler «') === 0;
+    return '<div class="ch-msg'+(m.moi ? ' moi' : '')+(celebration ? ' celebration' : '')+'">'
       + chatAvatarHtml(m.auteur)
       + '<div class="ch-bulle">'
         + '<div class="ch-tete">'+chatAuteurHtml(m.auteur)
@@ -7990,6 +7993,17 @@
           + formAdmin + '</div>'
         : '';
     }
+    // Replié par défaut : une ligne au-dessus du fil, pas un pavé.
+    if(!state.sondageOuvert){
+      return '<div class="sond plie" data-action="sondage-deplier" role="button">'
+        + '<div class="sond-h"><span class="sond-pic">📊</span>'
+          + '<span class="sond-q">'+esc(sg.question)+'</span>'
+          + '<span class="sond-t">'+sg.total+' vote'+(sg.total>1?'s':'')+'</span>'
+          + '<span class="sond-dep">'+(sg.mien !== null && sg.mien !== undefined
+              ? 'voir ▾' : 'voter ▾')+'</span>'
+        + '</div>'
+      + '</div>';
+    }
     var aVote = sg.mien !== null && sg.mien !== undefined;
     var lignes = sg.options.map(function(opt, i){
       var n = sg.votes[i] || 0;
@@ -8010,6 +8024,7 @@
         + '<span class="sond-q">'+esc(sg.question)+'</span>'
         + '<span class="sond-t">'+sg.total+' vote'+(sg.total>1?'s':'')+'</span>'
         + (c.admin ? '<button class="ch-act sup" data-action="sondage-clore">Clore</button>' : '')
+        + '<button class="sond-dep" data-action="sondage-deplier">replier ▴</button>'
       + '</div>'
       + '<div class="sond-corps">'+lignes+'</div>'
     + '</div>';
@@ -9236,6 +9251,9 @@
       }
       case 'sondage-form':
         setState({ sondageForm: !state.sondageForm });
+        break;
+      case 'sondage-deplier':
+        setState({ sondageOuvert: !state.sondageOuvert });
         break;
       case 'sondage-clore':
         apiJson('POST', '/api/chat/sondage', { clore:true }).then(function(){

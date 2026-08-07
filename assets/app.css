@@ -22,7 +22,12 @@
   .app{display:flex;min-height:100vh;min-width:900px}
 
   /* ---------- Sidebar ---------- */
-  .sidebar{width:262px;flex:none;background:var(--nav);color:#fff;display:flex;flex-direction:column;padding:30px 26px;position:sticky;top:0;height:100vh}
+  /* Fixée : elle ne suit jamais le défilement de la page. Son propre contenu
+     défile en interne si le menu dépasse la hauteur de l'écran. */
+  .sidebar{width:262px;flex:none;background:var(--nav);color:#fff;display:flex;
+    flex-direction:column;padding:30px 26px;position:fixed;top:0;left:0;bottom:0;
+    overflow-y:auto;z-index:40}
+  .app > main{margin-left:262px}
   .brand{display:flex;align-items:center;gap:11px;margin-bottom:34px;min-height:32px;cursor:pointer}
   .brand-logo{height:25px;width:auto;max-width:100%;display:block}
   /* Repli affiché seulement si le fichier du logo est absent (voir initBrand). */
@@ -216,6 +221,11 @@
     transition:background .15s var(--ease)}
   .ch-msg:hover{background:rgba(255,255,255,.85)}
   .ch-msg.moi{background:rgba(47,107,255,.055)}
+  /* Un objectif bouclé partagé : une carte de fête, pas un message ordinaire */
+  .ch-msg.celebration{background:linear-gradient(120deg,#f0fdf4 0%,#fefce8 100%);
+    border:1px solid #bbf7d0;border-radius:14px;margin:4px 0}
+  .ch-msg.celebration:hover{background:linear-gradient(120deg,#dcfce7 0%,#fef9c3 100%)}
+  .ch-msg.celebration .ch-txt{font-weight:700;color:#166534}
   .ch-msg.moi:hover{background:rgba(47,107,255,.09)}
   .ch-msg.efface{padding:4px 10px}
   .ch-efface{font-size:12px;font-style:italic;color:#a3adc0}
@@ -321,6 +331,12 @@
   /* La question de la semaine, épinglée */
   .sond{margin-bottom:12px;padding:14px 16px;border-radius:16px;background:#fff;
     border:1.5px solid #dbe4f2}
+  /* Replié : une seule ligne, la question et le compteur */
+  .sond.plie{padding:9px 14px;cursor:pointer;transition:border-color .16s var(--ease)}
+  .sond.plie:hover{border-color:var(--blue)}
+  .sond.plie .sond-h{margin-bottom:0}
+  .sond-dep{margin-left:4px;flex:none;background:none;border:none;padding:2px 6px;
+    font-family:inherit;font-size:11.5px;font-weight:800;color:var(--blue);cursor:pointer}
   .sond.vide{padding:8px 12px;border-style:dashed;background:none}
   .sond-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px}
   .sond-pic{font-size:15px}
@@ -2584,6 +2600,7 @@
   /* ---------- Écrans plus étroits (13", fenêtre réduite) ---------- */
   @media (max-width:1280px){
     .sidebar{width:210px;padding:24px 18px}
+    .app > main{margin-left:210px}
     .ptitre-zone:not(:empty){padding:22px 26px 0}
     .content{padding:16px 26px 44px}
     .ptitre-t{font-size:21px}
