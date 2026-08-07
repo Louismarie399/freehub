@@ -237,17 +237,17 @@
       check:function(){ return !!state.faits['secret:logo']; } },
 
     // --- La collection elle-même : des médailles pour les médailles ---
-    { id:'serie-5', ico:'🥉', t:'Première salve', d:'Cinq hauts faits débloqués.',
+    { id:'serie-5', ico:'🥉', t:'Première salve', d:'Cinq récompenses débloquées.',
       rang:'bronze',
       check:function(){ return state.badges.length >= 5; } },
-    { id:'serie-10', ico:'🥈', t:'Chasseur de trophées', d:'Dix hauts faits débloqués.',
+    { id:'serie-10', ico:'🥈', t:'Chasseur de trophées', d:'Dix récompenses débloquées.',
       rang:'argent',
       check:function(){ return state.badges.length >= 10; } },
-    { id:'serie-15', ico:'🥇', t:'Vitrine bien garnie', d:'Quinze hauts faits débloqués.',
+    { id:'serie-15', ico:'🥇', t:'Vitrine bien garnie', d:'Quinze récompenses débloquées.',
       rang:'or',
       check:function(){ return state.badges.length >= 15; } },
     { id:'serie-tout', ico:'🏆', t:'Sans faute',
-      d:'Tous les hauts faits débloqués, jusqu’au dernier.',
+      d:'Toutes les récompenses débloquées, jusqu’à la dernière.',
       rang:'royal',
       // Tous les autres — sauf lui-même, et sauf les badges exclusifs qu'un
       // membre arrivé après l'alpha ne pourra jamais avoir.
@@ -338,7 +338,7 @@
     'salon':        'Là où les membres se parlent, il y a une porte.',
     'pionnier':     'Être là avant tout le monde. Ça ne se rattrape pas.',
     'secret':       'Aucun indice. C’est tout le principe.',
-    'serie-5':      'Les hauts faits appellent les hauts faits.',
+    'serie-5':      'Les récompenses appellent les récompenses.',
     'serie-10':     'La collection commence à peser.',
     'serie-15':     'Il ne t’en manque plus beaucoup.',
     'serie-tout':   'Le badge de fin. Littéralement.',
@@ -1119,7 +1119,7 @@
       ],
     },
     {
-      nom:'Icon Invest', kind:'Expertise comptable',
+      nom:'Icon Invest', kind:'Expertise comptable', tease:true,
       img:'assets/partenaires/icon-invest.png',
       color:'#6a1fb0', grad:'#a55ce0', soft:'#f6edff',
       url:'https://icongroup.fr/invest', promo:'',
@@ -1146,7 +1146,7 @@
     calendrier: ['Calendrier',      '🗓', '#db2777'],
     partenaires:['Nos partenaires', '🤝', '#16a34a'],
     chat:       ['Entraide',        '💬', '#e11d48'],
-    succes:     ['Hauts faits',     '🏆', '#d97706'],
+    succes:     ['Récompenses',     '🏆', '#d97706'],
     profil:     ['Mon profil',      '👤', '#475569'],
     admin:      ['Dashboard admin', '🛠', '#be123c'],
   };
@@ -2199,7 +2199,9 @@
     retourVers: null,       // onglet d'où l'objectif a été ouvert
     badgeOuvert: null,      // badge dont la fiche est ouverte
     chat: { messages:[], charge:false, erreur:null, muet:null, admin:false,
-            nonLus:0, nbSignales:0, moderation:null, empreinte:null },
+            nonLus:0, nbSignales:0, moderation:null, empreinte:null,
+            enLigne:0, total:0,
+            fil:null, filMessages:[], filCharge:false },
     chatCharte: false,      // charte d'accueil de l'Entraide (première visite)
     badgePorte: (function(){
       try { return localStorage.getItem('freehub_badge_porte') || null; } catch(e){ return null; }
@@ -2636,8 +2638,8 @@
                  {key:'partenaires',label:'Nos partenaires'} ];
     // L'entraide vit à part : c'est le seul endroit où l'on croise d'autres
     // personnes, autant que la navigation le dise.
-    tabs.push({ key:'chat', label:'Entraide', section:'Social' });
-    tabs.push({ key:'succes', label:'Hauts faits' });
+    tabs.push({ key:'chat', label:'Entraide', section:'Social', alpha:true });
+    tabs.push({ key:'succes', label:'Récompenses', alpha:true });
     // Espace admin : tout en bas, et seulement pour les comptes administrateurs.
     // (L'API vérifie de toute façon le rôle côté serveur.)
     if(state.compte && state.compte.isAdmin) tabs.push({key:'admin', label:'Dashboard admin'});
@@ -2651,6 +2653,7 @@
           + 'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+NAV_ICONES[t.key]+'</svg></span>'
         + '<span class="nav-text">'+esc(t.label)+'</span>'
         + (t.key === 'objectifs' ? '<span class="nav-badge">New</span>' : '')
+        + (t.alpha ? '<span class="nav-badge alpha">Alpha</span>' : '')
         + (t.key === 'chat' && state.chat.nonLus
             ? '<span class="nav-pastille">'+state.chat.nonLus+'</span>' : '')
         + '</button>';
@@ -2823,7 +2826,7 @@
 
     if(!portes.length) return '';
     return '<div class="acc-bloc">'
-      + '<div class="acc-bloc-h">De quoi tu as besoin, là, maintenant</div>'
+      + '<div class="acc-bloc-h">Par où on continue ?</div>'
       + '<div class="acc-portes">'+portes.slice(0, 4).map(function(x){
           return '<button class="acc-porte" style="--c:'+x.c+'" data-action="'+x.action+'"'
             + (x.sim ? ' data-sim="'+x.sim+'"' : '')
@@ -2835,6 +2838,15 @@
           + '</button>';
         }).join('')+'</div>'
     + '</div>';
+  }
+
+  // Dire bonjour comme on le dirait vraiment, selon l'heure qu'il est.
+  function salutation(){
+    var h = new Date().getHours();
+    if(h < 6)  return 'Bonsoir';
+    if(h < 13) return 'Bonjour';
+    if(h < 18) return 'Bon après-midi';
+    return 'Bonsoir';
   }
 
   function accueilHtml(){
@@ -2852,7 +2864,7 @@
       hero = '<div class="acc-hero">'
         + '<div class="acc-hero-top">'
           + '<div class="acc-hero-l">'
-            + '<div class="acc-bonjour">'+(prenom ? 'Bonjour '+esc(prenom) : 'Bonjour')
+            + '<div class="acc-bonjour">'+salutation()+(prenom ? ' '+esc(prenom) : '')
               + '<span class="acc-proj-badge" style="display:none">Projection</span></div>'
             + '<div class="acc-hero-k">Ce qui te reste vraiment, en '+esc(net.label)+'</div>'
             + '<div class="acc-hero-n">'+fmtEur(net.res.net / 12)+'<span> / mois</span></div>'
@@ -2874,7 +2886,7 @@
     } else {
       hero = '<div class="acc-hero vide">'
         + '<div class="acc-hero-l">'
-          + '<div class="acc-bonjour">'+(prenom ? 'Bonjour '+esc(prenom) : 'Bienvenue')+'</div>'
+          + '<div class="acc-bonjour">'+salutation()+(prenom ? ' '+esc(prenom) : '')+'</div>'
           + '<div class="acc-hero-k">On ne connaît pas encore ton chiffre d’affaires</div>'
           + '<div class="acc-hero-s">Renseigne-le et cet écran te dira, en direct, '
             + 'ce qu’il te reste vraiment chaque mois.</div>'
@@ -2882,14 +2894,14 @@
         + '</div></div>';
     }
 
-    // --- Trois cartes : échéance, action, profil ---
+    // --- L'échéance : une ligne datée, pas un pavé ---
     var carteEch = ech
-      ? '<button class="acc-card" style="--c:#b45309" data-action="view" data-id="'+ech.e.objectif+'">'
-        + '<div class="acc-card-h"><span class="acc-ico">📅</span>Prochaine échéance</div>'
-        + '<div class="acc-card-t">'+esc(ech.e.titre)+'</div>'
-        + '<div class="acc-card-d">'+esc(ech.e.note)+'</div>'
-        + '<div class="acc-card-f"><strong>'+ech.date.toLocaleDateString('fr-FR',
-            { day:'numeric', month:'long' })+'</strong><span>dans '+ech.jours+' jours</span></div>'
+      ? '<button class="acc-ech" data-action="view" data-id="'+ech.e.objectif+'">'
+        + '<span class="acc-ech-i">📅</span>'
+        + '<span class="acc-ech-x"><b>'+esc(ech.e.titre)+'</b> · '
+          + ech.date.toLocaleDateString('fr-FR', { day:'numeric', month:'long' })
+          + ' <span class="acc-ech-j">dans '+ech.jours+' j</span></span>'
+        + '<span class="acc-ech-f">→</span>'
         + '</button>'
       : '';
 
@@ -2928,7 +2940,7 @@
     return '<div class="view">'
       + hero
       + repriseHtml()
-      + (carteEch ? '<div class="acc-cards une">'+carteEch+'</div>' : '')
+      + carteEch
       + portesHtml()
       + (enCours
           ? '<div class="acc-bloc">'
@@ -3047,7 +3059,7 @@
               + ' data-action="obj-epingle" data-id="'+id+'" role="button" tabindex="0"'
               + ' title="'+(epingle ? 'Retirer de la mise en avant'
                   : (pleinAvant ? 'Trois objectifs déjà en avant' : 'Mettre en avant'))+'">'
-              + (epingle ? '★' : '☆')+'</span>'
+              + '📌</span>'
             + '<span class="tui-x" data-action="obj-remove" data-id="'+id+'" title="Retirer de mes objectifs">×</span>'
           + '</span>');
 
@@ -3243,9 +3255,6 @@
     var grille = function(ids, zone){
       return ids.map(function(id){
         return '<div class="tui-slot" draggable="true" data-zone="'+zone+'" data-id="'+id+'">'
-          + '<span class="tui-grip" aria-hidden="true">'
-            + '<span></span><span></span><span></span>'
-            + '<span></span><span></span><span></span></span>'
           + objectifTuileHtml(id, false)+'</div>';
       }).join('');
     };
@@ -3254,7 +3263,7 @@
     // glissement. La faire apparaître en JS obligerait à re-rendre en plein
     // déplacement, ce qui saccade.
     var haut = '<div class="zone zone-avant'+(enAvant.length?'':' vide')+'" data-zone="avant">'
-      + '<div class="zone-t"><span class="zone-p">★</span>En avant'
+      + '<div class="zone-t"><span class="zone-p">📌</span>En avant'
         + '<span class="zone-h">'
           + (enAvant.length >= MAX_AVANT
               ? 'trois au maximum, c’est ce qui garde la priorité utile'
@@ -7627,7 +7636,7 @@
       + '<div class="obj-tete-r">'+anneau+'</div>'
       + '<div class="obj-tete-x">'
         + '<div class="obj-tete-t">'
-          + (n ? n+' haut'+(n>1?'s':'')+' fait'+(n>1?'s':'')+' sur '+total
+          + (n ? n+' récompense'+(n>1?'s':'')+' sur '+total
                : 'Ta collection commence ici')+'</div>'
         + '<div class="obj-tete-s">Clique sur une médaille : chacune dit ce qu’elle '
           + 'donne, et comment s’en approcher</div>'
@@ -7657,7 +7666,7 @@
         + '<div class="suc-paliers">'
           + BADGES_PALIERS.map(function(id){ return medailleHtml(id, true); }).join('')
         + '</div></div>'
-      + '<div class="suc-sec"><div class="suc-sec-t">Tous les hauts faits</div>'
+      + '<div class="suc-sec"><div class="suc-sec-t">Toutes les récompenses</div>'
         + '<div class="suc-grille">'
           + autres.map(function(b){ return medailleHtml(b.id, false); }).join('')
         + '</div></div>'
@@ -7729,6 +7738,59 @@
         + ' · ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
   }
 
+  // Avatar : la photo du profil si le membre en a une, sinon ses initiales sur
+  // une couleur stable dérivée du nom — chacun garde la sienne.
+  var CH_AV_COULEURS = ['#2f6bff', '#7c3aed', '#0f9d6e', '#b45309', '#e11d48', '#0891b2'];
+  function chatAvatarHtml(a){
+    if(a && a.photo){
+      return '<span class="ch-av"><img src="'+esc(a.photo)+'" alt=""></span>';
+    }
+    var nom = (a && a.nom) || 'M';
+    var h = 0;
+    for(var i = 0; i < nom.length; i++) h = (h * 31 + nom.charCodeAt(i)) % 997;
+    var c = CH_AV_COULEURS[h % CH_AV_COULEURS.length];
+    return '<span class="ch-av" style="background:'+c+'">'+esc(nom.charAt(0).toUpperCase())+'</span>';
+  }
+
+  function chatMessageHtml(m, c, dansAparte){
+    // Un message retiré ne laisse qu'une trace discrète, pour tout le monde.
+    if(m.supprime){
+      return '<div class="ch-msg efface"><span class="ch-efface">'
+        + (m.moi ? 'Tu as retiré ce message' : 'Message retiré')+'</span></div>';
+    }
+    var actions = ''
+      + (!dansAparte && state.compte
+          ? '<button class="ch-act" data-action="chat-aparte" data-id="'+m.id+'">Aparté</button>'
+          : '')
+      + (state.compte && !m.moi && !m.signale
+          ? '<button class="ch-act" data-action="chat-signaler" data-id="'+m.id+'">Signaler</button>'
+          : '')
+      + (c.admin
+          ? '<button class="ch-act sup" data-action="chat-supprimer" data-id="'+m.id+'">Retirer</button>'
+          : '')
+      + (c.admin && !m.moi && m.auteur.id
+          ? '<button class="ch-act sup" data-action="chat-muet" data-id="'+m.auteur.id+'">Silence 24 h</button>'
+          : '');
+    return '<div class="ch-msg'+(m.moi ? ' moi' : '')+'">'
+      + chatAvatarHtml(m.auteur)
+      + '<div class="ch-bulle">'
+        + '<div class="ch-tete">'+chatAuteurHtml(m.auteur)
+          + '<span class="ch-h">'+chatHeure(m.created)+'</span>'
+          + (m.signale ? '<span class="ch-tag signale">signalé</span>' : '')
+          + (actions ? '<span class="ch-survol">'+actions+'</span>' : '')
+        + '</div>'
+        + '<div class="ch-txt">'+esc(m.contenu).replace(/\n/g, '<br>')+'</div>'
+        + '<div class="ch-pied">'
+          + (!dansAparte && m.nbReponses
+              ? '<button class="ch-fil-n" data-action="chat-aparte" data-id="'+m.id+'">💬 '
+                + m.nbReponses+' réponse'+(m.nbReponses>1?'s':'')+'</button>'
+              : '')
+          + chatReactionsHtml(m)
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  }
+
   function chatMessagesHtml(){
     var c = state.chat;
     if(c.erreur && !c.messages.length) return '<div class="ch-info erreur">'+esc(c.erreur)+'</div>';
@@ -7741,33 +7803,37 @@
           + 'un bon plan qui t’a servi</div>'
       + '</div>';
     }
-    return c.messages.map(function(m){
-      if(m.supprime && !c.admin){
-        return '<div class="ch-msg efface"><span class="ch-efface">'
-          + 'Message retiré par la modération</span></div>';
-      }
-      return '<div class="ch-msg'+(m.moi ? ' moi' : '')+(m.supprime ? ' efface' : '')+'">'
-        + '<div class="ch-tete">'+chatAuteurHtml(m.auteur)
-          + '<span class="ch-h">'+chatHeure(m.created)+'</span>'
-          + (m.supprime ? '<span class="ch-tag">retiré</span>' : '')
-          + (m.signale && !m.supprime ? '<span class="ch-tag signale">signalé</span>' : '')
-        + '</div>'
-        + '<div class="ch-txt">'+esc(m.contenu).replace(/\n/g, '<br>')+'</div>'
-        + chatReactionsHtml(m)
-        + '<div class="ch-actions">'
-          + (state.compte && !m.moi && !m.signale && !m.supprime
-              ? '<button class="ch-act" data-action="chat-signaler" data-id="'+m.id+'">Signaler</button>'
-              : '')
-          + (c.admin && !m.supprime
-              ? '<button class="ch-act sup" data-action="chat-supprimer" data-id="'+m.id+'">Retirer</button>'
-              : '')
-          + (c.admin && !m.moi && m.auteur.id
-              ? '<button class="ch-act sup" data-action="chat-muet" data-id="'+m.auteur.id+'">'
-                + 'Réduire au silence 24 h</button>'
-              : '')
-        + '</div>'
-      + '</div>';
-    }).join('');
+    return c.messages.map(function(m){ return chatMessageHtml(m, c, false); }).join('');
+  }
+
+  // Le panneau d'aparté : le message d'origine, ses réponses, et sa saisie.
+  function chatAparteHtml(){
+    var c = state.chat;
+    if(!c.fil) return '';
+    var liste = c.filMessages || [];
+    var corps = !c.filCharge
+      ? '<div class="ch-info">Chargement…</div>'
+      : liste.map(function(m, i){
+          return chatMessageHtml(m, c, true) + (i === 0 && liste.length
+            ? '<div class="ch-ap-sep">Les réponses</div>' : '');
+        }).join('')
+        + (liste.length <= 1
+            ? '<div class="ch-ap-vide">Personne n’a encore répondu — à toi d’ouvrir</div>' : '');
+    return '<aside class="ch-aparte">'
+      + '<div class="ch-ap-tete">'
+        + '<div class="ch-ap-t">Aparté</div>'
+        + '<div class="ch-ap-s">Un fil à part, pour creuser sans envahir le salon</div>'
+        + '<button class="cat-x" data-action="chat-aparte-close" aria-label="Fermer">✕</button>'
+      + '</div>'
+      + '<div class="ch-ap-fil" data-chat-fil-b>'+corps+'</div>'
+      + (state.compte && !c.muet
+          ? '<form class="ch-form ap" data-chat-form-fil>'
+            + '<textarea data-chat-fil-input rows="1" maxlength="800"'
+              + ' placeholder="Répondre dans l’aparté…"></textarea>'
+            + '<button type="submit" class="ch-envoi">Envoyer</button>'
+          + '</form>'
+          : '')
+    + '</aside>';
   }
 
   function chatHtml(){
@@ -7777,13 +7843,20 @@
         + 'Tu peux continuer à lire le fil.</div>'
       : '';
 
+    // Les compteurs disent qu'on n'est pas seul : c'est ça, l'espace communautaire.
+    var stats = '<div class="ch-stats">'
+      + '<span class="ch-stat"><span class="ch-stat-pt"></span>'
+        + (c.enLigne || 0)+' en ligne</span>'
+      + '<span class="ch-stat-sep">·</span>'
+      + '<span class="ch-stat">'+(c.total || 0)+' membre'+((c.total||0)>1?'s':'')
+        + ' déjà passé'+((c.total||0)>1?'s':'')+' ici</span>'
+    + '</div>';
+
     return '<div class="view">'
       + '<div class="ch-tete-b">'
         + '<div class="ch-tete-x">'
           + '<div class="ch-tete-t">L’entraide entre membres</div>'
-          + '<div class="ch-tete-s">Un fil unique, pour poser une question ou '
-            + 'partager ce qui t’a servi. On est en alpha : sois indulgent, et '
-            + 'signale ce qui n’a rien à faire ici</div>'
+          + stats
         + '</div>'
         + (c.admin
             ? '<button class="ch-mod" data-action="chat-moderation">Modération'
@@ -7791,14 +7864,19 @@
               + '</button>'
             : '')
       + '</div>'
-      + '<div class="ch-fil" data-chat-fil>'+chatMessagesHtml()+'</div>'
-      + (c.erreur && c.messages.length ? '<div class="ch-alerte">'+esc(c.erreur)+'</div>' : '')
-      + muet
-      + '<form class="ch-form" data-chat-form'+(c.muet ? ' data-inactif' : '')+'>'
-        + '<textarea data-chat-input rows="1" maxlength="800"'+(c.muet ? ' disabled' : '')
-          + ' placeholder="Une question, un retour d’expérience…"></textarea>'
-        + '<button type="submit" class="ch-envoi"'+(c.muet ? ' disabled' : '')+'>Envoyer</button>'
-      + '</form>'
+      + '<div class="ch-corps'+(c.fil ? ' avec-aparte' : '')+'">'
+        + '<div class="ch-principal">'
+          + '<div class="ch-fil" data-chat-fil>'+chatMessagesHtml()+'</div>'
+          + (c.erreur && c.messages.length ? '<div class="ch-alerte">'+esc(c.erreur)+'</div>' : '')
+          + muet
+          + '<form class="ch-form" data-chat-form'+(c.muet ? ' data-inactif' : '')+'>'
+            + '<textarea data-chat-input rows="1" maxlength="800"'+(c.muet ? ' disabled' : '')
+              + ' placeholder="Une question, un retour d’expérience…"></textarea>'
+            + '<button type="submit" class="ch-envoi"'+(c.muet ? ' disabled' : '')+'>Envoyer</button>'
+          + '</form>'
+        + '</div>'
+        + chatAparteHtml()
+      + '</div>'
       + '<div class="ch-regles">Les messages sont publics et visibles par tous les membres. '
         + 'La modération peut retirer un message ou suspendre l’accès à l’écriture</div>'
       + '</div>';
@@ -7808,16 +7886,21 @@
   function chatCharger(silencieux){
     // On recharge toujours la fenêtre complète : les réactions et les retraits
     // touchent d'anciens messages, qu'un chargement incrémental ne verrait pas.
-    apiJson('GET', '/api/chat').then(function(r){
+    var appels = [apiJson('GET', '/api/chat')];
+    if(state.chat.fil) appels.push(apiJson('GET', '/api/chat?fil=' + state.chat.fil));
+    Promise.all(appels).then(function(reps){
+      var r = reps[0], rf = reps[1] || null;
       if(!r.ok){
         if(!silencieux) setState({ chat: Object.assign({}, state.chat,
           { charge:true, erreur:'Le fil n’a pas pu être chargé.' }) });
         return;
       }
       var neufs = r.data.messages || [];
+      var filMsgs = rf && rf.ok ? (rf.data.messages || []) : state.chat.filMessages;
       // Rien n'a bougé ? On ne re-rend pas : c'est ce re-rendu périodique qui
       // vidait le champ de saisie en pleine frappe.
-      var empreinte = JSON.stringify([neufs, r.data.muet || null, !!r.data.admin]);
+      var empreinte = JSON.stringify([neufs, filMsgs, r.data.muet || null,
+        !!r.data.admin, r.data.enLigne, r.data.total]);
       if(state.chat.charge && empreinte === state.chat.empreinte) return;
 
       var dernierAvant = state.chat.messages.length
@@ -7825,6 +7908,8 @@
       var c = Object.assign({}, state.chat, {
         charge:true, erreur:null, messages:neufs, empreinte:empreinte,
         muet:r.data.muet || null, admin:!!r.data.admin,
+        enLigne:r.data.enLigne || 0, total:r.data.total || 0,
+        filMessages:filMsgs, filCharge:!!(rf && rf.ok) || state.chat.filCharge,
         nbSignales: neufs.filter(function(m){ return m.signale && !m.supprime; }).length,
       });
       if(state.tab !== 'chat' && dernierAvant){
@@ -7855,10 +7940,11 @@
     chatTimer = setInterval(function(){ chatCharger(true); }, CHAT_INTERVALLE);
   }
 
-  function chatEnvoyer(texte){
+  function chatEnvoyer(texte, fil){
     texte = (texte || '').trim();
     if(!texte) return;
-    apiJson('POST', '/api/chat', { contenu: texte }).then(function(r){
+    var corps = fil ? { contenu: texte, fil: fil } : { contenu: texte };
+    apiJson('POST', '/api/chat', corps).then(function(r){
       if(!r.ok){
         setState({ chat: Object.assign({}, state.chat,
           { erreur: (r.data && r.data.error) || 'Envoi impossible.' }) });
@@ -7892,9 +7978,10 @@
     state.added.forEach(function(id){ var o = obj(id); if(o) doms[o.dom] = 1; });
     if(estMicro(state.profil)) doms.statut = 1;
     if(/franchise/i.test(state.profil.tva || '')) doms.tva = 1;
+    // Uniquement ce qui touche vraiment au profil : compléter avec des termes
+    // hors sujet donnait l'impression d'une liste qui se remplit toute seule.
     var pertinents = LEXIQUE.filter(function(x){ return doms[x.cat] && !estEpingle(x.id); });
-    var reste = LEXIQUE.filter(function(x){ return !doms[x.cat] && !estEpingle(x.id); });
-    return pertinents.concat(reste).slice(0, n || 6);
+    return pertinents.slice(0, n || 6);
   }
 
   function lexPastillesHtml(actif, action){
@@ -8225,9 +8312,13 @@
               + ' aria-label="En savoir plus sur '+esc(p.nom)+'">+</button>'
             + (p.promo ? '<span class="part-flag">🎁 Promo</span>' : '')
           + '</div>'
-          + '<div class="part-logo"><img src="'+esc(p.img)+'" alt="Logo '+esc(p.nom)+'"></div>'
-          + '<div><div class="part-name">'+esc(p.nom)+'</div>'
-            + '<div class="part-kind">'+esc(p.kind)+'</div></div>'
+          + (p.tease
+              ? '<div class="part-logo tease">?</div>'
+                + '<div><div class="part-name">Prochainement…</div>'
+                + '<div class="part-kind">'+esc(p.kind)+'</div></div>'
+              : '<div class="part-logo"><img src="'+esc(p.img)+'" alt="Logo '+esc(p.nom)+'"></div>'
+                + '<div><div class="part-name">'+esc(p.nom)+'</div>'
+                + '<div class="part-kind">'+esc(p.kind)+'</div></div>')
         + '</div>'
         + '<p class="part-desc">'+esc(p.pitch)+'</p>'
         + '<ul class="part-pts">'+pts+'</ul>'
@@ -8312,10 +8403,12 @@
 
     // Le bouton vit dans l'en-tête, face au logo. Lien d'affiliation pas encore
     // connu → bouton inactif en attendant.
-    var lien = p.url
-      ? '<a class="part-link" href="'+esc(p.url)+'" target="_blank" rel="noopener sponsored">'
-        + 'Découvrir '+esc(p.nom)+' →</a>'
-      : '<span class="part-link soon">Lien bientôt disponible</span>';
+    var lien = p.tease
+      ? '<span class="part-link soon">Bientôt dévoilé</span>'
+      : (p.url
+          ? '<a class="part-link" href="'+esc(p.url)+'" target="_blank" rel="noopener sponsored">'
+            + 'Découvrir '+esc(p.nom)+' →</a>'
+          : '<span class="part-link soon">Lien bientôt disponible</span>');
 
     // L'avantage occupe tout le pied : code, ce qu'il donne, clic pour copier.
     var avantage = p.promo
@@ -8330,13 +8423,21 @@
     return '<div class="overlay" data-action="part-close">'
       + '<div class="modal" style="width:560px;'+partVars(p)+'" data-action="stop">'
         + '<div class="part-modal-head">'
-          + '<div class="part-modal-logo"><img src="'+esc(p.img)+'" alt="Logo '+esc(p.nom)+'"></div>'
-          + '<div class="part-modal-id"><div class="part-modal-name">'+esc(p.nom)+'</div>'
-            + '<div class="part-modal-kind">'+esc(p.kind)+'</div></div>'
+          + (p.tease
+              ? '<div class="part-modal-logo part-logo tease">?</div>'
+                + '<div class="part-modal-id"><div class="part-modal-name">Prochainement…</div>'
+                + '<div class="part-modal-kind">'+esc(p.kind)+'</div></div>'
+              : '<div class="part-modal-logo"><img src="'+esc(p.img)+'" alt="Logo '+esc(p.nom)+'"></div>'
+                + '<div class="part-modal-id"><div class="part-modal-name">'+esc(p.nom)+'</div>'
+                + '<div class="part-modal-kind">'+esc(p.kind)+'</div></div>')
           + lien
         + '</div>'
         + '<div class="modal-body" style="background:'+p.soft+'">'
-          + '<p class="part-modal-desc">'+p.desc+'</p>'
+          + '<p class="part-modal-desc">'+(p.tease
+              ? 'Un nouveau partenaire arrive : un cabinet d’expertise comptable qui '
+                + 'travaille au quotidien avec de jeunes entrepreneurs. On te le '
+                + 'présente très bientôt — voilà déjà ce qu’il sait faire.'
+              : p.desc)+'</p>'
           + '<div class="part-modal-label">Là où ils te débloquent</div>'
           + '<ul class="part-modal-pts">'+pts+'</ul>'
         + '</div>'
@@ -8468,6 +8569,10 @@
     var chVal = chAvant ? chAvant.value : '';
     var chFocus = chAvant && chAvant === document.activeElement;
     var chPos = chFocus ? chAvant.selectionStart : 0;
+    var cfAvant = document.querySelector('[data-chat-fil-input]');
+    var cfVal = cfAvant ? cfAvant.value : '';
+    var cfFocus = cfAvant && cfAvant === document.activeElement;
+    var cfPos = cfFocus ? cfAvant.selectionStart : 0;
 
     content.innerHTML = state.tab === 'accueil' ? accueilHtml()
                       : state.tab === 'objectifs' ? objectifsHtml()
@@ -8488,6 +8593,14 @@
       if(chFocus){
         chApres.focus();
         try { chApres.setSelectionRange(chPos, chPos); } catch(e){}
+      }
+    }
+    var cfApres = document.querySelector('[data-chat-fil-input]');
+    if(cfApres && cfVal && !cfApres.value){
+      cfApres.value = cfVal;
+      if(cfFocus){
+        cfApres.focus();
+        try { cfApres.setSelectionRange(cfPos, cfPos); } catch(e){}
       }
     }
 
@@ -8551,6 +8664,16 @@
   // Entraide : envoi du formulaire, et Entrée pour publier (Maj+Entrée = saut
   // de ligne, comme partout ailleurs).
   document.addEventListener('submit', function(e){
+    var ff = e.target.closest && e.target.closest('[data-chat-form-fil]');
+    if(ff){
+      e.preventDefault();
+      var cf = ff.querySelector('[data-chat-fil-input]');
+      if(!cf || !cf.value.trim()) return;
+      chatEnvoyer(cf.value, state.chat.fil);
+      cf.value = '';
+      cf.style.height = 'auto';
+      return;
+    }
     var f = e.target.closest && e.target.closest('[data-chat-form]');
     if(!f) return;
     e.preventDefault();
@@ -8563,6 +8686,13 @@
   });
   document.addEventListener('keydown', function(e){
     if(e.key !== 'Enter' || e.shiftKey) return;
+    var champFil = e.target.closest && e.target.closest('[data-chat-fil-input]');
+    if(champFil){
+      e.preventDefault();
+      var ff = champFil.closest('[data-chat-form-fil]');
+      if(ff) ff.dispatchEvent(new Event('submit', { bubbles:true, cancelable:true }));
+      return;
+    }
     var champ = e.target.closest && e.target.closest('[data-chat-input]');
     if(!champ) return;
     e.preventDefault();
@@ -8676,11 +8806,15 @@
     });
   })();
 
-  // Sept clics rapprochés sur le logo : le badge que personne ne cherche.
+  // Le logo ramène à la page d'accueil du site — c'était la seule sortie
+  // manquante. L'œuf de Pâques vit ailleurs : sept clics rapprochés sur
+  // l'icône du titre de page.
   var secretClics = { n: 0, t: 0 };
   document.getElementById('app').addEventListener('click', function(e){
     var marque = e.target.closest && e.target.closest('.brand');
-    if(marque){
+    if(marque){ window.location.href = '/'; return; }
+    var icone = e.target.closest && e.target.closest('.ptitre-i');
+    if(icone){
       var now = Date.now();
       if(now - secretClics.t > 4000) secretClics.n = 0;
       secretClics.n++; secretClics.t = now;
@@ -8787,6 +8921,19 @@
         try { localStorage.setItem('freehub_chat_onb', '1'); } catch(err){}
         marquerFait('chat:visite');
         setState({ chatCharte: false });
+        break;
+      case 'chat-aparte': {
+        e.stopPropagation();
+        var fid = parseInt(el.getAttribute('data-id'), 10);
+        // Un seul panneau à la fois : cliquer un autre message y bascule.
+        setState({ chat: Object.assign({}, state.chat,
+          { fil: fid, filMessages: [], filCharge: false, empreinte: null }) });
+        chatCharger(true);
+        break;
+      }
+      case 'chat-aparte-close':
+        setState({ chat: Object.assign({}, state.chat,
+          { fil: null, filMessages: [], filCharge: false, empreinte: null }) });
         break;
       case 'chat-react': {
         e.stopPropagation();

@@ -56,7 +56,7 @@ function chat_auteurs(array $ids): array
     $st->execute($ids);
     $out = [];
     foreach ($st->fetchAll() as $r) {
-        $badge = null; $nbBadges = 0;
+        $badge = null; $nbBadges = 0; $photo = null;
         if ($r['blob']) {
             $d = json_decode($r['blob'], true);
             if (is_array($d)) {
@@ -68,6 +68,16 @@ function chat_auteurs(array $ids): array
                 if (is_string($b) && preg_match('/^[a-z0-9-]{1,32}$/', $b)) $badge = $b;
                 $liste = json_decode((string) ($d['freehub_badges'] ?? ''), true);
                 if (is_array($liste)) $nbBadges = count($liste);
+                // La photo vit dans le profil (data URL, redimensionnée côté
+                // client). On la borne : une valeur anormalement grosse est
+                // ignorée plutôt que de gonfler chaque relevé du fil.
+                $profil = json_decode((string) ($d['freehub_profil'] ?? ''), true);
+                if (is_array($profil)) {
+                    $ph = (string) ($profil['photo'] ?? '');
+                    if (str_starts_with($ph, 'data:image/') && strlen($ph) < 120000) {
+                        $photo = $ph;
+                    }
+                }
             }
         }
         $prenom = trim((string) $r['prenom']);
@@ -80,6 +90,7 @@ function chat_auteurs(array $ids): array
             'beta'    => (bool) $r['beta'],
             'badge'   => $badge,
             'nbBadges' => $nbBadges,
+            'photo'   => $photo,
         ];
     }
     return $out;
@@ -94,23 +105,43 @@ function chat_auteurs(array $ids): array
 function route_chat_liste(): void
 {
     $u = utilisateur_courant();   // null si personne n'est connecté
-    $depuis = (int) ($_GET['depuis'] ?? 0);
+    $fil = (int) ($_GET['fil'] ?? 0);
     $pdo = db();
 
-    if ($depuis > 0) {
-        // Suite du fil : uniquement ce qui est arrivé depuis.
+    // Passage relevé : alimente les compteurs « en ligne » et « déjà venus ».
+    if ($u) {
+        $pdo->prepare('INSERT INTO chat_presence(user_id, vu) VALUES (?,?)
+                       ON CONFLICT(user_id) DO UPDATE SET vu = excluded.vu')
+            ->execute([$u['id'], maintenant()]);
+    }
+
+    if ($fil > 0) {
+        // Un aparté : le message d'origine puis ses réponses.
         $st = $pdo->prepare(
             'SELECT id, user_id, contenu, created, supprime, signale
-               FROM chat_messages WHERE id > ? ORDER BY id ASC LIMIT ?');
-        $st->execute([$depuis, CHAT_PAGE]);
+               FROM chat_messages WHERE id = ? OR parent_id = ?
+              ORDER BY id ASC LIMIT ?');
+        $st->execute([$fil, $fil, CHAT_PAGE]);
         $lignes = $st->fetchAll();
     } else {
-        // Premier chargement : la fin du fil, remise dans l'ordre.
+        // Le fil principal : la fin, remise dans l'ordre, sans les apartés.
         $st = $pdo->prepare(
             'SELECT id, user_id, contenu, created, supprime, signale
-               FROM chat_messages ORDER BY id DESC LIMIT ?');
+               FROM chat_messages WHERE parent_id IS NULL ORDER BY id DESC LIMIT ?');
         $st->execute([CHAT_PAGE]);
         $lignes = array_reverse($st->fetchAll());
+    }
+
+    // Nombre de réponses en aparté de chaque message affiché.
+    $nbReponses = [];
+    if ($lignes) {
+        $ids = array_map(fn($l) => (int) $l['id'], $lignes);
+        $marques = implode(',', array_fill(0, count($ids), '?'));
+        $st = $pdo->prepare(
+            "SELECT parent_id, COUNT(*) AS n FROM chat_messages
+              WHERE parent_id IN ($marques) AND supprime = 0 GROUP BY parent_id");
+        $st->execute($ids);
+        foreach ($st->fetchAll() as $r) $nbReponses[(int) $r['parent_id']] = (int) $r['n'];
     }
 
     $auteurs = chat_auteurs(array_values(array_unique(
@@ -164,14 +195,24 @@ function route_chat_liste(): void
                 ? (($u && $u['is_admin']) ? $l['contenu'] : '')
                 : $l['contenu'],
             'reactions' => $supprime ? [] : $rs,
+            'nbReponses' => $nbReponses[$mid] ?? 0,
         ];
     }
+
+    // Compteurs de présence : « en ligne » = passé dans les deux dernières
+    // minutes ; « déjà venus » = tous ceux qui ont ouvert l'Entraide un jour.
+    $limite = gmdate('Y-m-d\TH:i:s\Z', time() - 120);
+    $enLigne = (int) $pdo->query(
+        "SELECT COUNT(*) FROM chat_presence WHERE vu > '" . $limite . "'")->fetchColumn();
+    $total = (int) $pdo->query('SELECT COUNT(*) FROM chat_presence')->fetchColumn();
 
     json_reponse([
         'messages' => $messages,
         'muet'     => $u ? chat_muet((int) $u['id']) : null,
         'admin'    => (bool) ($u && $u['is_admin']),
         'connecte' => (bool) $u,
+        'enLigne'  => $enLigne,
+        'total'    => $total,
     ]);
 }
 
@@ -189,6 +230,34 @@ function route_chat_envoyer(): void
         erreur('Message trop long (' . CHAT_LONGUEUR_MAX . ' caractères maximum).');
     }
 
+    // Réponse en aparté : rattachée à un message du fil principal.
+    $fil = (int) (corps()['fil'] ?? 0);
+    if ($fil > 0) {
+        $st = db()->prepare(
+            'SELECT parent_id, supprime FROM chat_messages WHERE id = ?');
+        $st->execute([$fil]);
+        $parent = $st->fetch();
+        if (!$parent) erreur('Message d’origine introuvable.');
+        if ($parent['parent_id'] !== null) erreur('Un aparté ne peut pas en contenir un autre.');
+        if ((int) $parent['supprime']) erreur('Ce message a été retiré.');
+
+        // Ouvrir un aparté (première réponse) : un seul par membre et par jour.
+        $st = db()->prepare('SELECT COUNT(*) FROM chat_messages WHERE parent_id = ?');
+        $st->execute([$fil]);
+        if ((int) $st->fetchColumn() === 0) {
+            $debutJour = gmdate('Y-m-d\T00:00:00\Z');
+            $st = db()->prepare(
+                "SELECT COUNT(*) FROM chat_messages m
+                  WHERE m.user_id = ? AND m.parent_id IS NOT NULL AND m.created >= ?
+                    AND NOT EXISTS (SELECT 1 FROM chat_messages a
+                                     WHERE a.parent_id = m.parent_id AND a.id < m.id)");
+            $st->execute([$u['id'], $debutJour]);
+            if ((int) $st->fetchColumn() >= 1) {
+                erreur('Tu as déjà ouvert un aparté aujourd’hui — réponds dans ceux qui existent, ou reviens demain.', 429);
+            }
+        }
+    }
+
     // Débit : on compte ce que ce compte a publié dans la dernière minute.
     $st = db()->prepare(
         'SELECT COUNT(*) FROM chat_messages WHERE user_id = ? AND created > ?');
@@ -198,8 +267,8 @@ function route_chat_envoyer(): void
     }
 
     $st = db()->prepare(
-        'INSERT INTO chat_messages(user_id, contenu, created) VALUES (?,?,?)');
-    $st->execute([$u['id'], $texte, maintenant()]);
+        'INSERT INTO chat_messages(user_id, contenu, created, parent_id) VALUES (?,?,?,?)');
+    $st->execute([$u['id'], $texte, maintenant(), $fil > 0 ? $fil : null]);
     json_reponse(['ok' => true, 'id' => (int) db()->lastInsertId()]);
 }
 

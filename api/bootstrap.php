@@ -161,6 +161,10 @@ function init_db(PDO $pdo): void
             message_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
             emoji TEXT NOT NULL, created TEXT NOT NULL,
             PRIMARY KEY(message_id, user_id, emoji));
+        -- Présence : dernier passage de chaque membre dans l'Entraide. Sert aux
+        -- compteurs « en ligne » (vu < 2 min) et « membres passés par ici ».
+        CREATE TABLE IF NOT EXISTS chat_presence(
+            user_id INTEGER PRIMARY KEY, vu TEXT NOT NULL);
     ");
     // Migration douce, comme en Python : ajoute les colonnes manquantes.
     $cols = array_column($pdo->query('PRAGMA table_info(users)')->fetchAll(), 'name');
@@ -168,6 +172,11 @@ function init_db(PDO $pdo): void
               'google_sub' => "TEXT DEFAULT ''", 'invite_code' => "TEXT DEFAULT ''",
               'is_admin' => 'INTEGER DEFAULT 0', 'beta' => 'INTEGER DEFAULT 0'] as $c => $type) {
         if (!in_array($c, $cols, true)) $pdo->exec("ALTER TABLE users ADD COLUMN $c $type");
+    }
+    // Apartés : un message peut répondre à un message du fil principal.
+    $colsChat = array_column($pdo->query('PRAGMA table_info(chat_messages)')->fetchAll(), 'name');
+    if (!in_array('parent_id', $colsChat, true)) {
+        $pdo->exec('ALTER TABLE chat_messages ADD COLUMN parent_id INTEGER DEFAULT NULL');
     }
 }
 
