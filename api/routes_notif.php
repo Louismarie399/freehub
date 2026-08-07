@@ -259,25 +259,72 @@ function notif_mois(int $m): string
 // Envoi
 // --------------------------------------------------------------------------- //
 
-/** Le gabarit d'un e-mail : sobre, lisible, sans image externe. */
+/**
+ * Le gabarit d'un e-mail, aux couleurs de la marque.
+ *
+ * Contraintes des clients de messagerie : pas de flexbox ni de grid (Outlook
+ * ne les gère pas), donc des tableaux ; pas d'image externe, donc le logo est
+ * dessiné en CSS ; styles en ligne, car les <style> sont souvent supprimés.
+ */
 function notif_gabarit(string $prenom, string $titre, string $corps, string $lienStop): string
 {
-    return '<!doctype html><html lang="fr"><body style="margin:0;padding:24px;'
-        . 'background:#f4f7fd;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#0f1b33">'
-        . '<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:18px;padding:30px">'
-        . '<div style="font-size:19px;font-weight:800;letter-spacing:-.02em;margin-bottom:22px">Freehub</div>'
-        . '<div style="font-size:17px;font-weight:700;margin-bottom:12px">Salut ' . htmlspecialchars($prenom) . ',</div>'
-        . '<div style="font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:14px">'
-        . htmlspecialchars($titre) . '</div>'
-        . '<div style="font-size:15px;line-height:1.65;color:#4a5a75">' . $corps . '</div>'
-        . '<a href="' . htmlspecialchars(notif_base()) . '/app" style="display:inline-block;margin-top:24px;'
-        . 'background:#0f1b33;color:#fff;text-decoration:none;padding:13px 24px;border-radius:100px;'
-        . 'font-weight:700;font-size:15px">Ouvrir mon espace</a>'
-        . '<div style="margin-top:26px;padding-top:18px;border-top:1px solid #eef1f7;'
-        . 'font-size:12px;color:#8a97ad;line-height:1.5">'
+    $base = htmlspecialchars(notif_base());
+    return '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+        . '<body style="margin:0;padding:0;background:#eef3fc;'
+        . 'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+        . 'style="background:#eef3fc;padding:32px 16px"><tr><td align="center">'
+
+        // --- La carte ---
+        . '<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" '
+        . 'style="width:560px;max-width:100%;background:#ffffff;border-radius:22px;'
+        . 'overflow:hidden;box-shadow:0 18px 44px -22px rgba(15,27,51,.35)">'
+
+        // Bandeau de marque : le bleu de la DA, avec la pastille du logo.
+        . '<tr><td style="background:#0f1b33;background-image:linear-gradient(135deg,#0f1b33 0%,'
+        . '#1e46b8 62%,#2f6bff 130%);padding:26px 32px">'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
+        . '<td style="padding-right:11px">'
+        . '<div style="width:34px;height:34px;border-radius:11px;background:#2f6bff;'
+        . 'color:#ffffff;font-size:19px;font-weight:800;line-height:34px;text-align:center;'
+        . 'font-family:Georgia,serif">F</div></td>'
+        . '<td style="color:#ffffff;font-size:19px;font-weight:800;letter-spacing:-.02em">'
+        . 'Freehub<span style="color:#7aa7ff">.</span></td>'
+        . '</tr></table></td></tr>'
+
+        // Corps
+        . '<tr><td style="padding:30px 32px 26px">'
+        . '<div style="font-size:14.5px;font-weight:600;color:#5b6b85;margin-bottom:10px">'
+        . 'Salut ' . htmlspecialchars($prenom) . ',</div>'
+        . '<div style="font-size:22px;font-weight:800;letter-spacing:-.025em;color:#0f1b33;'
+        . 'line-height:1.25;margin-bottom:18px">' . htmlspecialchars($titre) . '</div>'
+        // L'encart bleu clair : c'est lui qui donne le ton de la marque.
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+        . 'style="background:#f2f7ff;border-left:4px solid #2f6bff;border-radius:12px">'
+        . '<tr><td style="padding:16px 18px;font-size:15px;line-height:1.6;color:#4a5a75">'
+        . $corps . '</td></tr></table>'
+        // Le bouton, en pilule comme dans l'app.
+        . '<table role="presentation" cellpadding="0" cellspacing="0" border="0" '
+        . 'style="margin-top:24px"><tr><td style="background:#0f1b33;border-radius:100px">'
+        . '<a href="' . $base . '/app" style="display:inline-block;padding:14px 28px;'
+        . 'color:#ffffff;text-decoration:none;font-weight:700;font-size:15px">'
+        . 'Ouvrir mon espace &rarr;</a></td></tr></table>'
+        . '</td></tr>'
+
+        // Pied
+        . '<tr><td style="padding:20px 32px 26px;border-top:1px solid #eef1f7">'
+        . '<div style="font-size:12px;color:#8a97ad;line-height:1.6">'
         . 'Tu reçois cet e-mail parce que tu as activé les rappels dans ton espace Freehub.<br>'
-        . '<a href="' . htmlspecialchars($lienStop) . '" style="color:#8a97ad">Ne plus recevoir d’e-mails</a>'
-        . '</div></div></body></html>';
+        . '<a href="' . htmlspecialchars($lienStop) . '" style="color:#8a97ad">'
+        . 'Ne plus recevoir d’e-mails</a> &nbsp;·&nbsp; '
+        . '<a href="' . $base . '/app" style="color:#8a97ad">Gérer mes rappels</a>'
+        . '</div></td></tr>'
+
+        . '</table>'
+        . '<div style="font-size:11.5px;color:#8a97ad;margin-top:18px">'
+        . 'Freehub · L’administratif, enfin compris</div>'
+        . '</td></tr></table></body></html>';
 }
 
 function notif_base(): string

@@ -1242,11 +1242,39 @@
       var p = state.profil;
       var nom = ((p.prenom || '') + ' ' + (p.nom || '')).trim() || state.compte.email || '';
       var ini = (p.prenom || state.compte.email || '?').trim().charAt(0).toUpperCase();
-      out += '<button class="ptitre-moi" data-action="open-profil" title="Mon profil">'
-        + (p.photo ? '<img src="'+esc(p.photo)+'" alt="">'
-                   : '<span class="ptitre-ini">'+esc(ini)+'</span>')
-        + '<span class="ptitre-nom">'+esc(nom)+'</span>'
-      + '</button>';
+      // Le badge porté et le rôle : la seule information de statut visible en
+      // permanence. Le reste attend le survol.
+      var bp = state.badgePorte && state.badges.indexOf(state.badgePorte) >= 0
+             ? badge(state.badgePorte) : null;
+      var grade = state.compte.isAdmin
+        ? '<span class="moi-grade admin">★ Admin</span>'
+        : (bp ? '<span class="moi-grade'+(bp.rang ? ' rang-'+bp.rang : '')+'">'
+                + bp.ico+' '+esc(bp.t)+'</span>'
+              : (state.compte.beta ? '<span class="moi-grade beta">Bêta</span>' : ''));
+
+      var avatar = p.photo ? '<img src="'+esc(p.photo)+'" alt="">'
+                           : '<span class="ptitre-ini">'+esc(ini)+'</span>';
+      out += '<div class="moi-zone">'
+        + '<button class="ptitre-moi'+(state.tab === 'profil' ? ' on' : '')+'"'
+          + ' data-action="open-profil" title="Mon profil">'
+          + avatar
+          + '<span class="moi-x"><span class="ptitre-nom">'+esc(nom)+'</span>'
+            + (grade ? '<span class="moi-g">'+grade+'</span>' : '')+'</span>'
+        + '</button>'
+        // La carte de survol : le détail sans encombrer la barre.
+        + '<div class="moi-pop">'
+          + '<div class="moi-pop-h">'+avatar
+            + '<div><div class="moi-pop-n">'+esc(nom)+'</div>'
+            + '<div class="moi-pop-e">'+esc(state.compte.email || '')+'</div></div></div>'
+          + '<div class="moi-pop-l"><span>Activité</span><strong>'
+            + esc(p.activite || 'À compléter')+'</strong></div>'
+          + '<div class="moi-pop-l"><span>Statut</span><strong>'
+            + esc(p.forme || 'À compléter')+'</strong></div>'
+          + (bp ? '<div class="moi-pop-l"><span>Badge porté</span><strong>'
+              + bp.ico+' '+esc(bp.t)+'</strong></div>' : '')
+          + '<button class="moi-pop-cta" data-action="open-profil">Ouvrir mon profil →</button>'
+        + '</div>'
+      + '</div>';
     }
     return out ? '<span class="ptitre-outils">'+out+'</span>' : '';
   }
@@ -3196,7 +3224,7 @@
       + '<span class="tui-h">'
         + '<span class="tui-ico">'+d.ico+'</span>'
         + '<span class="tui-dom">'+esc(d.l)+'</span>'
-        + (neuf ? '<span class="tui-neuf">Nouveau</span>' : '')
+        + (neuf ? '<span class="tui-neuf">✦ NEW</span>' : '')
         + (pertinent && dispo && !neuf
             ? '<span class="tui-reco"><span class="tui-reco-e">★</span>Pour toi</span>' : '')
         + coin
@@ -9422,13 +9450,9 @@
           + '</button>'
         + '</div>'
         + '<nav>'+navHtml()+'</nav>'
+        // Le profil vit désormais en haut à droite : la barre latérale ne garde
+        // que la bascule de thème, et récupère toute la place.
         + '<div class="side-foot"><div class="side-divider"></div>'
-          + '<div class="user clickable" data-action="open-profil">'
-            + '<div class="avatar"></div>'
-            + '<div style="min-width:0"><div class="user-name"></div>'
-            + '<div class="user-roles"></div>'
-            + '<div class="user-sub"></div></div>'
-            + '<span class="user-cog">⚙</span></div>'
           + '<button class="theme-sw" data-action="theme" aria-label="Changer de thème">'
             + '<span class="theme-o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/>'
@@ -9495,30 +9519,8 @@
     });
     // Badge « New » : gardé affiché en permanence pendant la construction du
     // dashboard (pas de masquage après ouverture, pour l'instant).
-    app.querySelector('.user').classList.toggle('active', state.tab === 'profil');
-    app.querySelector('.user-sub').textContent = state.profil.activite || 'Micro-entreprise';
-
-    // Bloc utilisateur : nom, prénom et photo viennent du profil.
-    var nomComplet = ((state.profil.prenom || '') + ' ' + (state.profil.nom || '')).trim();
-    app.querySelector('.user-name').textContent = nomComplet || 'Mon profil';
-
-    // Insignes de rôle : ils viennent du compte (serveur), jamais du profil local,
-    // pour qu'on ne puisse pas s'auto-attribuer « admin » en bidouillant le stockage.
-    var roles = '';
-    var bp = state.badgePorte && state.badges.indexOf(state.badgePorte) >= 0
-           ? badge(state.badgePorte) : null;
-    if(bp) roles += '<span class="rbadge porte'+(bp.rang ? ' rang-'+bp.rang : '')+'"'
-      + ' title="'+esc(bp.t)+'">'+bp.ico+' '+esc(bp.t)+'</span>';
-    if(state.compte && state.compte.isAdmin) roles += '<span class="rbadge admin">★ Admin</span>';
-    app.querySelector('.user-roles').innerHTML = roles;
-    var av = app.querySelector('.avatar');
-    if(state.profil.photo){
-      av.innerHTML = '<img src="'+esc(state.profil.photo)+'" alt="">';
-    } else {
-      av.textContent = nomComplet
-        ? ((state.profil.prenom || '').charAt(0) + (state.profil.nom || '').charAt(0)).toUpperCase()
-        : '🙂';
-    }
+    // Le bloc utilisateur est reconstruit par titreOutilsHtml() à chaque rendu :
+    // rien à mettre à jour ici depuis que la barre latérale ne le porte plus.
 
     // Les deux réglages d'affichage vivent sur le conteneur en flex.
     var coquille = app.querySelector('.app');

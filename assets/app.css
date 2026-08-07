@@ -8,9 +8,11 @@
   }
   [data-theme="sombre"]{
     --bg:#0b1220; --ink:#e8edf7; --blue:#5b8cff; --blue-dark:#7aa3ff;
-    --muted:#8593ad; --muted2:#a8b4ca; --border:rgba(255,255,255,.1);
-    --track:#1b2436; --soft:#182238; --nav:#070d18;
-    --surface:#141c2e; --surface-2:#101827; --ombre:rgba(0,0,0,.7);
+    --muted:#93a1ba; --muted2:#b8c4d8; --border:rgba(255,255,255,.14);
+    /* --soft doit trancher NETTEMENT sur --surface, sinon les encarts teintés
+       disparaissent : c'est la cause n°1 des éléments « qui ne ressortent plus ». */
+    --track:#232f47; --soft:#1e2b47; --nav:#070d18;
+    --surface:#141c2e; --surface-2:#0e1524; --ombre:rgba(0,0,0,.7);
   }
   /* En sombre, les aplats très clairs des univers deviennent illisibles :
      on les rabat sur la surface, la couleur reste portée par le texte. */
@@ -164,15 +166,59 @@
   .ptitre-outils{margin-left:auto;display:flex;align-items:center;gap:12px;flex:none}
   .ptitre-stats{display:flex;align-items:center;gap:8px;font-size:12.5px;
     font-weight:700;color:var(--muted)}
-  .ptitre-moi{display:inline-flex;align-items:center;gap:9px;padding:5px 13px 5px 5px;
+  /* Le profil, condensé en haut à droite : avatar, nom, grade. Le détail
+     n'apparaît qu'au survol, dans une carte. */
+  .moi-zone{position:relative}
+  .ptitre-moi{display:inline-flex;align-items:center;gap:10px;padding:5px 15px 5px 5px;
     border:1px solid var(--border);border-radius:999px;background:var(--surface);
     font-family:inherit;cursor:pointer;transition:.18s var(--ease)}
-  .ptitre-moi:hover{border-color:#c7d7ff;box-shadow:0 6px 16px -10px rgba(47,107,255,.6)}
-  .ptitre-moi img,.ptitre-ini{width:28px;height:28px;border-radius:50%;flex:none;
+  .ptitre-moi:hover,.ptitre-moi.on{border-color:#c7d7ff;
+    box-shadow:0 6px 16px -10px rgba(47,107,255,.6)}
+  .ptitre-moi img,.ptitre-ini{width:32px;height:32px;border-radius:50%;flex:none;
     object-fit:cover;display:flex;align-items:center;justify-content:center;
-    background:var(--blue);color:#fff;font-size:12.5px;font-weight:800}
-  .ptitre-nom{font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;
-    max-width:180px;overflow:hidden;text-overflow:ellipsis}
+    background:var(--blue);color:#fff;font-size:13px;font-weight:800}
+  .moi-x{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
+  .ptitre-nom{font-size:13px;font-weight:800;color:var(--ink);white-space:nowrap;
+    max-width:170px;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+  .moi-g{display:flex}
+  .moi-grade{font-size:10px;font-weight:800;letter-spacing:.02em;padding:1px 7px;
+    border-radius:999px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+  .moi-grade.admin{background:#fef3c7;color:#92400e}
+  .moi-grade.beta{background:var(--soft);color:var(--blue)}
+  .moi-grade.rang-bronze{background:#fde8d7;color:#9a5b1e}
+  .moi-grade.rang-argent{background:#eef1f6;color:#475569}
+  .moi-grade.rang-or{background:#fef3c7;color:#a16207}
+  .moi-grade.rang-royal{background:linear-gradient(90deg,#ede9fe,#fae8ff);color:#7c3aed}
+
+  /* La carte de détail : sur le survol de la zone, pas du bouton, pour qu'on
+     puisse y descendre la souris sans qu'elle disparaisse. */
+  .moi-pop{position:absolute;top:calc(100% + 10px);right:0;width:290px;padding:16px;
+    background:var(--surface);border:1px solid var(--border);border-radius:18px;
+    box-shadow:0 26px 54px -26px var(--ombre);z-index:40;
+    opacity:0;visibility:hidden;transform:translateY(-6px);
+    transition:opacity .18s var(--ease),transform .18s var(--ease),visibility .18s}
+  .moi-zone:hover .moi-pop,.moi-zone:focus-within .moi-pop{
+    opacity:1;visibility:visible;transform:none}
+  .moi-pop-h{display:flex;align-items:center;gap:11px;padding-bottom:12px;
+    border-bottom:1px solid var(--border);margin-bottom:11px}
+  .moi-pop-h img,.moi-pop-h .ptitre-ini{width:38px;height:38px;font-size:15px}
+  .moi-pop-n{font-size:14.5px;font-weight:800;color:var(--ink)}
+  .moi-pop-e{font-size:11.5px;color:var(--muted);font-weight:600;
+    max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .moi-pop-l{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+    padding:5px 0;font-size:12.5px}
+  .moi-pop-l span{color:var(--muted);font-weight:600;flex:none}
+  .moi-pop-l strong{color:var(--ink);font-weight:700;text-align:right;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .moi-pop-cta{width:100%;margin-top:11px;padding:10px;border:none;border-radius:11px;
+    background:var(--soft);color:var(--blue);font-family:inherit;font-size:12.5px;
+    font-weight:800;cursor:pointer;transition:.16s var(--ease)}
+  .moi-pop-cta:hover{background:var(--blue);color:#fff}
+  @media (max-width:860px){
+    .ptitre-nom,.moi-g{display:none}
+    .ptitre-moi{padding:4px}
+    .moi-pop{width:250px}
+  }
 
   .content{padding:22px 44px 56px;flex:1}
   .ptitre-zone:empty + .content{padding-top:32px}
@@ -2789,6 +2835,29 @@
   [data-theme="sombre"] .acc-ico,[data-theme="sombre"] .tui-ico,
   [data-theme="sombre"] .dg-e{background:rgba(255,255,255,.1)}
 
+  /* Les aplats clairs codés en dur : sans reprise, ils portent du texte clair
+     sur du blanc cassé. On les rabat sur des teintes sombres de même famille. */
+  [data-theme="sombre"] [style*="background:#f"],
+  [data-theme="sombre"] .pf-total,[data-theme="sombre"] .field-eg,
+  [data-theme="sombre"] .dg-micro,[data-theme="sombre"] .ch-muet,
+  [data-theme="sombre"] .modal,[data-theme="sombre"] .cat-panneau,
+  [data-theme="sombre"] .lex-panneau,[data-theme="sombre"] .sav-panneau,
+  [data-theme="sombre"] .bulle-panneau{background:var(--surface);color:var(--ink)}
+  [data-theme="sombre"] .modal-foot,[data-theme="sombre"] .cat-head,
+  [data-theme="sombre"] .cat-body{background:transparent}
+  /* Les jauges, séparateurs et pastilles neutres */
+  [data-theme="sombre"] .jauge-bar,[data-theme="sombre"] .dp-bar,
+  [data-theme="sombre"] .sond-bar,[data-theme="sombre"] .mk-mois i{background:var(--track)}
+  [data-theme="sombre"] .chip,[data-theme="sombre"] .fstat,
+  [data-theme="sombre"] .tui-f,[data-theme="sombre"] .lex-tag{
+    background:rgba(255,255,255,.08);color:var(--ink)}
+  [data-theme="sombre"] .btn-ghost,[data-theme="sombre"] .btn-cancel,
+  [data-theme="sombre"] .retour{background:transparent;border-color:var(--border);color:var(--ink)}
+  /* Les verdicts colorés du guide des dépenses restent lisibles */
+  [data-theme="sombre"] .v-ok{background:rgba(34,163,85,.18);color:#6ee7a8}
+  [data-theme="sombre"] .v-non{background:rgba(255,255,255,.08);color:#a8b4ca}
+  [data-theme="sombre"] .v-info{background:rgba(180,83,9,.2);color:#fbbf24}
+
   /* Retouches propres au thème sombre : ce que les variables ne couvrent pas. */
   [data-theme="sombre"] .ch-fil{background:#0d1524}
   [data-theme="sombre"] .ch-txt{background:var(--surface-2);border-color:rgba(255,255,255,.09)}
@@ -2803,11 +2872,19 @@
 
   /* ---------- Objectif fraîchement ajouté au catalogue ---------- */
   /* La mise en avant s'éteint toute seule au bout de quelques jours (JS). */
-  @keyframes tui-halo{0%,100%{box-shadow:0 0 0 0 rgba(47,107,255,.32)}
-    50%{box-shadow:0 0 0 7px rgba(47,107,255,0)}}
-  .tui.neuf{border-color:var(--blue) !important;animation:tui-halo 2.6s ease-out infinite}
-  .tui-neuf{margin-left:auto;padding:3px 9px;border-radius:999px;background:var(--blue);
-    color:#fff;font-size:10px;font-weight:900;letter-spacing:.04em}
+  /* Doré plutôt que bleu : la couleur ne sert qu'à ça dans l'interface, donc
+     l'œil la repère immédiatement. */
+  @keyframes tui-halo{0%,100%{box-shadow:0 0 0 0 rgba(234,179,8,.5)}
+    50%{box-shadow:0 0 0 8px rgba(234,179,8,0)}}
+  .tui.neuf{border-color:#eab308 !important;animation:tui-halo 2.4s ease-out infinite}
+  /* L'insigne dépasse du coin, légèrement penché : impossible à rater. */
+  .tui-neuf{position:absolute;top:-9px;right:-7px;z-index:3;
+    padding:4px 11px;border-radius:999px;transform:rotate(7deg);
+    background:linear-gradient(135deg,#fbbf24,#d97706);color:#fff;
+    font-size:10.5px;font-weight:900;letter-spacing:.06em;
+    box-shadow:0 6px 16px -6px rgba(217,119,6,.9), 0 0 0 2.5px var(--surface)}
+  .tui{position:relative}
+  @media (prefers-reduced-motion: reduce){ .tui.neuf{animation:none} }
   @media (prefers-reduced-motion: reduce){ .tui.neuf{animation:none} }
 
   /* ---------- Squelettes de chargement ---------- */

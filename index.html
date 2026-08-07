@@ -133,14 +133,39 @@
   :root[data-theme="sombre"] .rv-q .e{background:#1c2740}
   :root[data-theme="sombre"] .rv-tete{color:#8593ad}
   /* Le dégradé du titre : la teinte « éteinte » doit rester lisible sur fond noir. */
+  /* `background-image` et non `background` : le raccourci réinitialiserait
+     background-clip:text, et le titre s'afficherait en bloc plein. */
   :root[data-theme="sombre"] .gratuit-titre{
-    background:radial-gradient(min(200px,26vw) circle at var(--mx,-999px) var(--my,-999px),
-      #7aa7ff 0%, #a78bfa 52%, #1a2338 78%)}
+    background-image:radial-gradient(min(200px,26vw) circle at var(--mx,-999px) var(--my,-999px),
+      #7aa7ff 0%, #a78bfa 52%, #46577d 80%)}
   :root[data-theme="sombre"] .visu-carte,
   :root[data-theme="sombre"] .scene-bulle,
   :root[data-theme="sombre"] .orbite,
   :root[data-theme="sombre"] .deck-dos,
   :root[data-theme="sombre"] .mk-notif{background:#182238;border-color:var(--trait);color:var(--encre)}
+
+  /* Modale d'authentification en thème sombre : champs, encarts et séparateurs
+     ont tous besoin d'être repris, sinon on saisit du blanc sur du blanc. */
+  :root[data-theme="sombre"] .auth-card{box-shadow:0 50px 100px -30px rgba(0,0,0,.85)}
+  :root[data-theme="sombre"] .fld{background:#0e1626;border-color:rgba(255,255,255,.14);
+    color:var(--encre)}
+  :root[data-theme="sombre"] .fld::placeholder{color:#6b7994}
+  :root[data-theme="sombre"] .code-box{background:rgba(91,140,255,.09);border-color:#3d5488}
+  :root[data-theme="sombre"] .code-box .fld{background:#0e1626}
+  :root[data-theme="sombre"] .code-aide,
+  :root[data-theme="sombre"] .fld-label{color:var(--encre-2)}
+  :root[data-theme="sombre"] .fld-label{color:var(--encre)}
+  :root[data-theme="sombre"] .btn-google{background:#0e1626;border-color:rgba(255,255,255,.14);
+    color:var(--encre)}
+  :root[data-theme="sombre"] .btn-google:hover{background:#141d31}
+  :root[data-theme="sombre"] .ou-sep > div{background:rgba(255,255,255,.12)}
+  :root[data-theme="sombre"] #tabSignup,:root[data-theme="sombre"] #tabLogin{}
+  /* Le bandeau d'onglets de la modale */
+  :root[data-theme="sombre"] .auth-right > div:first-child{background:#0e1626 !important}
+  :root[data-theme="sombre"] .auth-err{background:rgba(185,28,28,.16);color:#fca5a5}
+  :root[data-theme="sombre"] .auth-right h4,
+  :root[data-theme="sombre"] .auth-right p{color:var(--encre)}
+  :root[data-theme="sombre"] .auth-right > form > p{color:var(--encre-2)}
 
   /* Menu mobile : un burger dans la pilule, un tiroir juste dessous. */
   .nav-burger{display:none;flex-direction:column;justify-content:center;gap:4.5px;
@@ -1179,8 +1204,10 @@
 
   // ---- Modal d'authentification ----
   var TAB_BASE = 'flex:1;padding:10px;border:none;border-radius:9px;font-weight:700;font-size:14.5px;cursor:pointer;transition:all .15s';
-  var TAB_ON   = 'background:#fff;color:var(--encre);box-shadow:0 2px 6px -2px rgba(15,27,51,.28);' + TAB_BASE;
-  var TAB_OFF  = 'background:transparent;color:#8a97ad;' + TAB_BASE;
+  // Les couleurs passent par les variables : en sombre, un fond blanc portait
+  // un texte clair et l'onglet actif devenait illisible.
+  var TAB_ON   = 'background:var(--carte);color:var(--encre);box-shadow:0 2px 6px -2px rgba(15,27,51,.28);' + TAB_BASE;
+  var TAB_OFF  = 'background:transparent;color:var(--encre-2);' + TAB_BASE;
 
   function setTab(mode){
     var signup = mode === 'signup';
