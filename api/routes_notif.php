@@ -356,11 +356,14 @@ function notif_tourner(bool $simulation = false): array
 
             $quand = $e['jours'] === 0 ? "c'est aujourd'hui"
                    : ($e['jours'] === 1 ? "c'est demain" : 'dans ' . $e['jours'] . ' jours');
-            $corps = '<p style="margin:0 0 14px"><strong>' . htmlspecialchars($e['quoi'])
-                   . '</strong>, ' . $quand . '.</p><p style="margin:0">'
-                   . htmlspecialchars($e['note']) . '</p>';
+            $jour = (new DateTimeImmutable($e['date']))->format('d/m');
+            // Le corps ne répète pas le titre : il donne la date exacte et le
+            // seul geste à faire.
+            $corps = '<p style="margin:0 0 6px;font-size:13px;color:#8a97ad;font-weight:700">'
+                   . 'Échéance le ' . $jour . '</p>'
+                   . '<p style="margin:0">' . htmlspecialchars($e['note']) . '</p>';
             $html = notif_gabarit((string) ($l['prenom'] ?: 'toi'),
-                $e['quoi'] . ' — ' . $quand,
+                $e['quoi'] . ', ' . $quand,
                 $corps,
                 notif_base() . '/api/notifications/stop?j=' . $l['jeton']);
 

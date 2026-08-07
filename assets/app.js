@@ -601,6 +601,7 @@
         {t:'Faire la demande', h:'Avant le 30 septembre pour l’année suivante', duree:'15 min', illu:'enveloppe'},
       ]},
     { id:'mes-papiers', dom:'administratif', title:'Retrouver mes papiers officiels',
+      nouveau:'2026-08-07',              // mis en avant 4 jours dans le catalogue
       suite:['compte-pro','facture-elec'],
       desc:'Kbis, attestation de vigilance, avis de situation : où les trouver',
       pourquoi:'Un client ou une banque te les demandera : autant savoir où ils sont',
@@ -2795,7 +2796,8 @@
           + 'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+NAV_ICONES[t.key]+'</svg></span>'
         + '<span class="nav-text">'+esc(t.label)+'</span>'
         + '<span class="nav-tip">'+esc(t.label)+'</span>'
-        + (t.key === 'objectifs' ? '<span class="nav-badge">New</span>' : '')
+        + (t.key === 'objectifs' && objectifsNouveaux().length
+            ? '<span class="nav-badge">New</span>' : '')
         + (t.alpha ? '<span class="nav-badge alpha">Alpha</span>' : '')
         + (t.key === 'chat' && state.chat.nonLus
             ? '<span class="nav-pastille">'+state.chat.nonLus+'</span>' : '')
@@ -3146,6 +3148,19 @@
       + dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + '</span>';
   }
 
+  // Les objectifs récemment ajoutés au catalogue. `nouveau` porte la date de
+  // mise en ligne ; passé le délai, la mise en avant disparaît d'elle-même.
+  var NOUVEAU_JOURS = 4;
+  function objectifsNouveaux(){
+    var now = Date.now();
+    return catalog.filter(function(o){
+      if(!o.nouveau) return false;
+      var age = (now - Date.parse(o.nouveau)) / 86400000;
+      return age >= 0 && age <= NOUVEAU_JOURS;
+    }).map(function(o){ return o.id; });
+  }
+  function estNouveau(id){ return objectifsNouveaux().indexOf(id) >= 0; }
+
   // `dispo` : objectif pas encore choisi - présenté plus sobrement, avec un +.
   function illusObjectif(id){
     return 'assets/illus/obj-' + id + '.svg';
@@ -3173,13 +3188,16 @@
             + '<span class="tui-x" data-action="obj-remove" data-id="'+id+'" title="Retirer de mes objectifs">×</span>'
           + '</span>');
 
-    return '<button class="tui '+etat+(dispo?' dispo':'')+(pertinent&&dispo?' reco':'')+'"'
+    var neuf = estNouveau(id);
+    return '<button class="tui '+etat+(dispo?' dispo':'')+(pertinent&&dispo?' reco':'')
+      + (neuf ? ' neuf' : '')+'"'
       + ' draggable="false"'
       + ' style="--c:'+d.c+';--s:'+d.soft+'" data-action="'+(dispo?'obj-add':'view')+'" data-id="'+id+'">'
       + '<span class="tui-h">'
         + '<span class="tui-ico">'+d.ico+'</span>'
         + '<span class="tui-dom">'+esc(d.l)+'</span>'
-        + (pertinent && dispo
+        + (neuf ? '<span class="tui-neuf">Nouveau</span>' : '')
+        + (pertinent && dispo && !neuf
             ? '<span class="tui-reco"><span class="tui-reco-e">★</span>Pour toi</span>' : '')
         + coin
       + '</span>'
@@ -5976,19 +5994,25 @@
   }
 
   // Petit anneau de remplissage, posé sur chaque ligne du profil.
-  function anneauSection(pct, color, taille){
-    var R = taille / 2 - 3, C = 2 * Math.PI * R;
-    return '<svg class="ring" viewBox="0 0 '+taille+' '+taille+'" width="'+taille+'" height="'+taille+'">'
-      + '<circle cx="'+(taille/2)+'" cy="'+(taille/2)+'" r="'+R+'" fill="none" stroke="#e6eaf2" stroke-width="4"/>'
+  // `epais` : anneau large avec le chiffre en grand, pour le score de sérénité.
+  function anneauSection(pct, color, taille, epais){
+    var trait = epais ? Math.max(8, taille * 0.095) : 4;
+    var R = taille / 2 - trait / 2 - 1, C = 2 * Math.PI * R;
+    var chiffre = epais ? taille * 0.3 : 9;
+    return '<svg class="ring'+(epais ? ' ring-gras' : '')+'" viewBox="0 0 '+taille+' '+taille+'" '
+      + 'width="'+taille+'" height="'+taille+'">'
+      + '<circle cx="'+(taille/2)+'" cy="'+(taille/2)+'" r="'+R+'" fill="none" stroke="#e6eaf2" '
+        + 'stroke-width="'+trait+'"/>'
       + '<circle cx="'+(taille/2)+'" cy="'+(taille/2)+'" r="'+R+'" fill="none" stroke="'+color+'" '
-        + 'stroke-width="4" stroke-linecap="round" stroke-dasharray="'+(pct/100*C)+' '+C+'" '
+        + 'stroke-width="'+trait+'" stroke-linecap="round" stroke-dasharray="'+(pct/100*C)+' '+C+'" '
         + 'transform="rotate(-90 '+(taille/2)+' '+(taille/2)+')"/>'
-      + (pct === 100
+      + (pct === 100 && !epais
           ? '<path d="M'+(taille*0.32)+' '+(taille*0.5)+' l'+(taille*0.12)+' '+(taille*0.13)
             + ' l'+(taille*0.24)+' -'+(taille*0.26)+'" fill="none" stroke="'+color
             + '" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'
-          : '<text x="'+(taille/2)+'" y="'+(taille/2 + 3.5)+'" text-anchor="middle" font-size="9" '
-            + 'font-weight="800" fill="'+color+'">'+pct+'</text>')
+          : '<text x="'+(taille/2)+'" y="'+(taille/2 + chiffre*0.36)+'" text-anchor="middle" '
+            + 'font-size="'+chiffre+'" font-weight="800" fill="'+color+'"'
+            + (epais ? ' letter-spacing="-1"' : '')+'>'+pct+'</text>')
       + '</svg>';
   }
 
@@ -7107,10 +7131,14 @@
         + '" data-action="cote-montant" data-v="'+m+'">'+fmtEur(m)+'</button>';
     }).join('');
 
+    // Même ossature que les autres simulateurs : bouton « retour », barre de
+    // titre `res-topbar`, puis le contenu.
     return '<div class="view"><div class="sim-wrap">'
-      + '<button class="btn-back" data-action="sim-close">← Tous les simulateurs</button>'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
+      + '<div class="res-topbar">'
+        + '<h2>Combien mettre de côté ce mois-ci ?</h2>'
+      + '</div>'
       + '<div class="cote-tete">'
-        + '<div class="cote-t">Combien mettre de côté ce mois-ci ?</div>'
         + '<div class="cote-s">Sur un encaissement, une partie ne t’appartient pas. '
           + 'Provisionne-la, et dépense le reste sans arrière-pensée.</div>'
       + '</div>'
@@ -7655,30 +7683,39 @@
     } else if(e >= 6 && e <= 5 + SERENITE_Q.length){
       // Les questions de ressenti : une échelle de 1 à 10, un clic par réponse.
       var qs = SERENITE_Q[e - 6];
-      var val = (r.serenite || {})[qs.id];
+      var val = (r.serenite || {})[qs.id] || 5;
       corps = dots + '<div class="onb-q">'+esc(qs.q)+'</div>'
-        + '<div class="onb-sub">Réponds au feeling, il n’y a pas de bonne réponse. '
-          + 'Ça nous sert à mesurer tes progrès.</div>'
-        + '<div class="onb-echelle">'
-          + Array.apply(null, {length:10}).map(function(_, i){
-              var v = i + 1;
-              return '<button class="onb-ech'+(val === v ? ' on' : '')+'"'
-                + ' data-action="onb-serenite" data-id="'+qs.id+'" data-v="'+v+'">'+v+'</button>';
-            }).join('')
+        + '<div class="onb-curseur" style="--p:'+((val - 1) / 9 * 100)+'%">'
+          + '<div class="onb-cur-v">'+val+'</div>'
+          + '<input type="range" min="1" max="10" step="1" value="'+val+'"'
+            + ' data-serenite-curseur data-id="'+qs.id+'"'
+            + ' aria-label="'+esc(qs.bas)+' à '+esc(qs.haut)+'">'
+          + '<div class="onb-cur-l"><span>'+esc(qs.bas)+'</span><span>'+esc(qs.haut)+'</span></div>'
         + '</div>'
-        + '<div class="onb-echelle-l"><span>'+esc(qs.bas)+'</span><span>'+esc(qs.haut)+'</span></div>'
-        + onbNav(false);
+        + '<div class="onb-actions">'
+          + '<button class="onb-back" data-action="onb-prev">← Retour</button>'
+          + '<button class="onb-primary" data-action="onb-serenite" data-id="'+qs.id+'">'
+            + (e === 5 + SERENITE_Q.length ? 'Voir mon score →' : 'Suivant →')+'</button>'
+        + '</div>';
     } else {
       // Le bilan : le score calculé, et le premier pas à faire tout de suite.
       var s = serenite();
       var niv = sereniteNiveau(s.score);
       var reco = objectifRecommande();
-      corps = '<div class="onb-score" style="--c:'+niv.c+'">'
-          + anneauSection(s.score, niv.c, 116) + '</div>'
-        + '<div class="onb-q">'+niv.em+' '+esc(niv.l)+'</div>'
-        + '<div class="onb-sub">Voilà ton score de sérénité de départ. '
-          + 'Il montera à chaque chose que tu mettras en place — '
-          + 'tu le retrouveras sur ton accueil.</div>'
+      corps = '<div class="onb-fete">'
+          + '<span class="onb-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            + 'stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'
+            + '<path d="M4.5 12.5 10 18 19.5 6.5"/></svg></span>'
+          + '<span class="onb-conf c1"></span><span class="onb-conf c2"></span>'
+          + '<span class="onb-conf c3"></span><span class="onb-conf c4"></span>'
+          + '<span class="onb-conf c5"></span><span class="onb-conf c6"></span>'
+        + '</div>'
+        + '<div class="onb-q">Ton espace est prêt'+(prenom ? ', '+esc(prenom) : '')+' !</div>'
+        + '<div class="onb-score" style="--c:'+niv.c+'">'
+          + anneauSection(s.score, niv.c, 132, true) + '</div>'
+        + '<div class="onb-niveau" style="--c:'+niv.c+'">'+niv.em+' '+esc(niv.l)+'</div>'
+        + '<div class="onb-sub">Ton score de sérénité de départ. Il montera à chaque chose '
+          + 'que tu mettras en place.</div>'
         + (reco
             ? '<button class="onb-reco" data-action="onb-lancer" data-id="'+esc(reco.id)+'">'
               + '<span class="onb-reco-k">Le meilleur premier pas pour toi</span>'
@@ -8387,14 +8424,16 @@
   // Deux moitiés : le ressenti (ce que la personne déclare à l'onboarding) et
   // le concret (ce qu'elle a réellement mis en place). Le ressenti se répare en
   // agissant : c'est tout l'intérêt de le mesurer au départ.
+  // Quatre questions courtes : une par peur identifiée. Pas de sous-texte, le
+  // curseur et ses deux extrémités suffisent à se situer.
   var SERENITE_Q = [
-    { id:'confiance', q:'Aujourd’hui, tu te sens comment face à l’administratif ?',
-      bas:'Complètement perdu', haut:'Parfaitement à l’aise' },
-    { id:'charge', q:'À quel point l’administratif t’occupe l’esprit ?',
-      bas:'Ça me hante', haut:'Je n’y pense jamais' },
-    { id:'dates', q:'Tu sais quelles échéances t’attendent cette année ?',
-      bas:'Aucune idée', haut:'Je les connais toutes' },
-    { id:'argent', q:'Tu sais ce qu’il te restera vraiment sur ce que tu encaisses ?',
+    { id:'confiance', q:'L’administratif, tu le vis comment ?',
+      bas:'Je subis', haut:'Je maîtrise' },
+    { id:'charge', q:'Ça t’occupe l’esprit ?',
+      bas:'Tout le temps', haut:'Jamais' },
+    { id:'dates', q:'Tes prochaines échéances, tu les connais ?',
+      bas:'Aucune idée', haut:'Toutes' },
+    { id:'argent', q:'Sur 1 000 € encaissés, tu sais ce qu’il te reste ?',
       bas:'Pas du tout', haut:'Au centime près' },
   ];
 
@@ -8461,7 +8500,7 @@
 
     return '<div class="ser" style="--c:'+n.c+'">'
       + '<div class="ser-h">'
-        + '<div class="ser-jauge">'+anneauSection(s.score, n.c, 92)+'</div>'
+        + '<div class="ser-jauge">'+anneauSection(s.score, n.c, 96, true)+'</div>'
         + '<div class="ser-x">'
           + '<div class="ser-k">Ton score de sérénité</div>'
           + '<div class="ser-t">'+n.em+' '+n.l+'</div>'
@@ -8496,6 +8535,27 @@
     if(s >= 40) return { l:'En chemin', c:'#b45309', em:'😐' };
     if(s >= 20) return { l:'Encore flou', c:'#c2410c', em:'😕' };
     return { l:'Dans le brouillard', c:'#b91c1c', em:'😰' };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Thème clair / sombre
+  // ---------------------------------------------------------------------------
+  // Le choix explicite prime ; sans choix, on suit le réglage du système.
+  function appliquerTheme(t){
+    document.documentElement.setAttribute('data-theme', t);
+    var m = document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute('content', t === 'sombre' ? '#0b1220' : '#f4f6fa');
+  }
+
+  function initTheme(){
+    var choix = null;
+    try { choix = localStorage.getItem('freehub_theme'); } catch(e){}
+    if(!choix){
+      var sombreSysteme = window.matchMedia
+        && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      choix = sombreSysteme ? 'sombre' : 'clair';
+    }
+    appliquerTheme(choix);
   }
 
   // Le seuil où la barre latérale devient un tiroir (aligné sur app.css).
@@ -9369,6 +9429,15 @@
             + '<div class="user-roles"></div>'
             + '<div class="user-sub"></div></div>'
             + '<span class="user-cog">⚙</span></div>'
+          + '<button class="theme-sw" data-action="theme" aria-label="Changer de thème">'
+            + '<span class="theme-o"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/>'
+              + '<path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4'
+              + 'M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg>Clair</span>'
+            + '<span class="theme-l"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>Sombre</span>'
+          + '</button>'
         + '</div>'
       + '</aside>'
       + '<main>'
@@ -9410,7 +9479,7 @@
 
   function render(){
     var app = document.getElementById('app');
-    if(!app.querySelector('.app')){ app.innerHTML = shellHtml(); initBrand(); }
+    if(!app.querySelector('.app')){ app.innerHTML = shellHtml(); initBrand(); initTheme(); }
 
     // La nav n'est bâtie qu'une fois ; or le rôle admin arrive après coup (session
     // vérifiée en arrière-plan). On la reconstruit donc si l'onglet admin doit
@@ -10271,14 +10340,21 @@
       }
       case 'onb-serenite': {
         var sq = el.getAttribute('data-id');
+        var curseur = document.querySelector('[data-serenite-curseur]');
         state.onboarding.rep.serenite = state.onboarding.rep.serenite || {};
-        state.onboarding.rep.serenite[sq] = parseInt(el.getAttribute('data-v'), 10);
+        state.onboarding.rep.serenite[sq] = curseur ? parseInt(curseur.value, 10) : 5;
         // Le ressenti est enregistré au fil de l'eau : le bilan final le lit.
         state.serenite.reponses = state.onboarding.rep.serenite;
         try { localStorage.setItem('freehub_serenite',
           JSON.stringify(state.serenite.reponses)); } catch(err){}
         state.onboarding.etape += 1;
         majOnboarding();
+        break;
+      }
+      case 'theme': {
+        var sombre = document.documentElement.getAttribute('data-theme') !== 'sombre';
+        appliquerTheme(sombre ? 'sombre' : 'clair');
+        try { localStorage.setItem('freehub_theme', sombre ? 'sombre' : 'clair'); } catch(err){}
         break;
       }
       case 'cote-montant':
@@ -11135,6 +11211,14 @@
     var ac = e.target.closest('[data-accueil-ca]');
     if(ac){ majAccueilProjection(parseFloat(ac.value)); return; }
     // Recherche du lexique : on met à jour la grille sans re-render (focus gardé).
+    // Le curseur de sérénité : la bulle et le remplissage suivent le doigt.
+    var sc = e.target.closest('[data-serenite-curseur]');
+    if(sc){
+      var pere = sc.closest('.onb-curseur');
+      pere.style.setProperty('--p', ((sc.value - 1) / 9 * 100) + '%');
+      pere.querySelector('.onb-cur-v').textContent = sc.value;
+      return;
+    }
     // « Combien mettre de côté » : le résultat suit la frappe, sans re-render
     // complet (sinon le champ perdrait le focus à chaque chiffre).
     var cm = e.target.closest('[data-cote-input]');
