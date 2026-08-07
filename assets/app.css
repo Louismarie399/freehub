@@ -1284,7 +1284,7 @@
   /* ---------- Accueil du simulateur ---------- */
   .sim-hero{background:linear-gradient(135deg,#0f1b33 0%,#1e3a6e 58%,#2f6bff 135%);border-radius:22px;padding:30px 32px;color:#fff;position:relative;overflow:hidden;cursor:pointer;display:flex;transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
   .sim-hero:hover{transform:translateY(-3px);box-shadow:0 26px 52px -28px rgba(15,27,51,.75)}
-  .sim-hero:hover .sim-hero-cta{background:var(--surface);color:#0f1b33}
+  .sim-hero:hover .sim-hero-cta{background:#fff;color:#0f1b33}
   .sim-hero-cta{display:inline-flex;align-self:flex-start;align-items:center;gap:9px;margin-top:auto;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:12px 20px;font-size:14.5px;font-weight:800;transition:background .25s var(--ease),color .25s var(--ease)}
   .sim-hero::after{content:"";position:absolute;right:-70px;top:-70px;width:270px;height:270px;border-radius:50%;background:rgba(255,255,255,.06)}
   .sim-hero::before{content:"";position:absolute;right:60px;bottom:-100px;width:190px;height:190px;border-radius:50%;background:rgba(255,255,255,.045)}
@@ -2706,7 +2706,7 @@
   .acc-hero-n{font-size:44px;font-weight:800;letter-spacing:-.035em;color:#fff;line-height:1.05;margin-top:4px}
   .acc-hero-n span{font-size:17px;font-weight:700;color:rgba(255,255,255,.55);margin-left:6px}
   .acc-hero-s{font-size:13px;font-weight:500;color:rgba(255,255,255,.6);margin-top:8px}
-  .acc-hero-cta{margin-top:16px;background:var(--surface);color:#1e46b8;border:none;border-radius:12px;
+  .acc-hero-cta{margin-top:16px;background:#fff;color:#1e46b8;border:none;border-radius:12px;
     padding:12px 22px;font-size:14.5px;font-weight:800;cursor:pointer;font-family:inherit;
     transition:transform .2s var(--ease)}
   .acc-hero-cta:hover{transform:translateY(-2px)}
@@ -2837,7 +2837,6 @@
 
   /* Les aplats clairs codés en dur : sans reprise, ils portent du texte clair
      sur du blanc cassé. On les rabat sur des teintes sombres de même famille. */
-  [data-theme="sombre"] [style*="background:#f"],
   [data-theme="sombre"] .pf-total,[data-theme="sombre"] .field-eg,
   [data-theme="sombre"] .dg-micro,[data-theme="sombre"] .ch-muet,
   [data-theme="sombre"] .modal,[data-theme="sombre"] .cat-panneau,
@@ -2848,15 +2847,55 @@
   /* Les jauges, séparateurs et pastilles neutres */
   [data-theme="sombre"] .jauge-bar,[data-theme="sombre"] .dp-bar,
   [data-theme="sombre"] .sond-bar,[data-theme="sombre"] .mk-mois i{background:var(--track)}
+  /* .tui-f volontairement absent : c'est une simple rangée (points d'étapes),
+     lui donner un fond posait une bande grise par-dessus. */
   [data-theme="sombre"] .chip,[data-theme="sombre"] .fstat,
-  [data-theme="sombre"] .tui-f,[data-theme="sombre"] .lex-tag{
+  [data-theme="sombre"] .lex-tag{
     background:rgba(255,255,255,.08);color:var(--ink)}
+  [data-theme="sombre"] .tui-f{background:none}
+  [data-theme="sombre"] .obj-pts i{background:rgba(255,255,255,.22)}
   [data-theme="sombre"] .btn-ghost,[data-theme="sombre"] .btn-cancel,
   [data-theme="sombre"] .retour{background:transparent;border-color:var(--border);color:var(--ink)}
   /* Les verdicts colorés du guide des dépenses restent lisibles */
   [data-theme="sombre"] .v-ok{background:rgba(34,163,85,.18);color:#6ee7a8}
   [data-theme="sombre"] .v-non{background:rgba(255,255,255,.08);color:#a8b4ca}
   [data-theme="sombre"] .v-info{background:rgba(180,83,9,.2);color:#fbbf24}
+
+  /* Calendrier : le sélecteur de vue et les cases de jours. Les cases
+     « étalées » portent leur pastel en style inline : on le recalcule à partir
+     de la couleur du domaine (currentColor), posée inline elle aussi. */
+  [data-theme="sombre"] .cal-vues{background:var(--track)}
+  [data-theme="sombre"] .cal-vue.on{box-shadow:0 1px 3px rgba(0,0,0,.5)}
+  [data-theme="sombre"] .cal-m-jn i{color:var(--muted)}
+  [data-theme="sombre"] .cal-m-g i.auj{box-shadow:0 0 0 1.5px var(--ink) inset}
+  [data-theme="sombre"] .cal-m-g i.etale{
+    background:color-mix(in srgb,currentColor 22%,transparent) !important}
+  [data-theme="sombre"] .cal-an.on{color:#db2777}
+
+  /* Les encarts ambrés : recalculés en ambre sombre, texte doré lisible. */
+  [data-theme="sombre"] .acc-ech{background:rgba(234,179,8,.13);color:#fcd34d}
+  [data-theme="sombre"] .acc-ech:hover{background:rgba(234,179,8,.2)}
+  [data-theme="sombre"] .ch-muet,[data-theme="sombre"] .ch-tag.signale,
+  [data-theme="sombre"] .sc-liste.warn,[data-theme="sombre"] .card.tinted,
+  [data-theme="sombre"] .stat.o,[data-theme="sombre"] .pb-manque,
+  [data-theme="sombre"] .adm-stat.or,[data-theme="sombre"] .adm-tag.or,
+  [data-theme="sombre"] .obj-ech{
+    background:rgba(234,179,8,.13);border-color:rgba(234,179,8,.32);color:#fcd34d}
+  [data-theme="sombre"] .adm-stat.or .adm-stat-v{color:#fbbf24}
+  [data-theme="sombre"] .moi-grade.admin,[data-theme="sombre"] .moi-grade.rang-or{
+    background:rgba(234,179,8,.16);color:#fcd34d}
+  [data-theme="sombre"] .v-info,[data-theme="sombre"] .mk-verdict.v-info{
+    background:rgba(234,179,8,.14);color:#fbbf24}
+  [data-theme="sombre"] .zone-avant{background:rgba(234,179,8,.09);
+    border-color:rgba(234,179,8,.3)}
+  [data-theme="sombre"] .zone.survol{background:rgba(234,179,8,.16)}
+  /* Partenaires : le bandeau « devenir partenaire » restait blanc, avec un
+     titre clair par-dessus - donc invisible. */
+  [data-theme="sombre"] .part-join{background:var(--surface);border-color:#3a4a6b}
+  [data-theme="sombre"] .part-note{color:var(--muted)}
+  /* La fiche partenaire pose sa couleur pastel en style INLINE : seul un
+     !important peut la surclasser. Idem pour tout corps de modale teinté. */
+  [data-theme="sombre"] .modal-body{background:var(--surface) !important}
 
   /* Retouches propres au thème sombre : ce que les variables ne couvrent pas. */
   [data-theme="sombre"] .ch-fil{background:#0d1524}
@@ -2876,16 +2915,21 @@
      l'œil la repère immédiatement. */
   @keyframes tui-halo{0%,100%{box-shadow:0 0 0 0 rgba(234,179,8,.5)}
     50%{box-shadow:0 0 0 8px rgba(234,179,8,0)}}
-  .tui.neuf{border-color:#eab308 !important;animation:tui-halo 2.4s ease-out infinite}
-  /* L'insigne dépasse du coin, légèrement penché : impossible à rater. */
-  .tui-neuf{position:absolute;top:-9px;right:-7px;z-index:3;
-    padding:4px 11px;border-radius:999px;transform:rotate(7deg);
-    background:linear-gradient(135deg,#fbbf24,#d97706);color:#fff;
-    font-size:10.5px;font-weight:900;letter-spacing:.06em;
-    box-shadow:0 6px 16px -6px rgba(217,119,6,.9), 0 0 0 2.5px var(--surface)}
+  .tui.inedit{border-color:#eab308 !important;animation:tui-halo 2.4s ease-out infinite}
+  /* Une bulle-cloche dorée sur le coin, penchée : elle disparaît (avec le
+     halo) dès qu'on clique la tuile - découverte faite. */
+  @keyframes tui-cloche{0%,88%,100%{transform:rotate(8deg)}
+    91%{transform:rotate(-8deg)}94%{transform:rotate(12deg)}97%{transform:rotate(-4deg)}}
+  .tui-neuf{position:absolute;top:-11px;right:-9px;z-index:3;
+    width:30px;height:30px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:14px;transform:rotate(8deg);
+    background:linear-gradient(135deg,#fbbf24,#d97706);
+    box-shadow:0 6px 16px -6px rgba(217,119,6,.9), 0 0 0 2.5px var(--surface);
+    animation:tui-cloche 3.2s ease-in-out infinite}
   .tui{position:relative}
-  @media (prefers-reduced-motion: reduce){ .tui.neuf{animation:none} }
-  @media (prefers-reduced-motion: reduce){ .tui.neuf{animation:none} }
+  @media (prefers-reduced-motion: reduce){ .tui-neuf{animation:none} }
+  @media (prefers-reduced-motion: reduce){ .tui.inedit{animation:none} }
+  @media (prefers-reduced-motion: reduce){ .tui.inedit{animation:none} }
 
   /* ---------- Squelettes de chargement ---------- */
   /* Une forme grise qui respire : l'attente a la silhouette du contenu. */

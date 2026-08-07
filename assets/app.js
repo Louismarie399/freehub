@@ -2601,6 +2601,17 @@
                        isAdmin: !!res.data.isAdmin, beta: !!res.data.beta };
       identiteDepuisCompte(state.compte);
       apiJson('GET', 'api/data').then(function(d){
+        // Marqueur de remise à zéro posé côté serveur : on efface TOUT le
+        // stockage local (sinon il ré-ensemencerait le compte aussitôt) et on
+        // repart comme à la première visite, onboarding compris.
+        if(d.ok && d.data.donnees && d.data.donnees.freehub_reset){
+          var razVue = null;
+          try { razVue = localStorage.getItem('freehub_reset_vu'); } catch(e){}
+          if(d.data.donnees.freehub_reset !== razVue){
+            remiseAZeroLocale(d.data.donnees.freehub_reset);
+            return;
+          }
+        }
         if(d.ok && d.data.donnees && Object.keys(d.data.donnees).length){
           appliquerPaquet(d.data.donnees);
           identiteDepuisCompte(state.compte);   // le compte fait foi pour l'identité
@@ -2611,6 +2622,19 @@
         render();
       });
     }, function(){ /* serveur injoignable : on reste en local */ });
+  }
+
+  // Remise à zéro « usine », déclenchée par le serveur : tout le stockage
+  // local saute (sauf le thème), puis la page se recharge sur un état neuf.
+  function remiseAZeroLocale(marqueur){
+    try {
+      CLES_SAUVEGARDE.forEach(function(k){ localStorage.removeItem(k); });
+      ['freehub_chat_onb', 'freehub_side_plie'].forEach(function(k){
+        localStorage.removeItem(k);
+      });
+      localStorage.setItem('freehub_reset_vu', marqueur);
+    } catch(e){}
+    window.location.reload();
   }
 
   // Y a-t-il déjà un usage local ? Le drapeau est relevé AVANT le premier rendu
@@ -3184,10 +3208,16 @@
     return catalog.filter(function(o){
       if(!o.nouveau) return false;
       var age = (now - Date.parse(o.nouveau)) / 86400000;
-      return age >= 0 && age <= NOUVEAU_JOURS;
+      // Un clic sur la tuile vaut découverte : le halo s'éteint pour de bon.
+      return age >= 0 && age <= NOUVEAU_JOURS && !state.faits['nouveau-vu:' + o.id];
     }).map(function(o){ return o.id; });
   }
   function estNouveau(id){ return objectifsNouveaux().indexOf(id) >= 0; }
+  function marquerNouveauVu(id){
+    var o = obj(id);
+    if(!o || !o.nouveau) return;
+    marquerFait('nouveau-vu:' + id);
+  }
 
   // `dispo` : objectif pas encore choisi - présenté plus sobrement, avec un +.
   function illusObjectif(id){
@@ -3216,16 +3246,18 @@
             + '<span class="tui-x" data-action="obj-remove" data-id="'+id+'" title="Retirer de mes objectifs">×</span>'
           + '</span>');
 
-    var neuf = estNouveau(id);
+    // « inedit » et non « neuf » : l'état d'avancement s'appelle déjà `neuf`
+    // (= pas commencé), la collision mettait un halo doré sur tout le monde.
+    var inedit = estNouveau(id);
     return '<button class="tui '+etat+(dispo?' dispo':'')+(pertinent&&dispo?' reco':'')
-      + (neuf ? ' neuf' : '')+'"'
+      + (inedit ? ' inedit' : '')+'"'
       + ' draggable="false"'
       + ' style="--c:'+d.c+';--s:'+d.soft+'" data-action="'+(dispo?'obj-add':'view')+'" data-id="'+id+'">'
       + '<span class="tui-h">'
         + '<span class="tui-ico">'+d.ico+'</span>'
         + '<span class="tui-dom">'+esc(d.l)+'</span>'
-        + (neuf ? '<span class="tui-neuf">✦ NEW</span>' : '')
-        + (pertinent && dispo && !neuf
+        + (inedit ? '<span class="tui-neuf" title="Nouveau parcours">🔔</span>' : '')
+        + (pertinent && dispo && !inedit
             ? '<span class="tui-reco"><span class="tui-reco-e">★</span>Pour toi</span>' : '')
         + coin
       + '</span>'
@@ -9876,6 +9908,7 @@
         // Depuis l'accueil on peut viser un objectif pas encore choisi : on
         // l'ajoute au passage plutôt que d'ouvrir un écran vide.
         var vid = el.getAttribute('data-id');
+        marquerNouveauVu(vid);
         if(obj(vid) && state.added.indexOf(vid) < 0){
           state.added = state.added.concat([vid]);
           saveObjectifs();
@@ -9908,6 +9941,7 @@
       case 'obj-add': {
         e.stopPropagation();
         var aid = el.getAttribute('data-id');
+        marquerNouveauVu(aid);
         if(state.added.indexOf(aid) < 0) state.added = state.added.concat([aid]);
         saveObjectifs();
         // Depuis le catalogue, la tuile disparaît de la liste : on y reste pour
