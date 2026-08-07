@@ -16,7 +16,7 @@
   var ORDRE_DOMAINES = ['statut','fiscalite','tva','administratif','pilotage'];
 
   // ---------------------------------------------------------------------------
-  // Lexique — les mots de l'administratif, expliqués simplement
+  // Lexique - les mots de l'administratif, expliqués simplement
   // ---------------------------------------------------------------------------
   // `cat` reprend les domaines pour la couleur ; `def` = 1 à 3 phrases, sans
   // jargon. On n'invente aucun chiffre : les définitions restent qualitatives.
@@ -153,7 +153,7 @@
   function terme(id){ return LEXIQUE.filter(function(x){ return x.id === id; })[0]; }
 
   // ---------------------------------------------------------------------------
-  // Badges & jalons — récompenser les VRAIES étapes franchies, pas les clics.
+  // Badges & jalons - récompenser les VRAIES étapes franchies, pas les clics.
   // Chaque badge a un `check()` évalué à chaque rendu ; le premier passage à vrai
   // le débloque et déclenche une petite célébration.
   // ---------------------------------------------------------------------------
@@ -252,7 +252,7 @@
     { id:'serie-tout', ico:'🏆', t:'Sans faute',
       d:'Toutes les récompenses débloquées, jusqu’à la dernière.',
       rang:'royal',
-      // Tous les autres — sauf lui-même, et sauf les badges exclusifs qu'un
+      // Tous les autres - sauf lui-même, et sauf les badges exclusifs qu'un
       // membre arrivé après l'alpha ne pourra jamais avoir.
       check:function(){
         return BADGES.every(function(b){
@@ -294,18 +294,26 @@
   // Ce que le badge apporte, une fois porté : c'est la récompense concrète,
   // et elle se voit dans l'Entraide.
   function avantageBadge(b){
-    // Le mot de la couleur porte sa couleur : on se projette avant d'avoir le badge.
-    var parRang = {
-      bronze: 'Porté, il teinte ton pseudo en <b class="teinte-bronze">bronze</b> dans l’Entraide',
-      argent: 'Porté, il teinte ton pseudo en <b class="teinte-argent">argenté</b> dans l’Entraide',
-      or:     'Porté, il teinte ton pseudo en <b class="teinte-or">doré</b>, avec un halo, dans l’Entraide',
-      royal:  'Porté, il passe ton pseudo en <b class="teinte-royal">dégradé royal</b> dans l’Entraide, réservé à ce badge',
-    };
     if(b.id === 'pionnier'){
-      return 'Porté, il dit que tu étais là avant tout le monde — introuvable après l’alpha';
+      return 'Porté, il dit que tu étais là avant tout le monde, introuvable après l’alpha';
     }
-    return b.rang ? parRang[b.rang]
-                  : 'Débloqué, tu peux le porter à côté de ton nom, visible de tous';
+    if(!b.rang) return 'Débloqué, tu peux le porter à côté de ton nom, visible de tous';
+
+    // Le mot de la couleur porte sa couleur, ET dit la bonne : les deux
+    // échelles n'ont pas la même palette, l'annonce doit suivre.
+    var parcours = BADGES_PALIERS.indexOf(b.id) >= 0;
+    var noms = parcours
+      ? { bronze:'turquoise', argent:'bleu océan', or:'indigo', royal:'dégradé cyan' }
+      : { bronze:'bronze', argent:'argenté', or:'doré', royal:'dégradé violet' };
+    var cls = (parcours ? 'teinte-p-' : 'teinte-') + b.rang;
+    var couleur = '<b class="'+cls+'">'+noms[b.rang]+'</b>';
+    if(b.rang === 'royal'){
+      return 'Porté, il passe ton pseudo en '+couleur+' dans l’Entraide, réservé à ce badge';
+    }
+    if(b.rang === 'or'){
+      return 'Porté, il teinte ton pseudo en '+couleur+', avec un halo, dans l’Entraide';
+    }
+    return 'Porté, il teinte ton pseudo en '+couleur+' dans l’Entraide';
   }
 
   // Nombre total d'étapes cochées, tous objectifs confondus.
@@ -460,7 +468,7 @@
                     + '</div>'
                   + '</div>';
                 }).join('')
-              : '<div class="obj-vide">Aucun signalement — c’est bon signe</div>')
+              : '<div class="obj-vide">Aucun signalement - c’est bon signe</div>')
         + '</div>'
       + '</div></div>';
   }
@@ -533,7 +541,7 @@
   // (`part`, index dans PARTENAIRES) : c'est ce qui relie les objectifs au reste
   // de l'app au lieu d'en faire une simple liste à cocher.
   //
-  // `echeance` : UNIQUEMENT les dates légales réelles. Pas de délai inventé —
+  // `echeance` : UNIQUEMENT les dates légales réelles. Pas de délai inventé -
   // on ne met pas la pression sur des étapes qui n'en ont pas.
   // `pertinent` : à qui l'objectif s'adresse, d'après le profil.
   var catalog = [
@@ -752,14 +760,14 @@
   ];
 
   // ---------------------------------------------------------------------------
-  // Contenu détaillé des étapes — séparé du catalogue pour rester lisible.
+  // Contenu détaillé des étapes - séparé du catalogue pour rester lisible.
   // Règle : aucun chiffre ni seuil inventé. On oriente vers les sources
   // officielles pour les valeurs qui changent (seuils, taux, dates).
   // Par étape : { intro, faire:[…], vigilance:[…], liens:[{l,url}] }.
   // ---------------------------------------------------------------------------
   var IMPOTS = { l:'impots.gouv.fr', url:'https://www.impots.gouv.fr' };
   var URSSAF = { l:'autoentrepreneur.urssaf.fr', url:'https://www.autoentrepreneur.urssaf.fr' };
-  var GUICHET = { l:'Guichet unique — formalites.entreprises.gouv.fr', url:'https://formalites.entreprises.gouv.fr' };
+  var GUICHET = { l:'Guichet unique - formalites.entreprises.gouv.fr', url:'https://formalites.entreprises.gouv.fr' };
   var SPUBLIC = { l:'entreprendre.service-public.fr', url:'https://entreprendre.service-public.fr' };
 
   var CONTENUS = {
@@ -1061,7 +1069,7 @@
   // Nos partenaires
   // ---------------------------------------------------------------------------
   // `url`   : lien d'affiliation. Tant qu'il est vide, la fiche affiche un bouton
-  //           inactif « Lien bientôt disponible » — il suffit de coller l'URL ici.
+  //           inactif « Lien bientôt disponible » - il suffit de coller l'URL ici.
   // `img`   : le logo, fourni par l'utilisateur, dans assets/partenaires/.
   // `color` / `grad` : les deux teintes de l'en-tête coloré, relevées sur le logo.
   // `soft`  : le fond teinté du corps de la carte.
@@ -1077,7 +1085,7 @@
       pitch:'Créer sa société sans avocat ni paperasse : tu réponds à un questionnaire, ils rédigent et déposent.',
       desc:'Créer sa société ne devrait pas demander trois rendez-vous chez l’avocat et six semaines d’attente. '
         + 'LegalPlace transforme les formalités en un <b>questionnaire guidé</b> : tu réponds, la plateforme rédige '
-        + 'tes statuts et dépose ton dossier d’immatriculation. Et elle reste là après la création — chaque changement '
+        + 'tes statuts et dépose ton dossier d’immatriculation. Et elle reste là après la création - chaque changement '
         + 'dans la vie de ta société se règle au même endroit.',
       points:[
         'Choisir la bonne forme : micro, EURL, SASU, SARL',
@@ -1095,7 +1103,7 @@
       promo:'MLCONSULTING', promoDetail:'−25 % sur l’abonnement annuel, ou −25 % les 3 premiers mois en mensuel',
       pitch:'Tes factures alimentent ton livre de recettes toutes seules, et tu déclares à l’URSSAF sans quitter l’outil.',
       desc:'En micro-entreprise, ce n’est pas la comptabilité qui fait mal, c’est l’oubli : une déclaration URSSAF '
-        + 'passée, un livre des recettes jamais tenu. Abby travaille en fond — tes factures alimentent '
+        + 'passée, un livre des recettes jamais tenu. Abby travaille en fond - tes factures alimentent '
         + '<b>automatiquement</b> ton livre de recettes, ton chiffre d’affaires est prêt à déclarer, et tu le déclares '
         + 'sans quitter l’outil. Pensé pour ceux qui se lancent, avec une version gratuite pour démarrer.',
       points:[
@@ -1113,7 +1121,7 @@
       url:'https://qonto.com/r/cj2xa2', promo:'',
       pitch:'Le compte pro qui dépose ton capital et envoie chaque dépense chez ton comptable, justificatif compris.',
       desc:'Le compte pro n’est pas une case à cocher : c’est là que tout transite. Qonto ouvre le tien en ligne, '
-        + 'dépose ton capital pour la création, et surtout <b>fait le lien avec ta comptabilité</b> — chaque paiement '
+        + 'dépose ton capital pour la création, et surtout <b>fait le lien avec ta comptabilité</b> - chaque paiement '
         + 'part chez ton expert-comptable avec son justificatif attaché. Plus de 600 000 entreprises l’utilisent en Europe.',
       points:[
         'Dépôt de capital en ligne pour créer ta société',
@@ -1131,7 +1139,7 @@
       pitch:'Une équipe jeune qui bosse avec de jeunes entrepreneurs : mêmes modèles, mêmes questions, même langage.',
       desc:'Un cabinet qui répond « ça dépend » et facture le rendez-vous, tu as déjà donné. Icon Invest, c’est une '
         + '<b>équipe jeune qui travaille au quotidien avec de jeunes entrepreneurs</b> : mêmes modèles économiques, '
-        + 'mêmes questions, même vocabulaire. La comptabilité est tenue, oui — mais surtout, quelqu’un décroche '
+        + 'mêmes questions, même vocabulaire. La comptabilité est tenue, oui - mais surtout, quelqu’un décroche '
         + 'quand tu ne sais pas si cette dépense peut passer.',
       points:[
         'Tenue comptable et bilan, du premier euro à la clôture',
@@ -1168,7 +1176,7 @@
     + '</div>';
   }
 
-  // Profil d'entreprise — centralisé, persisté dans le navigateur (localStorage),
+  // Profil d'entreprise - centralisé, persisté dans le navigateur (localStorage),
   // réutilisé par le simulateur. Pré-rempli avec un exemple modifiable.
   // Profil = source unique de vérité. Chaque champ ici est un champ en moins
   // dans les simulateurs : ils lisent le profil à l'ouverture (appliquerProfil).
@@ -1209,7 +1217,7 @@
     dividendes: '100',
     tresorerie: '10000',
     cfe: '',
-    // 7 · Charges professionnelles — liste partagée par 3 simulateurs
+    // 7 · Charges professionnelles - liste partagée par 3 simulateurs
     charges: [
       { nom:'Logiciels et abonnements', montant:'180', frequence:'mensuelle',
         tauxTVA:'0.2', deductible:'100', categorie:'fonctionnement' },
@@ -1237,7 +1245,7 @@
 
 
   // ---------------------------------------------------------------------------
-  // Paramètres fiscaux par année — à réviser chaque année, jamais en dur ailleurs.
+  // Paramètres fiscaux par année - à réviser chaque année, jamais en dur ailleurs.
   // ---------------------------------------------------------------------------
   // Un seul millésime affiché dans toute l'app : l'utilisateur raisonne en
   // « ma déclaration de cette année », pas en « année du taux ».
@@ -1249,7 +1257,7 @@
 
   function bandeauMillesimeHtml(jeu){
     return '<div class="millesime">Paramètres <strong>' + esc(MILLESIME.label) + '</strong>'
-      + ' · vérifiés : ' + esc(MILLESIME.verifieLe[jeu] || '—')
+      + ' · vérifiés : ' + esc(MILLESIME.verifieLe[jeu] || '-')
       + ' · <button class="btn-link" data-action="open-profil" style="display:inline">'
       + 'à revoir chaque année</button></div>';
   }
@@ -1263,11 +1271,11 @@
       verifieLe: '23/07/2026',
       micro: {
         venteBIC:   { vl: 0.010, abattement: 0.71, court: 'Vente (micro-BIC)',
-                      label: 'Vente de marchandises, restauration ou hébergement — micro-BIC' },
+                      label: 'Vente de marchandises, restauration ou hébergement - micro-BIC' },
         serviceBIC: { vl: 0.017, abattement: 0.50, court: 'Services (micro-BIC)',
-                      label: 'Prestations de services commerciales ou artisanales — micro-BIC' },
+                      label: 'Prestations de services commerciales ou artisanales - micro-BIC' },
         bnc:        { vl: 0.022, abattement: 0.34, court: 'Libéral (micro-BNC)',
-                      label: 'Activité libérale — micro-BNC' },
+                      label: 'Activité libérale - micro-BNC' },
       },
       abattementMinimum: 305,
       bareme: [
@@ -1280,7 +1288,7 @@
       plafondRfrParPart: 29315,
       // Volontairement non renseignés : valeurs officielles non fournies dans le
       // brief. Tant qu'ils sont à null, le calcul les ignore ET le dit dans les
-      // hypothèses affichées — plutôt que d'inventer des seuils.
+      // hypothèses affichées - plutôt que d'inventer des seuils.
       decote: null,
       plafondQuotientFamilial: null,
     },
@@ -1423,7 +1431,7 @@
   // Les niveaux de CA où l'activité n'est pas viable (revenu négatif dans l'un
   // des deux statuts) sont ignorés : y comparer deux pertes n'a aucun sens.
   // Répond à la question de l'utilisateur : « à partir de QUAND ? »
-  // On part donc de son CA actuel et on monte — chercher en dessous produirait
+  // On part donc de son CA actuel et on monte - chercher en dessous produirait
   // des croisements parasites (à très bas CA la rémunération est plafonnée et
   // la société peut sembler gagnante alors que rien n'est viable).
   // Retourne { deja:true } si la société est déjà devant, { ca } sinon, ou null.
@@ -1440,7 +1448,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Simulateur « Optimiser ma société » — moteur (temps réel, sans IA)
+  // Simulateur « Optimiser ma société » - moteur (temps réel, sans IA)
   // Réutilise STATUT_PARAMS : mêmes taux, donc mêmes réserves de validation.
   // ---------------------------------------------------------------------------
   var OPTIM_CATEGORIES = [
@@ -1455,7 +1463,7 @@
 
   // Leviers activables : chacun est une charge déductible supplémentaire.
   // ⚠️ Les plafonds d'exonération propres à chaque dispositif ne sont PAS
-  // vérifiés (le brief ne les chiffre pas) — seul le mécanisme de déduction
+  // vérifiés (le brief ne les chiffre pas) - seul le mécanisme de déduction
   // est simulé. C'est indiqué à l'utilisateur.
   var OPTIM_LEVIERS = [
     { v:'mutuelle',    l:'Mutuelle santé',        def:80,  unite:'mois', social:true },
@@ -1618,17 +1626,17 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Paramètres du simulateur TVA — à réviser chaque année.
+  // Paramètres du simulateur TVA - à réviser chaque année.
   // ---------------------------------------------------------------------------
   var TVA_PARAMS = {
     annee: 2026,
     source: 'impots.gouv.fr · entreprendre.service-public.fr',
     verifieLe: '23/07/2026',
     tauxVente: [
-      { v:'0.2',   l:'20% — taux normal' },
-      { v:'0.1',   l:'10% — taux intermédiaire' },
-      { v:'0.055', l:'5,5% — taux réduit' },
-      { v:'0.021', l:'2,1% — taux particulier' },
+      { v:'0.2',   l:'20% - taux normal' },
+      { v:'0.1',   l:'10% - taux intermédiaire' },
+      { v:'0.055', l:'5,5% - taux réduit' },
+      { v:'0.021', l:'2,1% - taux particulier' },
     ],
     tauxDepense: [
       { v:'0.2',   l:'20%' }, { v:'0.1',   l:'10%' },
@@ -1662,14 +1670,14 @@
       { id:'logiciel',  l:'Un logiciel type Abby',     min:144,  max:180,
         d:'Plan Pro (12 €/mois avec engagement annuel, 15 €/mois sans engagement) : déclarations CA3 générées depuis tes factures.' },
       { id:'comptable', l:'Un expert-comptable',       min:1800, max:3000,
-        d:'À partir d’environ 150 €/mois pour un suivi complet — il gère bien plus que la TVA.' },
+        d:'À partir d’environ 150 €/mois pour un suivi complet - il gère bien plus que la TVA.' },
     ],
     // Catégories dont la TVA est souvent limitée ou exclue.
     categoriesSensibles: ['vehicule','carburant','restaurant','hebergement','cadeau','mixte','logement'],
   };
 
   // ---------------------------------------------------------------------------
-  // Moteur de calcul TVA (déterministe et testable — l'IA ne calcule rien ici)
+  // Moteur de calcul TVA (déterministe et testable - l'IA ne calcule rien ici)
   // ---------------------------------------------------------------------------
   // TVA comprise dans un montant TTC.
   // Piège classique : TTC / 1,2 donne le HT, PAS la TVA.
@@ -1759,7 +1767,7 @@
 
     // --- Scénario de référence ---
     // On ne demande plus « que ferais-tu de tes prix ? » : on part de l'hypothèse
-    // la plus courante et la plus lisible — la TVA s'ajoute aux prix, le revenu
+    // la plus courante et la plus lisible - la TVA s'ajoute aux prix, le revenu
     // HT est donc préservé. Les autres stratégies restent comparées plus bas.
     var rRecup = 1, rSensible = 1;
     var principal = scenario(rRecup, rSensible);
@@ -1855,10 +1863,10 @@
     var autres = Math.max(0, parseFloat(f.autresRevenus) || 0);
     var parts = Math.max(1, parseFloat(f.parts) || 1);
 
-    // Option A — versement libératoire : assis sur le chiffre d'affaires.
+    // Option A - versement libératoire : assis sur le chiffre d'affaires.
     var vl = ca * cat.vl;
 
-    // Option B — barème progressif : on ne retient que le SURCOÛT dû à la micro.
+    // Option B - barème progressif : on ne retient que le SURCOÛT dû à la micro.
     var benefice = beneficeMicro(ca, cat.abattement, p.abattementMinimum);
     var impotSans = impotBareme(autres, parts, p);
     var impotAvec = impotBareme(autres + benefice, parts, p);
@@ -1898,7 +1906,7 @@
     };
   }
 
-  // Historique des simulations — conservé dans le navigateur, 20 dernières.
+  // Historique des simulations - conservé dans le navigateur, 20 dernières.
   function loadHistorique(){
     try {
       var raw = localStorage.getItem('freehub_historique');
@@ -2021,7 +2029,7 @@
 
 
   // Les 7 blocs du profil. Chaque bloc porte sa couleur, son icône, et la liste
-  // des simulateurs qui s'en servent — pour que l'utilisateur sache pourquoi il
+  // des simulateurs qui s'en servent - pour que l'utilisateur sache pourquoi il
   // remplit un champ. `si` masque un bloc ou un champ hors contexte.
   // Les blocs du profil. Chaque bloc : sa couleur, son icône, ses champs, et un
   // résumé affiché quand il est replié. `si` masque un bloc ou un champ hors contexte.
@@ -2066,7 +2074,7 @@
         { k:'forme', l:'Forme juridique', options:SIM_OPTIONS.forme.map(function(x){ return {v:x,l:x}; }) },
         { k:'regime', l:'Régime d’imposition', options:SIM_OPTIONS.regime.map(function(x){ return {v:x,l:x}; }) },
         { k:'versementLiberatoire', l:'Versement libératoire', lex:'vfl', si:estMicro, options:[
-            {v:'non', l:'Non — barème progressif'}, {v:'oui', l:'Oui'} ] },
+            {v:'non', l:'Non - barème progressif'}, {v:'oui', l:'Oui'} ] },
       ],
     },
     {
@@ -2114,7 +2122,7 @@
         { k:'rfr', l:'Revenu fiscal de référence N−2', lex:'rfr', type:'number', ph:'25 000',
           aide:'Sur ton avis d’impôt. Sert à vérifier ton éligibilité au versement libératoire.' },
         { k:'partsRfr', l:'Parts à cette année-là', options:[
-            {v:'',l:'— même qu’aujourd’hui —'},
+            {v:'',l:'- même qu’aujourd’hui -'},
             {v:'1',l:'1'},{v:'1.5',l:'1,5'},{v:'2',l:'2'},{v:'2.5',l:'2,5'},
             {v:'3',l:'3'},{v:'3.5',l:'3,5'},{v:'4',l:'4'} ] },
         { k:'reductions', l:'Réductions et crédits d’impôt', type:'number', ph:'0',
@@ -2124,7 +2132,7 @@
     {
       id:'remuneration', titre:'Rémunération', ico:'💶', color:'#4d7c0f', soft:'#f5fbe8',
       resume:function(p){ return valeurProfil('remuneration') + ' · ' + valeurProfil('dividendes') + ' en dividendes'; },
-      note:'Ce que tu te verses — ou ce que tu te verserais si tu passais en société.',
+      note:'Ce que tu te verses - ou ce que tu te verserais si tu passais en société.',
       champs:[
         { k:'remMensuelle', l:'Rémunération nette voulue', type:'number', ph:'3 000', suffixe:'€ / mois' },
         { k:'dividendes', l:'Bénéfices distribués en dividendes', lex:'dividendes', type:'number', ph:'100', suffixe:'%',
@@ -2213,6 +2221,9 @@
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
+    sidePlie: (function(){
+      try { return localStorage.getItem('freehub_side_plie') === '1'; } catch(e){ return false; }
+    })(),
     badgePorte: (function(){
       try { return localStorage.getItem('freehub_badge_porte') || null; } catch(e){ return null; }
     })(),
@@ -2278,7 +2289,7 @@
       onb: { actif:false, etape:0 },
       essai: false,            // société : on teste sans écrire dans le profil
     },
-    // Simulateur « Optimiser ma société » — cockpit temps réel
+    // Simulateur « Optimiser ma société » - cockpit temps réel
     optim: {
       statut: 'eurl',          // eurl | sasu
       form: { caAnnuel:'80000', caMensuel:false, tva:'oui', remMensuelle:'3000',
@@ -2293,7 +2304,7 @@
       outil: null,             // 'profil' | 'charges' | 'tableau' : modale d'outil ouverte
       importInfo: null,        // message après un import
     },
-    // Simulateur « Quand passer en société ? » — recalcul en temps réel
+    // Simulateur « Quand passer en société ? » - recalcul en temps réel
     statut: {
       params: loadParams(),
       paramsSaved: false,
@@ -2354,7 +2365,7 @@
   });
 
   // ---------------------------------------------------------------------------
-  // Compte & synchronisation (optionnels — l'app marche sans)
+  // Compte & synchronisation (optionnels - l'app marche sans)
   // ---------------------------------------------------------------------------
   function apiJson(method, path, body){
     return fetch(path, {
@@ -2458,7 +2469,7 @@
   }
 
   // Y a-t-il déjà un usage local ? Le drapeau est relevé AVANT le premier rendu
-  // (voir plus bas) : le rendu lui-même écrit des clés — les badges notamment —
+  // (voir plus bas) : le rendu lui-même écrit des clés - les badges notamment -
   // qui fausseraient la mesure. Sert à ne pas éjecter vers la landing quelqu'un
   // qui utilise l'outil sans compte.
   function aDesDonneesLocales(){ return usageLocalInitial; }
@@ -2619,7 +2630,7 @@
   // ---------------------------------------------------------------------------
   // Templates
   // ---------------------------------------------------------------------------
-  // Icônes de nav : traits fins, monochromes (currentColor) — plus sobres que
+  // Icônes de nav : traits fins, monochromes (currentColor) - plus sobres que
   // des emojis colorés sur le fond bleu nuit.
   var NAV_ICONES = {
     accueil:    '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/>',
@@ -2667,6 +2678,7 @@
         + '<span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
           + 'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+NAV_ICONES[t.key]+'</svg></span>'
         + '<span class="nav-text">'+esc(t.label)+'</span>'
+        + '<span class="nav-tip">'+esc(t.label)+'</span>'
         + (t.key === 'objectifs' ? '<span class="nav-badge">New</span>' : '')
         + (t.alpha ? '<span class="nav-badge alpha">Alpha</span>' : '')
         + (t.key === 'chat' && state.chat.nonLus
@@ -2676,7 +2688,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Accueil — « où j'en suis ? » en un écran
+  // Accueil - « où j'en suis ? » en un écran
   // ---------------------------------------------------------------------------
   // Échéances récurrentes. On ne met ici QUE des dates déjà affirmées ailleurs
   // dans l'app : pas d'échéance inventée. `objectif` relie au parcours associé.
@@ -2726,7 +2738,7 @@
     if(trou){
       return { ico:'🗂', titre:'Complète « '+trou.titre+' »',
         texte:'Il manque '+trou.manquants.join(', ').toLowerCase()
-          + ' — sans ça, tes simulateurs travaillent à l’aveugle.',
+          + ' - sans ça, tes simulateurs travaillent à l’aveugle.',
         cta:'Compléter mon profil', action:'open-profil', data:'' };
     }
     // Sinon : la prochaine étape non faite du parcours le plus avancé.
@@ -2747,7 +2759,7 @@
         cta:'Reprendre où j’en suis', action:'view', data:c.id, color:dom(c.o).c };
     }
     return { ico:'🎉', titre:'Tous tes objectifs sont bouclés',
-      texte:'Tu as fait le tour — explore les simulateurs pour affiner tes chiffres.',
+      texte:'Tu as fait le tour - explore les simulateurs pour affiner tes chiffres.',
       cta:'Revoir mes parcours', action:'tab', data:'' };
   }
 
@@ -2934,7 +2946,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Objectifs — la vue détaillée est imbriquée, plus d'onglet séparé
+  // Objectifs - la vue détaillée est imbriquée, plus d'onglet séparé
   // ---------------------------------------------------------------------------
   // Le raccourci d'une étape : soit un simulateur, soit un partenaire.
   var SIM_LIBELLES = {
@@ -2989,7 +3001,7 @@
     return { sims:sims, parts:parts };
   }
 
-  // Affichés en clair sur la tuile — même si l'étape n'est pas encore atteinte :
+  // Affichés en clair sur la tuile - même si l'étape n'est pas encore atteinte :
   // c'est ce qui donne envie d'aller voir.
   function liensTuileHtml(o){
     var l = liensObjectif(o);
@@ -3017,7 +3029,7 @@
       + dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + '</span>';
   }
 
-  // `dispo` : objectif pas encore choisi — présenté plus sobrement, avec un +.
+  // `dispo` : objectif pas encore choisi - présenté plus sobrement, avec un +.
   function illusObjectif(id){
     return 'assets/illus/obj-' + id + '.svg';
   }
@@ -3467,13 +3479,13 @@
     var ech = '';
     if(cur.echeance){
       if(cur.echeance.periode){
-        ech = '<div class="detail-ech">📅 <strong>'+esc(cur.echeance.quoi)+'</strong> — chaque année, '
+        ech = '<div class="detail-ech">📅 <strong>'+esc(cur.echeance.quoi)+'</strong> - chaque année, '
           + 'période <strong>'+esc(cur.echeance.periode)+'</strong> (date limite variable selon le département)</div>';
       } else {
         var now = new Date();
         var date = new Date(now.getFullYear(), cur.echeance.mois - 1, cur.echeance.jour);
         if(date < now) date = new Date(now.getFullYear() + 1, cur.echeance.mois - 1, cur.echeance.jour);
-        ech = '<div class="detail-ech">📅 <strong>'+esc(cur.echeance.quoi)+'</strong> — avant le '
+        ech = '<div class="detail-ech">📅 <strong>'+esc(cur.echeance.quoi)+'</strong> - avant le '
           + date.toLocaleDateString('fr-FR', { day:'numeric', month:'long' })+'</div>';
       }
     }
@@ -3675,7 +3687,7 @@
       var m = parseFloat(o.leviers[k]) || 0;
       ajout(L.l, m > 0 ? 'ok' : 'non',
         m > 0 ? 'Prise en charge par la société, déduite du résultat.'
-              : 'Non renseignée — un levier à étudier avec ton expert-comptable.');
+              : 'Non renseignée - un levier à étudier avec ton expert-comptable.');
     });
 
     ajout('TVA récupérée',
@@ -3943,7 +3955,7 @@
       + '<div class="statut-bar">'
         + '<div class="proj" style="max-width:520px">'
           + '<div class="proj-l">Projection du chiffre d’affaires'
-            + (proj !== null ? ' <button class="btn-link" data-action="optim-reset-proj">— revenir à '
+            + (proj !== null ? ' <button class="btn-link" data-action="optim-reset-proj">- revenir à '
                 + fmtEur(ca) + '</button>' : '') + '</div>'
           + '<input type="range" data-optim-range="projection" min="20000" max="'+maxCurseur+'" step="5000" '
             + 'value="'+(proj !== null ? proj : ca)+'">'
@@ -4098,7 +4110,7 @@
   }
 
   // --- Zone recalculée à chaque frappe ---
-  // « Où part ton chiffre d'affaires » — un anneau par statut, pour voir d'un
+  // « Où part ton chiffre d'affaires » - un anneau par statut, pour voir d'un
   // coup d'œil ce qui reste et ce qui part, sans lire un tableau.
   var PARTS_CA = [
     { k:'net',        l:'Dans ta poche', c:'#10b981' },
@@ -4116,7 +4128,7 @@
         + 'stroke="'+p.c+'" stroke-width="15" stroke-linecap="butt" '
         + 'stroke-dasharray="'+(part * C)+' '+C+'" stroke-dashoffset="'+(-offset * C)+'" '
         + 'transform="rotate(-90 '+(taille/2)+' '+(taille/2)+')"><title>'
-        + esc(p.l)+' — '+fmtEur(v)+'</title></circle>';
+        + esc(p.l)+' - '+fmtEur(v)+'</title></circle>';
       offset += part;
       return arc;
     }).join('');
@@ -4147,7 +4159,7 @@
         + '<div class="cam-legende">'+lignes+'</div></div>';
     }).join('');
     return '<div class="card"><div class="card-title">Où part ton chiffre d’affaires ?</div>'
-      + '<div class="field-eg" style="margin-bottom:14px">Sur '+fmtEur(ca)+' encaissés — '
+      + '<div class="field-eg" style="margin-bottom:14px">Sur '+fmtEur(ca)+' encaissés - '
       + 'survole un anneau pour le détail.</div>'
       + '<div class="cams">'+anneaux+'</div></div>';
   }
@@ -4191,7 +4203,7 @@
         recoCouleur = STATUT.orange.color;
         recoTitre = 'Tu approches du seuil où une société devient plus intéressante';
         reco = 'À partir d’environ ' + fmtEur(prochainCA) + ' de chiffre d’affaires, une '
-             + STATUT_LABELS[prochaine] + ' deviendrait plus avantageuse — soit '
+             + STATUT_LABELS[prochaine] + ' deviendrait plus avantageuse - soit '
              + fmtEur(prochainCA - ca) + ' de plus qu’aujourd’hui.';
       } else if(prochainCA !== null){
         reco = 'Le passage en société augmenterait tes coûts sans améliorer ton revenu disponible. '
@@ -4321,18 +4333,18 @@
       + '<div class="field-row">'
         + pc('micro.cotisations.'+state.statut.form.categorie, 'Cotisations micro (%)',
              P.micro.cotisations[state.statut.form.categorie], 'micro.cotisations', 'cotisations')
-        + pc('eurl.cotisationsTNS', 'Cotisations TNS — EURL (%)', P.eurl.cotisationsTNS, null, 'tns')
+        + pc('eurl.cotisationsTNS', 'Cotisations TNS - EURL (%)', P.eurl.cotisationsTNS, null, 'tns')
       + '</div>'
       + '<div class="field-row">'
-        + pc('sasu.patronales', 'Charges patronales — SASU (%)', P.sasu.patronales, null, 'assimile')
-        + pc('sasu.salariales', 'Charges salariales — SASU (%)', P.sasu.salariales, null, 'assimile')
+        + pc('sasu.patronales', 'Charges patronales - SASU (%)', P.sasu.patronales, null, 'assimile')
+        + pc('sasu.salariales', 'Charges salariales - SASU (%)', P.sasu.salariales, null, 'assimile')
       + '</div>'
       + '<div class="field-eg" style="margin:-4px 0 12px">Ensemble, elles représentent environ '
         + Math.round((1 + P.sasu.patronales) / (1 - P.sasu.salariales) * 100 - 100)
-        + ' % du salaire net — le « 88 % » de ta feuille de calcul.</div>'
+        + ' % du salaire net - le « 88 % » de ta feuille de calcul.</div>'
       + '<div class="field-row">'
-        + pc('is.tauxReduit', 'IS — taux réduit (%)', P.is.tauxReduit, null, 'is')
-        + pc('is.tauxNormal', 'IS — taux normal (%)', P.is.tauxNormal, null, 'is')
+        + pc('is.tauxReduit', 'IS - taux réduit (%)', P.is.tauxReduit, null, 'is')
+        + pc('is.tauxNormal', 'IS - taux normal (%)', P.is.tauxNormal, null, 'is')
       + '</div>'
       + '<div class="field-row">'
         + pc('pfu', 'PFU sur dividendes (%)', P.pfu, null, 'pfu')
@@ -4504,7 +4516,7 @@
   // Simulateur : est-ce intéressant de passer à la TVA ?
   // ===========================================================================
   var TVA_CATEGORIES = [
-    {v:'',           l:'— non précisée —'},
+    {v:'',           l:'- non précisée -'},
     {v:'informatique', l:'Matériel informatique'}, {v:'logiciel', l:'Logiciel / abonnement'},
     {v:'soustraitance',l:'Sous-traitance'},        {v:'local',    l:'Local professionnel'},
     {v:'publicite',   l:'Publicité'},              {v:'deplacement', l:'Déplacement'},
@@ -4520,7 +4532,7 @@
     var inner;
     if(o.options){
       inner = '<select data-tva-field="'+name+'">'
-        + (o.placeholder ? '<option value=""'+(value?'':' selected')+'>— choisir —</option>' : '')
+        + (o.placeholder ? '<option value=""'+(value?'':' selected')+'>- choisir -</option>' : '')
         + o.options.map(function(op){
             var v = op.v !== undefined ? op.v : op, l = op.l !== undefined ? op.l : op;
             return '<option value="'+esc(v)+'"'+(String(value)===String(v)?' selected':'')+'>'+esc(l)+'</option>';
@@ -4568,8 +4580,8 @@
       + '<div class="field-row">'
         + f('taux','TVA sur la facture', d.taux, {options:TVA_PARAMS.tauxDepense})
         + f('recup','TVA récupérable', d.recup, {options:[
-            {v:'100',l:'100 % — oui'},{v:'50',l:'50 % — partiellement'},
-            {v:'0',l:'0 % — non'},{v:'80',l:'80 %'},{v:'20',l:'20 %'}]})
+            {v:'100',l:'100 % - oui'},{v:'50',l:'50 % - partiellement'},
+            {v:'0',l:'0 % - non'},{v:'80',l:'80 %'},{v:'20',l:'20 %'}]})
       + '</div>'
       + f('categorie','Catégorie (facultatif)', d.categorie, {options:TVA_CATEGORIES})
       + (TVA_PARAMS.categoriesSensibles.indexOf(d.categorie) !== -1
@@ -4594,7 +4606,7 @@
       + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
       + (!sommeOk
           ? '<div class="vl-note" style="margin-top:0;background:#fef2f2">La répartition de ta clientèle '
-            + 'fait <strong>'+Math.round(somme)+'%</strong> au lieu de 100% — corrige-la dans ton profil.</div>' : '')
+            + 'fait <strong>'+Math.round(somme)+'%</strong> au lieu de 100% - corrige-la dans ton profil.</div>' : '')
       + '<div class="sim-lancer tva">'
         + '<div class="sim-lancer-e">🧮</div>'
         + '<div class="sim-lancer-t">Faut-il passer à la TVA ?</div>'
@@ -4622,7 +4634,7 @@
         : 'Complète ton chiffre d’affaires et ton taux de TVA dans ton profil.';
     } else if(g > 0){
       titre = 'Tu récupérerais environ ' + fmtEur(g) + ' de TVA par an';
-      sousTitre = 'En ajoutant la TVA à tes prix — ton revenu hors taxes reste identique. '
+      sousTitre = 'En ajoutant la TVA à tes prix - ton revenu hors taxes reste identique. '
                 + 'Reste à en retirer les coûts de gestion, ci-dessous.';
     } else {
       titre = 'Le passage à la TVA ne te rapporterait rien';
@@ -4635,7 +4647,7 @@
 
     // --- Clientèle ---
     var segLigne = function(label, part, montant, note){
-      return '<div class="vl-line"><span>'+esc(label)+' — '+Math.round(part*100)+' %</span>'
+      return '<div class="vl-line"><span>'+esc(label)+' - '+Math.round(part*100)+' %</span>'
         + '<span>'+fmtEur(montant)+'</span></div>'
         + (note ? '<div class="field-eg" style="margin:-4px 0 8px">'+esc(note)+'</div>' : '');
     };
@@ -4704,7 +4716,7 @@
           + '<span style="color:'+STATUT.rouge.color+'">−'+fmtEur(q.perteMin)+' à '+fmtEur(q.perteMax)+'</span></div>'
         + '<div class="field-eg">Estimation indicative bâtie sur ta répartition clientèle, pas une '
           + 'prédiction : tout dépend de ton positionnement et de la valeur perçue. '
-          + 'Non déduite du gain — l’impact réel dépend de ta marge.</div>'
+          + 'Non déduite du gain - l’impact réel dépend de ta marge.</div>'
         + '</div>'
       : '<div class="card"><div class="card-title">Le risque côté clients</div>'
         + '<div class="tva-risque-t" style="color:'+STATUT.vert.color+'">Quasi nul 👌</div>'
@@ -4883,7 +4895,7 @@
       var tauxBtns = TVA_PARAMS.tauxVente.map(function(o){
         return '<button class="tvo-chip'+(String(f.tauxVente) === String(o.v) ? ' on' : '')+'" '
           + 'data-action="tvo-form-set" data-champ="tauxVente" data-v="'+esc(o.v)+'">'
-          + esc(o.l.split(' — ')[0])+'</button>';
+          + esc(o.l.split(' - ')[0])+'</button>';
       }).join('');
       var recup = Math.round(parseFloat(f.partRecup) || 0);
       return points
@@ -5026,7 +5038,7 @@
     return '<div class="tvo-overlay"><div class="tvo-card">'+tvaOnbCorpsHtml()+'</div></div>';
   }
 
-  // Mise à jour ciblée : la carte seule est reconstruite, jamais l'overlay —
+  // Mise à jour ciblée : la carte seule est reconstruite, jamais l'overlay -
   // sinon l'animation d'apparition se rejouerait à chaque clic.
   function majTvaOnb(){
     var root = document.getElementById('tvo-root');
@@ -5087,7 +5099,7 @@
     var inner;
     if(o.options){
       inner = '<select data-vl-field="'+name+'">'
-        + (o.placeholder !== false ? '<option value=""'+(value?'':' selected')+'>— choisir —</option>' : '')
+        + (o.placeholder !== false ? '<option value=""'+(value?'':' selected')+'>- choisir -</option>' : '')
         + o.options.map(function(op){
             var v = op.v !== undefined ? op.v : op;
             var l = op.l !== undefined ? op.l : op;
@@ -5492,7 +5504,7 @@
     var inner;
     if(o.options){
       inner = '<select '+attr+'>'
-        + '<option value=""'+(value?'':' selected')+'>— choisir —</option>'
+        + '<option value=""'+(value?'':' selected')+'>- choisir -</option>'
         + o.options.map(function(op){
             return '<option value="'+esc(op)+'"'+(value===op?' selected':'')+'>'+esc(op)+'</option>';
           }).join('')
@@ -5507,7 +5519,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Écran Profil — la saisie unique dont vivent tous les simulateurs
+  // Écran Profil - la saisie unique dont vivent tous les simulateurs
   // ---------------------------------------------------------------------------
   function pfield(c, p){
     var v = p[c.k];
@@ -5567,7 +5579,7 @@
     var ok = Math.round(somme) === sec.total.attendu;
     el.classList.toggle('ok', ok);
     el.innerHTML = esc(sec.total.l) + ' : <strong>' + Math.round(somme) + ' %</strong>'
-      + (ok ? ' ✓' : ' — doit faire 100 %');
+      + (ok ? ' ✓' : ' - doit faire 100 %');
   }
   function majTotalCharges(){
     var lignes = state.profil.charges || [];
@@ -5666,7 +5678,7 @@
       var somme = s.total.cles.reduce(function(a, k){ return a + (parseFloat(p[k]) || 0); }, 0);
       var ok = Math.round(somme) === s.total.attendu;
       total = '<div class="pf-total'+(ok?' ok':'')+'">'+esc(s.total.l)+' : <strong>'
-        + Math.round(somme)+' %</strong>'+(ok ? ' ✓' : ' — doit faire 100 %')+'</div>';
+        + Math.round(somme)+' %</strong>'+(ok ? ' ✓' : ' - doit faire 100 %')+'</div>';
     }
 
     return '<section class="prow'+(ouvert?' open':'')+'" style="--c:'+s.color+';--s:'+s.soft+'">'
@@ -5805,7 +5817,7 @@
       ? '<div class="jauge-reste"><span class="jauge-rl">Il te reste</span>' + restantes.map(function(s){
           return '<button class="jchip" style="--c:'+s.color+'" data-action="profil-section" data-id="'
             + s.id+'">'+esc(s.titre)+' <b>'+s.faits+'/'+s.total+'</b></button>'; }).join('') + '</div>'
-      : '<div class="jauge-reste"><span class="jauge-ok">🎉 Profil complet — tes cinq simulateurs '
+      : '<div class="jauge-reste"><span class="jauge-ok">🎉 Profil complet - tes cinq simulateurs '
         + 'tournent sur des données à jour.</span></div>';
 
     return '<div class="jauge">'
@@ -5813,7 +5825,7 @@
       + '<div class="jauge-txt">'
         + '<div class="jauge-t">Ton profil est rempli à '+pct+' %</div>'
         + '<div class="jauge-s">'+faits+' information'+(faits>1?'s':'')+' sur '+total
-          + ' — plus il est complet, plus tes simulateurs sont justes.</div>'
+          + ' - plus il est complet, plus tes simulateurs sont justes.</div>'
         + reste
       + '</div>'
       + '</div>';
@@ -5960,13 +5972,13 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Guide des dépenses pro — le catalogue visuel qui remplace le « test » sec.
+  // Guide des dépenses pro - le catalogue visuel qui remplace le « test » sec.
   //
   // Philosophie : pousser à la réflexion (« tiens, ça aussi je pourrais le
   // passer ») plutôt que faire vérifier un frais. Chaque carte porte une jauge
   // de « facilité » 0–100 : plus c'est à droite (vert), plus la dépense passe
   // couramment ; plus c'est à gauche (rouge), plus elle est encadrée.
-  // Les scores sont des repères QUALITATIFS pour une société au réel — jamais
+  // Les scores sont des repères QUALITATIFS pour une société au réel - jamais
   // un avis fiscal. Aucun chiffre officiel n'est inventé : les fiches renvoient
   // vers les sites officiels quand un barème existe.
   // ---------------------------------------------------------------------------
@@ -6317,7 +6329,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Jauge de facilité — volontairement NON binaire.
+  // Jauge de facilité - volontairement NON binaire.
   //
   // La couleur suit un dégradé continu : deux dépenses « rouges » n'ont pas la
   // même teinte selon qu'elles sont impossibles ou juste très encadrées. Le
@@ -6356,7 +6368,7 @@
     else if(score >= 70) l = 'Passe bien';
     else if(score >= 55) l = 'Courant, à bien cadrer';
     else if(score >= 40) l = 'Sous conditions strictes';
-    else if(score >= 25) l = 'Risqué — cas par cas';
+    else if(score >= 25) l = 'Risqué - cas par cas';
     else                 l = 'Très encadré';
     return { c: depCouleur(score), l: l };
   }
@@ -6504,7 +6516,7 @@
     var p = state.profil;
     var nbFav = state.depFavoris.length;
 
-    // Bandeau adapté au statut : en micro, rien ne se déduit — le dire clairement
+    // Bandeau adapté au statut : en micro, rien ne se déduit - le dire clairement
     // vaut mieux que laisser croire l'inverse.
     var bandeau = '';
     if(estMicro(p)){
@@ -6568,7 +6580,7 @@
         }).join('') + '</div>'
       + depGrilleHtml()
       + '<div class="dg-fin">'
-        + '<p class="dg-disclaimer">Des repères généraux pour une société au réel — <strong>pas un '
+        + '<p class="dg-disclaimer">Des repères généraux pour une société au réel - <strong>pas un '
           + 'avis fiscal</strong>. Chaque situation a ses nuances : ton activité, ton statut, l’usage '
           + 'réel que tu fais de la dépense. Avant d’engager un montant important, mieux vaut faire '
           + 'valider ton cas précis par un professionnel</p>'
@@ -6710,7 +6722,7 @@
         + '<div class="sim-hero-title">Qu’est-ce qui peut passer sur&nbsp;ta&nbsp;société&nbsp;?</div>'
         + '<div class="sim-hero-sub">Un guide visuel de dizaines de dépenses pro, classées de '
           + 'l’évidente à la risquée. Compose ta sélection, reçois des suggestions selon ton '
-          + 'profil — et analyse tes cas précis avec l’IA.</div>'
+          + 'profil - et analyse tes cas précis avec l’IA.</div>'
         + '<div class="sim-hero-chips">'
           + chip('#22c55e', 'Passe très bien')
           + chip('#f59e0b', 'Courant, mais encadré')
@@ -6928,14 +6940,14 @@
     var rows = items.map(function(it, i){
       var st = STATUT[statutOf(it)];
       var d = deps[i] || {};
-      var risque = (it.vigilance && it.vigilance[0]) || '—';
+      var risque = (it.vigilance && it.vigilance[0]) || '-';
       return '<tr>'
-        + '<td><strong>'+esc(d.nom || '—')+'</strong></td>'
-        + '<td style="white-space:nowrap">'+(d.montant ? fmtEur(d.montant) : '—')+'</td>'
+        + '<td><strong>'+esc(d.nom || '-')+'</strong></td>'
+        + '<td style="white-space:nowrap">'+(d.montant ? fmtEur(d.montant) : '-')+'</td>'
         + '<td><span class="pill" style="background:'+st.soft+';color:'+st.color+'">'+st.icon+' '
           + esc(it.libelle || st.label)+'</span></td>'
         + '<td>'+esc(risque)+'</td>'
-        + '<td>'+esc(it.action || '—')+'</td>'
+        + '<td>'+esc(it.action || '-')+'</td>'
         + '</tr>';
     }).join('');
     return '<div class="recap"><div class="recap-h">Récapitulatif</div><div class="recap-scroll">'
@@ -6968,7 +6980,7 @@
         + '<div class="res-item-main">'
           + '<div class="res-item-name">'+esc(d.nom || 'Dépense')+'</div>'
           + '<div class="res-item-meta">'+(d.montant ? fmtEur(d.montant)+' · ' : '')
-            + 'Confiance : '+esc(it.confiance || '—')+'</div>'
+            + 'Confiance : '+esc(it.confiance || '-')+'</div>'
         + '</div>'
         + '<div class="res-item-status" style="color:'+st.color+'">'+esc(it.libelle || st.label)+'</div>'
         + '<span class="res-item-chev">▶</span>'
@@ -6991,7 +7003,7 @@
     return '<div class="sync-bar">'
       + '<span class="sync-ico">🔄</span>'
       + '<div class="sync-t"><strong>Reprendre ces verdicts dans ton profil ?</strong>'
-        + '<span>La déductibilité analysée ici sera appliquée à tes charges — '
+        + '<span>La déductibilité analysée ici sera appliquée à tes charges - '
         + 'les simulateurs TVA, société et optimisation en tiendront compte.</span></div>'
       + '<button class="btn-primary" data-action="sim-sync">Mettre à jour mon profil</button>'
       + '</div>';
@@ -7012,12 +7024,12 @@
         return (c.nom || '').trim().toLowerCase() === nom; })[0];
       if(existante){
         existante.deductible = ded;
-        existante.source = 'Analyse de dépenses — ' + STATUT[statutOf(it)].label;
+        existante.source = 'Analyse de dépenses - ' + STATUT[statutOf(it)].label;
         maj++;
       } else {
         charges.push({ nom:d.nom, montant:d.montant, frequence:'annuelle',
           tauxTVA:'0.2', deductible:ded, categorie:'fonctionnement',
-          source:'Analyse de dépenses — ' + STATUT[statutOf(it)].label });
+          source:'Analyse de dépenses - ' + STATUT[statutOf(it)].label });
         ajouts++;
       }
     });
@@ -7027,7 +7039,7 @@
     var bouts = [];
     if(maj) bouts.push(maj + ' charge' + (maj>1?'s':'') + ' mise' + (maj>1?'s':'') + ' à jour');
     if(ajouts) bouts.push(ajouts + ' ajoutée' + (ajouts>1?'s':''));
-    state.sim.syncFait = bouts.length ? ('Profil à jour — ' + bouts.join(', ') + '.')
+    state.sim.syncFait = bouts.length ? ('Profil à jour - ' + bouts.join(', ') + '.')
                                       : 'Rien à reprendre.';
   }
 
@@ -7055,7 +7067,7 @@
           + 'te répond clairement, sans te facturer le moindre rendez-vous à l’aveugle.')
       + '<div class="final-note">Analyse indicative, sans valeur de validation fiscale ou comptable. '
         + '« A priori justifiable » ne signifie pas « garanti déductible ». La décision finale dépend de ta '
-        + 'situation réelle et des justificatifs disponibles — fais confirmer les dépenses sensibles par ton '
+        + 'situation réelle et des justificatifs disponibles - fais confirmer les dépenses sensibles par ton '
         + 'expert-comptable.</div>'
       + '</div>';
   }
@@ -7088,7 +7100,7 @@
     var r = state.sim.result || {};
     var items = r.depenses || [];
     var p = state.profil;
-    var L = ['COMPTE-RENDU — Simulateur de charges professionnelles (FreeHub)',
+    var L = ['COMPTE-RENDU - Simulateur de charges professionnelles (FreeHub)',
              'Date : ' + new Date().toLocaleDateString('fr-FR'),
              '',
              'ENTREPRISE',
@@ -7102,8 +7114,8 @@
       var d = state.sim.depenses[i] || {};
       var st = STATUT[statutOf(it)];
       L.push('──────────────────────────────');
-      L.push((i+1) + '. ' + (d.nom || 'Dépense') + ' — ' + (d.montant ? fmtEur(d.montant) : '—'));
-      L.push('Résultat : ' + (it.libelle || st.label) + '  |  Confiance : ' + (it.confiance || '—'));
+      L.push((i+1) + '. ' + (d.nom || 'Dépense') + ' - ' + (d.montant ? fmtEur(d.montant) : '-'));
+      L.push('Résultat : ' + (it.libelle || st.label) + '  |  Confiance : ' + (it.confiance || '-'));
       if(it.reponse) L.push('', it.reponse);
       var bloc = function(titre, arr){
         if(arr && arr.length){ L.push('', titre + ' :'); arr.forEach(function(x){ L.push('  • ' + x); }); }
@@ -7159,7 +7171,7 @@
     }).catch(function(){
       state.sim.analyzing = false;
       state.sim.error = 'Impossible de contacter le serveur d’analyse. '
-        + 'Assure-toi qu’il tourne (double-clic sur « Lancer FreeHub.command ») — '
+        + 'Assure-toi qu’il tourne (double-clic sur « Lancer FreeHub.command ») - '
         + 'l’IA ne fonctionne pas en ouvrant index.html directement.';
       state.sim.step = 'error';
       render();
@@ -7189,7 +7201,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Onboarding conversationnel — au tout premier lancement
+  // Onboarding conversationnel - au tout premier lancement
   // ---------------------------------------------------------------------------
   // Une question par écran. On lit la valeur au clic sur « Continuer » plutôt
   // que de re-rendre à chaque frappe (le focus reste dans le champ).
@@ -7204,14 +7216,14 @@
   ];
 
   // Le corps seul (sans l'overlay) : c'est lui qu'on met à jour à chaque étape,
-  // sans recréer l'overlay — sinon son animation d'apparition se rejoue et laisse
+  // sans recréer l'overlay - sinon son animation d'apparition se rejoue et laisse
   // voir le dashboard derrière.
   function onbCorpsHtml(){
     var o = state.onboarding;
     var r = o.rep;
     var e = o.etape;
     // 3 questions : activité, statut, CA. Le prénom/nom est déjà saisi à la
-    // création du compte — on ne le redemande pas ici.
+    // création du compte - on ne le redemande pas ici.
     var total = 3;
 
     var dots = '';
@@ -7245,7 +7257,7 @@
         + onbNav(false);
     } else if(e === 3){
       corps = dots + '<div class="onb-q">Ton chiffre d’affaires, à peu près ?</div>'
-        + '<div class="onb-sub">Une estimation suffit — pour situer tes simulateurs.</div>'
+        + '<div class="onb-sub">Une estimation suffit - pour situer tes simulateurs.</div>'
         + '<div class="onb-ca">'
           + '<input class="onb-input" data-onb="ca" type="number" min="0" value="'+esc(r.ca||'')+'" placeholder="60 000">'
           + '<div class="onb-seg">'
@@ -7267,7 +7279,7 @@
 
   // Met à jour l'onboarding sans recréer l'overlay : on ne remplace que le contenu
   // intérieur de la carte. L'overlay (et son animation d'apparition) n'est créé
-  // qu'une seule fois, à la première apparition — plus aucun « flash » du dashboard
+  // qu'une seule fois, à la première apparition - plus aucun « flash » du dashboard
   // à chaque action du formulaire.
   function majOnboarding(){
     var root = document.getElementById('onb-root');
@@ -7315,7 +7327,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Calendrier — les échéances de l'année, tirées des objectifs et du statut
+  // Calendrier - les échéances de l'année, tirées des objectifs et du statut
   // ---------------------------------------------------------------------------
   var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août',
               'septembre','octobre','novembre','décembre'];
@@ -7583,10 +7595,10 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Hauts faits — la salle des trophées
+  // Hauts faits - la salle des trophées
   // ---------------------------------------------------------------------------
   // Des médailles, pas des cases : les paliers en grand avec leur progression
-  // chiffrée, le reste de la collection en dessous. Tout est cliquable — la
+  // chiffrée, le reste de la collection en dessous. Tout est cliquable - la
   // fiche dit ce que le badge donne, et comment s'en approcher.
 
   function medailleHtml(id, grand){
@@ -7663,7 +7675,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Réclamations — la file des demandes, côté admin
+  // Réclamations - la file des demandes, côté admin
   // ---------------------------------------------------------------------------
   function savAdminHtml(){
     if(!(state.compte && state.compte.isAdmin)){
@@ -7714,13 +7726,13 @@
       + '</div>'
       + (d.chargees
           ? (liste.length ? '<div class="dems">'+cartes+'</div>'
-              : '<div class="obj-vide">Rien ici pour l’instant — c’est calme</div>')
+              : '<div class="obj-vide">Rien ici pour l’instant - c’est calme</div>')
           : '<div class="ch-info">Chargement…</div>')
       + '</div>';
   }
 
   // ---------------------------------------------------------------------------
-  // La bulle d'aide — toujours là, en bas à droite
+  // La bulle d'aide - toujours là, en bas à droite
   // ---------------------------------------------------------------------------
   var SAV_TYPES = [
     { v:'suggestion', ico:'💡', l:'Une suggestion',
@@ -7734,7 +7746,7 @@
   function savBulleHtml(){
     if(state.tab === 'chat') return '';   // le salon a déjà sa conversation
     var o = state.sav;
-    // Une icône dessinée, dans le trait de l'app — pas un emoji.
+    // Une icône dessinée, dans le trait de l'app - pas un emoji.
     var icone = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
       + ' stroke-linecap="round" stroke-linejoin="round" width="22" height="22">'
       + '<path d="M20.5 11.8c0 3.9-3.8 7-8.5 7a10 10 0 0 1-2.6-.34L4.6 20l1.2-3.4'
@@ -7747,7 +7759,7 @@
     var type = SAV_TYPES.filter(function(t){ return t.v === o.type; })[0] || null;
     var corps;
     if(o.envoye){
-      corps = '<div class="bulle-merci">🙌 Bien reçu — merci ! On te répond '
+      corps = '<div class="bulle-merci">🙌 Bien reçu - merci ! On te répond '
         + (state.compte ? 'sur l’e-mail de ton compte' : 'sur l’adresse laissée')+'.'
         + '<button class="btn-link" data-action="sav-encore">En envoyer un autre</button></div>';
     } else if(!type){
@@ -7786,7 +7798,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Entraide — le seul écran où l'on croise d'autres membres
+  // Entraide - le seul écran où l'on croise d'autres membres
   // ---------------------------------------------------------------------------
   // Volontairement simple pour l'alpha : un fil unique, rafraîchi par sondage
   // pendant qu'on est sur l'onglet. Pas de temps réel, pas de fils multiples :
@@ -7832,7 +7844,7 @@
   }
 
   // La barre de réactions : une pastille de verre qui se pose sur le message
-  // au survol — les cinq gestes, celui déjà posé marqué.
+  // au survol - les cinq gestes, celui déjà posé marqué.
   function chatPopHtml(m){
     if(m.supprime || !state.compte) return '';
     var mienne = null;
@@ -7855,7 +7867,7 @@
   }
 
   // Avatar : la photo du profil si le membre en a une, sinon ses initiales sur
-  // une couleur stable dérivée du nom — chacun garde la sienne.
+  // une couleur stable dérivée du nom - chacun garde la sienne.
   var CH_AV_COULEURS = ['#2f6bff', '#7c3aed', '#0f9d6e', '#b45309', '#e11d48', '#0891b2'];
   // Les photos (data URL) pèsent lourd : on ne les demande qu'une fois par
   // auteur, puis chaque relevé passe en mode léger. C'est ce qui fluidifie.
@@ -7885,8 +7897,11 @@
       return '<div class="ch-msg efface"><span class="ch-efface">'
         + (m.moi ? 'Tu as retiré ce message' : 'Message retiré')+'</span></div>';
     }
+    // Un partage d'objectif bouclé : on le fête visuellement, et on n'y ouvre
+    // pas de discussion — ce n'est pas un sujet, c'est une bonne nouvelle.
+    var celebration = m.contenu.indexOf('🎉 Je viens de boucler «') === 0;
     var actions = ''
-      + (!dansAparte && state.compte && state.chat.fil !== m.id
+      + (!dansAparte && !celebration && state.compte && state.chat.fil !== m.id
           ? '<button class="ch-act" data-action="chat-aparte" data-id="'+m.id+'">Aparté</button>'
           : '')
       + (state.compte && !m.moi && !m.signale
@@ -7898,8 +7913,6 @@
       + (c.admin && !m.moi && m.auteur.id
           ? '<button class="ch-act sup" data-action="chat-muet" data-id="'+m.auteur.id+'">Silence 24 h</button>'
           : '');
-    // Un partage d'objectif bouclé : on le fête visuellement.
-    var celebration = m.contenu.indexOf('🎉 Je viens de boucler «') === 0;
     return '<div class="ch-msg'+(m.moi ? ' moi' : '')+(celebration ? ' celebration' : '')+'">'
       + chatAvatarHtml(m.auteur)
       + '<div class="ch-bulle">'
@@ -7909,7 +7922,7 @@
         + '</div>'
         + '<div class="ch-txt">'+esc(m.contenu).replace(/\n/g, '<br>')+'</div>'
         + '<div class="ch-pied">'
-          + (!dansAparte && m.nbReponses
+          + (!dansAparte && !celebration && m.nbReponses
               ? '<button class="ch-fil-n" data-action="chat-aparte" data-id="'+m.id+'">'
                 + '💬 Aparté ouvert · '+m.nbReponses+' message'+(m.nbReponses>1?'s':'')
                 + ' <span class="ch-fil-go">'+(state.chat.fil === m.id ? 'fermer ×' : 'rejoindre →')
@@ -7952,7 +7965,7 @@
             ? '<div class="ch-ap-sep">Les réponses</div>' : '');
         }).join('')
         + (liste.length <= 1
-            ? '<div class="ch-ap-vide">Personne n’a encore répondu — à toi d’ouvrir</div>' : '');
+            ? '<div class="ch-ap-vide">Personne n’a encore répondu - à toi d’ouvrir</div>' : '');
     return '<aside class="ch-aparte">'
       + '<div class="ch-ap-tete">'
         + '<div class="ch-ap-t">Aparté</div>'
@@ -8186,7 +8199,7 @@
 
   // Termes suggérés : ceux qui touchent aux domaines des objectifs pris, et au
   // statut déclaré. On propose au lieu de tout déverser.
-  // Chaque objectif appelle deux ou trois mots précis — pas son domaine entier.
+  // Chaque objectif appelle deux ou trois mots précis - pas son domaine entier.
   // C'est cette carte qui rend la suggestion personnelle : un utilisateur qui a
   // tout épinglé n'a simplement plus rien à se voir proposer.
   var LEX_PAR_OBJECTIF = {
@@ -8384,7 +8397,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Dashboard admin — l'état de FreeHub, réservé aux administrateurs
+  // Dashboard admin - l'état de FreeHub, réservé aux administrateurs
   // ---------------------------------------------------------------------------
   function adminChargerStats(){
     if(state.admin.chargement) return;
@@ -8415,8 +8428,8 @@
     return '<div class="adm-rep">'
       + '<div class="adm-rep-barre"><span style="width:'+pa+'%"></span></div>'
       + '<div class="adm-rep-legende">'
-        + '<span><i class="p1"></i>'+esc(labelA)+' — <b>'+a+'</b> ('+pa+' %)</span>'
-        + '<span><i class="p2"></i>'+esc(labelB)+' — <b>'+b+'</b> ('+(total?100-pa:0)+' %)</span>'
+        + '<span><i class="p1"></i>'+esc(labelA)+' - <b>'+a+'</b> ('+pa+' %)</span>'
+        + '<span><i class="p2"></i>'+esc(labelB)+' - <b>'+b+'</b> ('+(total?100-pa:0)+' %)</span>'
       + '</div></div>';
   }
 
@@ -8588,7 +8601,7 @@
       + '</div>'
       + '<p class="part-legal">Partenaires indépendants de FreeHub. Les liens de leurs fiches sont '
       + 'des <strong>liens d’affiliation</strong> : FreeHub peut percevoir une commission si tu '
-      + 'souscris, sans surcoût pour toi — les codes promo te font au contraire baisser le prix.</p>'
+      + 'souscris, sans surcoût pour toi - les codes promo te font au contraire baisser le prix.</p>'
       + '</div>';
   }
 
@@ -8601,7 +8614,7 @@
           + '<div class="modal-body" style="text-align:center;padding:38px 30px">'
             + '<div style="font-size:44px;line-height:1">🤝</div>'
             + '<div class="modal-title" style="margin-top:10px">Demande envoyée !</div>'
-            + '<div class="modal-sub" style="margin-top:8px">Merci — on revient vers toi par e-mail '
+            + '<div class="modal-sub" style="margin-top:8px">Merci - on revient vers toi par e-mail '
               + 'si ça matche. À bientôt sur FreeHub.</div>'
           + '</div>'
           + '<div class="modal-foot" style="justify-content:center">'
@@ -8613,7 +8626,7 @@
       + '<div class="modal" style="width:500px" data-action="stop">'
         + '<div class="modal-head">'
           + '<div class="modal-title">Devenir partenaire</div>'
-          + '<div class="modal-sub">Dis-nous qui tu es. Aucune obligation — on étudie chaque demande.</div>'
+          + '<div class="modal-sub">Dis-nous qui tu es. Aucune obligation - on étudie chaque demande.</div>'
         + '</div>'
         + '<div class="modal-body">'
           + '<div class="pf"><label>Nom de la structure *</label>'
@@ -8681,7 +8694,7 @@
           + '<p class="part-modal-desc">'+(p.tease
               ? 'Un nouveau partenaire arrive : un cabinet d’expertise comptable qui '
                 + 'travaille au quotidien avec de jeunes entrepreneurs. On te le '
-                + 'présente très bientôt — voilà déjà ce qu’il sait faire.'
+                + 'présente très bientôt - voilà déjà ce qu’il sait faire.'
               : p.desc)+'</p>'
           + '<div class="part-modal-label">Là où ils te débloquent</div>'
           + '<ul class="part-modal-pts">'+pts+'</ul>'
@@ -8713,10 +8726,16 @@
   function shellHtml(){
     return '<div class="app">'
       + '<aside class="sidebar">'
-        // Le vrai logo dès qu'il est déposé dans assets/ ; sinon le wordmark CSS.
-        + '<div class="brand">'
-          + '<img class="brand-logo" src="assets/freehub-logo-blanc.png" alt="Freehub">'
-          + '<span class="brand-word">Freehub<span class="brand-dot">.</span></span>'
+        + '<div class="side-haut">'
+          // Le vrai logo dès qu'il est déposé dans assets/ ; sinon le wordmark CSS.
+          + '<div class="brand">'
+            + '<img class="brand-logo" src="assets/freehub-logo-blanc.png" alt="Freehub">'
+            + '<span class="brand-word">Freehub<span class="brand-dot">.</span></span>'
+          + '</div>'
+          + '<button class="side-repli" data-action="side-repli" aria-label="Replier le menu">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+            + ' stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 7 9.5 12l5 5"/></svg>'
+          + '</button>'
         + '</div>'
         + '<nav>'+navHtml()+'</nav>'
         + '<div class="side-foot"><div class="side-divider"></div>'
@@ -8801,6 +8820,13 @@
         : '🙂';
     }
 
+    // Les deux réglages d'affichage vivent sur le conteneur en flex.
+    var coquille = app.querySelector('.app');
+    coquille.classList.toggle('side-plie', state.sidePlie);
+    // Écran d'entraide : la page ne défile pas, seul le fil le fait.
+    coquille.classList.toggle('sans-defilement', state.tab === 'chat');
+    document.body.classList.toggle('fige', state.tab === 'chat');
+
     // Titre de page : masqué quand un objectif est ouvert, où le titre de
     // l'objectif et le bouton retour suffisent.
     var barre = app.querySelector('.ptitre-zone');
@@ -8863,15 +8889,9 @@
       if(apAp) apAp.scrollTop = apScroll;
     }
 
-    // Animation d'entrée uniquement quand on change réellement d'écran.
-    var key = state.tab + ':' + (state.tab === 'simulateur'
-      ? (state.sim.open || 'liste') + ':' + state.sim.step
-      : (state.tab === 'objectifs' ? (state.objectifOuvert || 'liste') : ''));
-    if(key !== lastView){
-      var first = content.firstElementChild;
-      if(first){ first.classList.add('enter'); }
-      lastView = key;
-    }
+    // Plus d'animation d'entrée : le fondu donnait l'impression que la page
+    // se rechargeait à chaque clic d'onglet. L'affichage est immédiat.
+    lastView = state.tab;
 
     // Débloque les badges nouvellement mérités (ne relance pas render()).
     evaluerBadges();
@@ -9097,12 +9117,12 @@
     });
   })();
 
-  // Le logo ramène à la page d'accueil du site — c'était la seule sortie
+  // Le logo ramène à la page d'accueil du site - c'était la seule sortie
   // manquante. L'œuf de Pâques vit ailleurs : sept clics rapprochés sur
   // l'icône du titre de page.
   var secretClics = { n: 0, t: 0 };
   document.getElementById('app').addEventListener('click', function(e){
-    // La bulle d'aide se referme dès qu'on clique ailleurs — la croix n'est
+    // La bulle d'aide se referme dès qu'on clique ailleurs - la croix n'est
     // plus le seul chemin de sortie.
     if(state.sav.ouvert
        && !(e.target.closest && (e.target.closest('.bulle-panneau')
@@ -9217,6 +9237,12 @@
       case 'suite-rester':
         setState({ suiteAjout: null });
         break;
+      case 'side-repli': {
+        var plie = !state.sidePlie;
+        try { localStorage.setItem('freehub_side_plie', plie ? '1' : '0'); } catch(err){}
+        setState({ sidePlie: plie });
+        break;
+      }
       case 'sav-open':
         setState({ sav: Object.assign({}, state.sav, { ouvert:true, envoye:false, erreur:null }) });
         break;
@@ -9273,7 +9299,7 @@
         var o2 = obj(oid2);
         if(!o2 || state.faits['partage:'+oid2]) break;
         marquerFait('partage:'+oid2);
-        chatEnvoyer('🎉 Je viens de boucler « '+o2.title+' » — '
+        chatEnvoyer('🎉 Je viens de boucler « '+o2.title+' » - '
           + o2.steps.length+' étapes, fait !');
         setState({ tab:'chat' });
         chatSondage();
@@ -10519,7 +10545,7 @@
       else if(/^client/.test(kp)) majTotalClientele();
       return;
     }
-    // Charges du profil — partagées par 3 simulateurs.
+    // Charges du profil - partagées par 3 simulateurs.
     var pc = e.target.closest('[data-pcharge-field]');
     if(pc){
       var ic = parseInt(pc.getAttribute('data-i'), 10);

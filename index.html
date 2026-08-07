@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Freehub — Le hub des freelances</title>
+<title>Freehub - Le hub des freelances</title>
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png">
@@ -45,7 +45,7 @@
   /* Bandeau + nav solidaires, collés en haut de l'écran pendant le défilement */
   .top-fixe{position:sticky;top:0;z-index:50}
 
-  /* Nav — hauteur réduite */
+  /* Nav - hauteur réduite */
   .nav{display:flex;align-items:center;justify-content:space-between;gap:14px;
     padding:9px 28px;background:rgba(255,255,255,.82);backdrop-filter:blur(12px);
     border-bottom:1px solid rgba(15,27,51,.06);transition:box-shadow .3s}
@@ -131,7 +131,7 @@
     .auth-right{padding:24px 20px}
   }
 
-  /* Bandeau alpha — tout en haut, au-dessus de la nav */
+  /* Bandeau alpha - tout en haut, au-dessus de la nav */
   .alpha-bar{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
     padding:9px 24px;background:linear-gradient(90deg,#0f1b33 0%,#1e46b8 55%,#2f6bff 100%);
     color:#fff;font-size:13px;font-weight:600;letter-spacing:.01em;text-align:center}
@@ -249,7 +249,7 @@
     <div data-reveal style="text-align:center;max-width:660px;margin:0 auto 52px">
       <div style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#2f6bff;margin-bottom:12px">Ça te parle ?</div>
       <h2 style="font-size:clamp(27px,4.2vw,40px);line-height:1.1;letter-spacing:-.025em;font-weight:800;margin:0 0 14px">Ces phrases, tu te les es déjà dites ?</h2>
-      <p style="font-size:17px;color:#5b6b85;margin:0">Le blocage, c'est humain. On est là pour le lever — un pote à la fois.</p>
+      <p style="font-size:17px;color:#5b6b85;margin:0">Le blocage, c'est humain. On est là pour le lever - un pote à la fois.</p>
     </div>
     <div class="temo-grid">
       <div data-reveal data-reveal-delay="0" style="justify-self:start">
@@ -316,7 +316,7 @@
         <div style="display:flex;flex-direction:column;gap:16px">
           <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✓</span><span style="font-size:16px;line-height:1.45">Une seule plateforme, des réponses claires adaptées à ton cas.</span></div>
           <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✓</span><span style="font-size:16px;line-height:1.45">Des simulateurs qui montrent exactement quoi optimiser.</span></div>
-          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✓</span><span style="font-size:16px;line-height:1.45">La confiance de savoir ce que tu fais — et de passer à l'action.</span></div>
+          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✓</span><span style="font-size:16px;line-height:1.45">La confiance de savoir ce que tu fais - et de passer à l'action.</span></div>
         </div>
       </div>
     </div>
@@ -344,11 +344,11 @@
 <!-- ============ MODAL CONNEXION / INSCRIPTION ============ -->
 <!-- Création de compte volontairement minimale : prénom, nom, e-mail, mot de passe.
      Les questions d'activité (statut, CA) sont posées dans l'onboarding du dashboard,
-     une fois le compte créé — pas de doublon entre les deux. -->
+     une fois le compte créé - pas de doublon entre les deux. -->
 <div id="authOverlay" style="display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px;background:rgba(15,27,51,.55);backdrop-filter:blur(6px)" onclick="closeAuth()">
   <div class="auth-card" onclick="event.stopPropagation()">
     <div class="auth-grid">
-      <!-- panneau foncé — reste entièrement visible : seul le formulaire défile -->
+      <!-- panneau foncé - reste entièrement visible : seul le formulaire défile -->
       <div class="auth-left">
         <div style="position:absolute;bottom:-140px;left:-80px;width:400px;height:400px;background:radial-gradient(circle,rgba(47,107,255,.5),transparent 65%)"></div>
         <div style="position:relative"><img src="assets/freehub-logo-blanc.png" alt="Freehub" style="height:24px;display:block"></div>
@@ -358,7 +358,7 @@
         </div>
         <div style="position:relative;font-size:13px;color:rgba(255,255,255,.5);line-height:1.5">« Enfin quelqu'un qui m'explique sans me faire flipper. »<br><span style="color:rgba(255,255,255,.75);font-weight:600">Léa · graphiste freelance</span></div>
       </div>
-      <!-- formulaire — seule zone qui défile -->
+      <!-- formulaire - seule zone qui défile -->
       <div class="auth-right">
         <div style="display:flex;background:#f0f3f9;border-radius:13px;padding:5px;margin-bottom:26px">
           <button id="tabSignup" type="button" onclick="setTab('signup')">S'inscrire</button>
