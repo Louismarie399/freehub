@@ -2207,9 +2207,9 @@
     chat: { messages:[], charge:false, erreur:null, muet:null, admin:false,
             nonLus:0, nbSignales:0, moderation:null, empreinte:null,
             enLigne:0, total:0,
-            fil:null, filMessages:[], filCharge:false, filClos:false },
+            fil:null, filMessages:[], filCharge:false, filClos:false, filErreur:null },
     chatCharte: false,      // charte d'accueil de l'Entraide (première visite)
-    sav: { ouvert:false, envoi:false, envoye:false, erreur:null },
+    sav: { ouvert:false, envoi:false, envoye:false, erreur:null, type:null },
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     badgePorte: (function(){
@@ -7721,11 +7721,58 @@
   // ---------------------------------------------------------------------------
   // La bulle d'aide — toujours là, en bas à droite
   // ---------------------------------------------------------------------------
+  var SAV_TYPES = [
+    { v:'suggestion', ico:'💡', l:'Une suggestion',
+      d:'Une idée pour améliorer FreeHub' },
+    { v:'bug', ico:'🐛', l:'Un bug',
+      d:'Quelque chose ne marche pas comme prévu' },
+    { v:'question', ico:'❓', l:'Autre chose',
+      d:'Une question, un mot, ce que tu veux' },
+  ];
+
   function savBulleHtml(){
     if(state.tab === 'chat') return '';   // le salon a déjà sa conversation
     var o = state.sav;
+    // Une icône dessinée, dans le trait de l'app — pas un emoji.
+    var icone = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
+      + ' stroke-linecap="round" stroke-linejoin="round" width="22" height="22">'
+      + '<path d="M20.5 11.8c0 3.9-3.8 7-8.5 7a10 10 0 0 1-2.6-.34L4.6 20l1.2-3.4'
+      + 'A6.7 6.7 0 0 1 3.5 11.8c0-3.9 3.8-7 8.5-7s8.5 3.1 8.5 7z"/>'
+      + '<path d="M8.5 10.5h7M8.5 13.5h4"/></svg>';
     if(!o.ouvert){
-      return '<button class="bulle-aide" data-action="sav-open" title="Un pépin, une idée ?">🛟</button>';
+      return '<button class="bulle-aide" data-action="sav-open" title="Un pépin, une idée ?">'
+        + icone + '</button>';
+    }
+    var type = SAV_TYPES.filter(function(t){ return t.v === o.type; })[0] || null;
+    var corps;
+    if(o.envoye){
+      corps = '<div class="bulle-merci">🙌 Bien reçu — merci ! On te répond '
+        + (state.compte ? 'sur l’e-mail de ton compte' : 'sur l’adresse laissée')+'.'
+        + '<button class="btn-link" data-action="sav-encore">En envoyer un autre</button></div>';
+    } else if(!type){
+      // D'abord dire de quoi il s'agit : la réponse arrive mieux rangée.
+      corps = '<div class="bulle-choix">'
+        + SAV_TYPES.map(function(t){
+            return '<button class="bulle-type" data-action="sav-type" data-t="'+t.v+'">'
+              + '<span class="bulle-type-i">'+t.ico+'</span>'
+              + '<span><span class="bulle-type-l">'+t.l+'</span>'
+              + '<span class="bulle-type-d">'+t.d+'</span></span>'
+              + '<span class="bulle-type-f">→</span></button>';
+          }).join('')
+      + '</div>';
+    } else {
+      corps = '<form class="bulle-form" data-sav-form>'
+        + '<button type="button" class="bulle-retour" data-action="sav-type" data-t="">'
+          + '← '+type.ico+' '+esc(type.l)+'</button>'
+        + (state.compte ? ''
+            : '<input type="email" data-sav-email placeholder="Ton e-mail pour la réponse" required>')
+        + '<textarea data-sav-texte rows="4" maxlength="2000" required placeholder="'
+          + (o.type === 'bug' ? 'Qu’est-ce qui coince, et à quel endroit ?'
+             : o.type === 'suggestion' ? 'Raconte ton idée…' : 'Dis-nous tout…')+'"></textarea>'
+        + (o.erreur ? '<div class="bulle-erreur">'+esc(o.erreur)+'</div>' : '')
+        + '<button type="submit" class="ch-envoi bulle-envoi"'
+          + (o.envoi ? ' disabled' : '')+'>'+(o.envoi ? 'Envoi…' : 'Envoyer')+'</button>'
+      + '</form>';
     }
     return '<div class="bulle-panneau">'
       + '<div class="bulle-tete">'
@@ -7733,19 +7780,7 @@
         + '<div class="bulle-s">Retour sur l’alpha, question, bug : ça arrive direct chez Louis</div>'
         + '<button class="cat-x" data-action="sav-close" aria-label="Fermer">✕</button>'
       + '</div>'
-      + (o.envoye
-          ? '<div class="bulle-merci">🙌 Bien reçu — merci ! On te répond '
-            + (state.compte ? 'sur l’e-mail de ton compte' : 'sur l’adresse laissée')+'.'
-            + '<button class="btn-link" data-action="sav-encore">En envoyer un autre</button></div>'
-          : '<form class="bulle-form" data-sav-form>'
-            + (state.compte ? ''
-                : '<input type="email" data-sav-email placeholder="Ton e-mail pour la réponse" required>')
-            + '<textarea data-sav-texte rows="4" maxlength="2000" required'
-              + ' placeholder="Dis-nous tout…"></textarea>'
-            + (o.erreur ? '<div class="bulle-erreur">'+esc(o.erreur)+'</div>' : '')
-            + '<button type="submit" class="ch-envoi bulle-envoi"'
-              + (o.envoi ? ' disabled' : '')+'>'+(o.envoi ? 'Envoi…' : 'Envoyer')+'</button>'
-          + '</form>')
+      + corps
     + '</div>';
   }
 
@@ -7850,7 +7885,7 @@
         + (m.moi ? 'Tu as retiré ce message' : 'Message retiré')+'</span></div>';
     }
     var actions = ''
-      + (!dansAparte && state.compte
+      + (!dansAparte && state.compte && state.chat.fil !== m.id
           ? '<button class="ch-act" data-action="chat-aparte" data-id="'+m.id+'">Aparté</button>'
           : '')
       + (state.compte && !m.moi && !m.signale
@@ -7922,6 +7957,7 @@
         + '<button class="cat-x" data-action="chat-aparte-close" aria-label="Fermer">✕</button>'
       + '</div>'
       + '<div class="ch-ap-fil" data-chat-fil-b>'+corps+'</div>'
+      + (c.filErreur ? '<div class="ch-alerte ap">'+esc(c.filErreur)+'</div>' : '')
       + (c.filClos
           ? '<div class="ch-ap-clos">Aparté clôturé : plus personne n’y a écrit '
             + 'depuis 24 h</div>'
@@ -8103,9 +8139,14 @@
     var corps = fil ? { contenu: texte, fil: fil } : { contenu: texte };
     apiJson('POST', '/api/chat', corps).then(function(r){
       if(!r.ok){
+        var msg = (r.data && r.data.error) || 'Envoi impossible.';
+        // L'erreur s'affiche là où on vient d'écrire, pas ailleurs.
         setState({ chat: Object.assign({}, state.chat,
-          { erreur: (r.data && r.data.error) || 'Envoi impossible.' }) });
+          fil ? { filErreur: msg } : { erreur: msg }) });
         return;
+      }
+      if(fil){
+        state.chat = Object.assign({}, state.chat, { filErreur: null });
       }
       chatCharger(true);
     });
@@ -8889,7 +8930,8 @@
       var mail = (sf.querySelector('[data-sav-email]') || {}).value || '';
       if(!texte.trim()) return;
       setState({ sav: Object.assign({}, state.sav, { envoi:true, erreur:null }) });
-      apiJson('POST', '/api/sav', { message:texte, email:mail }).then(function(r){
+      apiJson('POST', '/api/sav', { message:texte, email:mail,
+        type: state.sav.type || 'question' }).then(function(r){
         setState({ sav: Object.assign({}, state.sav, {
           envoi:false,
           envoye:r.ok,
@@ -9045,6 +9087,15 @@
   // l'icône du titre de page.
   var secretClics = { n: 0, t: 0 };
   document.getElementById('app').addEventListener('click', function(e){
+    // La bulle d'aide se referme dès qu'on clique ailleurs — la croix n'est
+    // plus le seul chemin de sortie.
+    if(state.sav.ouvert
+       && !(e.target.closest && (e.target.closest('.bulle-panneau')
+            || e.target.closest('.bulle-aide')))){
+      state.sav = Object.assign({}, state.sav, { ouvert:false, type:null });
+      var sr = document.getElementById('sav-root');
+      if(sr) sr.innerHTML = savBulleHtml();
+    }
     var marque = e.target.closest && e.target.closest('.brand');
     if(marque){ window.location.href = '/'; return; }
     var icone = e.target.closest && e.target.closest('.ptitre-i');
@@ -9155,10 +9206,15 @@
         setState({ sav: Object.assign({}, state.sav, { ouvert:true, envoye:false, erreur:null }) });
         break;
       case 'sav-close':
-        setState({ sav: Object.assign({}, state.sav, { ouvert:false }) });
+        setState({ sav: Object.assign({}, state.sav, { ouvert:false, type:null }) });
+        break;
+      case 'sav-type':
+        setState({ sav: Object.assign({}, state.sav,
+          { type: el.getAttribute('data-t') || null, erreur:null }) });
         break;
       case 'sav-encore':
-        setState({ sav: Object.assign({}, state.sav, { envoye:false, erreur:null }) });
+        setState({ sav: Object.assign({}, state.sav,
+          { envoye:false, erreur:null, type:null }) });
         break;
       case 'dem-filtre':
         setState({ demandes: Object.assign({}, state.demandes,
@@ -9217,11 +9273,13 @@
         // Recliquer le même aparté le referme ; un autre y bascule.
         if(state.chat.fil === fid){
           setState({ chat: Object.assign({}, state.chat,
-            { fil: null, filMessages: [], filCharge: false, empreinte: null }) });
+            { fil: null, filMessages: [], filCharge: false, empreinte: null,
+              filErreur: null }) });
           break;
         }
         setState({ chat: Object.assign({}, state.chat,
-          { fil: fid, filMessages: [], filCharge: false, empreinte: null }) });
+          { fil: fid, filMessages: [], filCharge: false, empreinte: null,
+            filErreur: null }) });
         chatCharger(true);
         break;
       }

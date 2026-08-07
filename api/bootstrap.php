@@ -168,7 +168,7 @@ function init_db(PDO $pdo): void
         -- Retours et réclamations (la bulle d'aide) ; `identite` sert au débit.
         CREATE TABLE IF NOT EXISTS sav_requests(
             id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
-            identite TEXT NOT NULL, email TEXT DEFAULT '',
+            identite TEXT NOT NULL, email TEXT DEFAULT '', type TEXT DEFAULT '',
             message TEXT NOT NULL, created TEXT NOT NULL, traite INTEGER DEFAULT 0);
         -- La question de la semaine, et une voix par membre.
         CREATE TABLE IF NOT EXISTS chat_sondages(
@@ -194,6 +194,10 @@ function init_db(PDO $pdo): void
     $colsPart = array_column($pdo->query('PRAGMA table_info(partner_requests)')->fetchAll(), 'name');
     if (!in_array('traite', $colsPart, true)) {
         $pdo->exec('ALTER TABLE partner_requests ADD COLUMN traite INTEGER DEFAULT 0');
+    }
+    $colsSav = array_column($pdo->query('PRAGMA table_info(sav_requests)')->fetchAll(), 'name');
+    if (!in_array('type', $colsSav, true)) {
+        $pdo->exec("ALTER TABLE sav_requests ADD COLUMN type TEXT DEFAULT ''");
     }
 }
 

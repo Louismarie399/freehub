@@ -33,10 +33,13 @@ function route_sav(): void
         erreur('On a bien reçu tes messages du jour — on te répond vite.', 429);
     }
 
+    $type = (string) ($c['type'] ?? '');
+    if (!in_array($type, ['suggestion', 'bug', 'question'], true)) $type = 'question';
+
     db()->prepare(
-        'INSERT INTO sav_requests(user_id, identite, email, message, created)
-         VALUES (?,?,?,?,?)')
-        ->execute([$u['id'] ?? null, $qui, $email, $message, maintenant()]);
+        'INSERT INTO sav_requests(user_id, identite, email, type, message, created)
+         VALUES (?,?,?,?,?,?)')
+        ->execute([$u['id'] ?? null, $qui, $email, $type, $message, maintenant()]);
     json_reponse(['ok' => true]);
 }
 
@@ -57,8 +60,9 @@ function route_admin_demandes(): void
             'traite' => (bool) $r['traite'],
         ];
     }
+    $libelles = ['suggestion' => '💡 Suggestion', 'bug' => '🐛 Bug', 'question' => '❓ Question'];
     foreach ($pdo->query(
-        'SELECT s.id, s.email, s.message, s.created, s.traite, u.prenom, u.nom
+        'SELECT s.id, s.email, s.type, s.message, s.created, s.traite, u.prenom, u.nom
            FROM sav_requests s LEFT JOIN users u ON u.id = s.user_id
           ORDER BY s.id DESC LIMIT 200') as $r) {
         $nom = trim((string) ($r['prenom'] ?? ''));
@@ -66,7 +70,7 @@ function route_admin_demandes(): void
         $out[] = [
             'type' => 'sav', 'id' => (int) $r['id'],
             'titre' => $nom !== '' ? $nom : ($r['email'] ?: 'Anonyme'),
-            'email' => $r['email'], 'detail' => '',
+            'email' => $r['email'], 'detail' => $libelles[$r['type']] ?? '',
             'message' => $r['message'], 'created' => $r['created'],
             'traite' => (bool) $r['traite'],
         ];
