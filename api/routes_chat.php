@@ -19,7 +19,8 @@ declare(strict_types=1);
 const CHAT_LONGUEUR_MAX = 800;   // caractères
 const CHAT_DEBIT_NB     = 5;     // messages…
 const CHAT_DEBIT_SEC    = 60;    // …par minute
-const CHAT_PAGE         = 60;    // messages renvoyés au maximum
+const CHAT_PAGE         = 50;    // messages affichés au maximum dans le fil
+const CHAT_APARTE_CLOS  = 86400; // un aparté sans message depuis 24 h est clos
 // Liste fermée : pas le clavier emoji entier, cinq gestes qui suffisent.
 const CHAT_EMOJIS = ['👍', '👎', '🙏', '❤️', '🔥'];
 
@@ -71,11 +72,13 @@ function chat_auteurs(array $ids): array
                 // La photo vit dans le profil (data URL, redimensionnée côté
                 // client). On la borne : une valeur anormalement grosse est
                 // ignorée plutôt que de gonfler chaque relevé du fil.
-                $profil = json_decode((string) ($d['freehub_profil'] ?? ''), true);
-                if (is_array($profil)) {
-                    $ph = (string) ($profil['photo'] ?? '');
-                    if (str_starts_with($ph, 'data:image/') && strlen($ph) < 120000) {
-                        $photo = $ph;
+                if (empty($_GET['leger'])) {
+                    $profil = json_decode((string) ($d['freehub_profil'] ?? ''), true);
+                    if (is_array($profil)) {
+                        $ph = (string) ($profil['photo'] ?? '');
+                        if (str_starts_with($ph, 'data:image/') && strlen($ph) < 120000) {
+                            $photo = $ph;
+                        }
                     }
                 }
             }
@@ -115,6 +118,7 @@ function route_chat_liste(): void
             ->execute([$u['id'], maintenant()]);
     }
 
+    $clos = false;
     if ($fil > 0) {
         // Un aparté : le message d'origine puis ses réponses.
         $st = $pdo->prepare(
@@ -123,6 +127,7 @@ function route_chat_liste(): void
               ORDER BY id ASC LIMIT ?');
         $st->execute([$fil, $fil, CHAT_PAGE]);
         $lignes = $st->fetchAll();
+        $clos = chat_aparte_clos($fil);
     } else {
         // Le fil principal : la fin, remise dans l'ordre, sans les apartés.
         $st = $pdo->prepare(
@@ -213,7 +218,49 @@ function route_chat_liste(): void
         'connecte' => (bool) $u,
         'enLigne'  => $enLigne,
         'total'    => $total,
+        'clos'     => $clos,
     ]);
+}
+
+/** Un aparté est clos quand plus rien n'y a été écrit depuis 24 h. */
+function chat_aparte_clos(int $fil): bool
+{
+    $st = db()->prepare(
+        'SELECT MAX(created) FROM chat_messages WHERE parent_id = ?');
+    $st->execute([$fil]);
+    $dernier = $st->fetchColumn();
+    if (!$dernier) return false;                       // pas encore ouvert
+    return strtotime((string) $dernier) < time() - CHAT_APARTE_CLOS;
+}
+
+/**
+ * Le fil principal reste court : au-delà de CHAT_PAGE messages, les plus
+ * anciens sont effacés pour de bon — avec leurs apartés et leurs réactions.
+ * Exception : un message dont l'aparté est encore actif (moins de 24 h)
+ * survit jusqu'à ce que la conversation s'y éteigne.
+ */
+function chat_purger(): void
+{
+    $pdo = db();
+    $ids = $pdo->query(
+        'SELECT id FROM chat_messages WHERE parent_id IS NULL
+          ORDER BY id DESC LIMIT -1 OFFSET ' . CHAT_PAGE)->fetchAll(PDO::FETCH_COLUMN);
+    if (!$ids) return;
+    $limite = gmdate('Y-m-d\TH:i:s\Z', time() - CHAT_APARTE_CLOS);
+    $victimes = [];
+    foreach ($ids as $id) {
+        $st = $pdo->prepare(
+            'SELECT COUNT(*) FROM chat_messages WHERE parent_id = ? AND created > ?');
+        $st->execute([$id, $limite]);
+        if ((int) $st->fetchColumn() === 0) $victimes[] = (int) $id;
+    }
+    if (!$victimes) return;
+    $m = implode(',', array_fill(0, count($victimes), '?'));
+    $pdo->prepare("DELETE FROM chat_reactions WHERE message_id IN ($m)
+                    OR message_id IN (SELECT id FROM chat_messages WHERE parent_id IN ($m))")
+        ->execute(array_merge($victimes, $victimes));
+    $pdo->prepare("DELETE FROM chat_messages WHERE parent_id IN ($m)")->execute($victimes);
+    $pdo->prepare("DELETE FROM chat_messages WHERE id IN ($m)")->execute($victimes);
 }
 
 /** POST /api/chat — publier un message. */
@@ -240,6 +287,10 @@ function route_chat_envoyer(): void
         if (!$parent) erreur('Message d’origine introuvable.');
         if ($parent['parent_id'] !== null) erreur('Un aparté ne peut pas en contenir un autre.');
         if ((int) $parent['supprime']) erreur('Ce message a été retiré.');
+
+        if (chat_aparte_clos($fil)) {
+            erreur('Cet aparté est clôturé : plus personne n’y a écrit depuis 24 h.', 410);
+        }
 
         // Ouvrir un aparté (première réponse) : un seul par membre et par jour.
         $st = db()->prepare('SELECT COUNT(*) FROM chat_messages WHERE parent_id = ?');
@@ -269,7 +320,9 @@ function route_chat_envoyer(): void
     $st = db()->prepare(
         'INSERT INTO chat_messages(user_id, contenu, created, parent_id) VALUES (?,?,?,?)');
     $st->execute([$u['id'], $texte, maintenant(), $fil > 0 ? $fil : null]);
-    json_reponse(['ok' => true, 'id' => (int) db()->lastInsertId()]);
+    $id = (int) db()->lastInsertId();
+    if ($fil <= 0) chat_purger();
+    json_reponse(['ok' => true, 'id' => $id]);
 }
 
 /** POST /api/chat/reagir — pose ou retire une réaction (liste fermée). */
@@ -288,11 +341,15 @@ function route_chat_reagir(): void
     if (!$m) erreur('Message introuvable.');
     if ((int) $m['supprime']) erreur('Ce message a été retiré.');
 
-    // Un second appel sur le même emoji retire la réaction : un seul geste.
+    // Une seule réaction par personne et par message : cliquer un autre emoji
+    // remplace la précédente ; recliquer le même la retire.
     $st = db()->prepare(
-        'DELETE FROM chat_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?');
-    $st->execute([$id, $u['id'], $emoji]);
-    if ($st->rowCount() === 0) {
+        'SELECT emoji FROM chat_reactions WHERE message_id = ? AND user_id = ?');
+    $st->execute([$id, $u['id']]);
+    $avant = $st->fetchColumn();
+    db()->prepare('DELETE FROM chat_reactions WHERE message_id = ? AND user_id = ?')
+        ->execute([$id, $u['id']]);
+    if ($avant !== $emoji) {
         db()->prepare(
             'INSERT INTO chat_reactions(message_id, user_id, emoji, created) VALUES (?,?,?,?)')
             ->execute([$id, $u['id'], $emoji, maintenant()]);

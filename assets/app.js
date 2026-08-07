@@ -2201,7 +2201,7 @@
     chat: { messages:[], charge:false, erreur:null, muet:null, admin:false,
             nonLus:0, nbSignales:0, moderation:null, empreinte:null,
             enLigne:0, total:0,
-            fil:null, filMessages:[], filCharge:false },
+            fil:null, filMessages:[], filCharge:false, filClos:false },
     chatCharte: false,      // charte d'accueil de l'Entraide (première visite)
     badgePorte: (function(){
       try { return localStorage.getItem('freehub_badge_porte') || null; } catch(e){ return null; }
@@ -2852,47 +2852,13 @@
   function accueilHtml(){
     var p = state.profil;
     var prenom = (p.prenom || '').trim();
-    var net = netEstime();
     var ech = prochaineEcheance();
     var act = actionDuMoment();
 
-    // --- Bandeau : le chiffre qu'on vient chercher ---
-    var hero;
-    if(net){
-      var caReel = caProfilAnnuel(p);
-      var maxCa = Math.max(150000, Math.round(caReel * 2 / 5000) * 5000);
-      hero = '<div class="acc-hero">'
-        + '<div class="acc-hero-top">'
-          + '<div class="acc-hero-l">'
-            + '<div class="acc-bonjour">'+salutation()+(prenom ? ' '+esc(prenom) : '')
-              + '<span class="acc-proj-badge" style="display:none">Projection</span></div>'
-            + '<div class="acc-hero-k">Ce qui te reste vraiment, en '+esc(net.label)+'</div>'
-            + '<div class="acc-hero-n">'+fmtEur(net.res.net / 12)+'<span> / mois</span></div>'
-            + '<div class="acc-hero-s">soit '+fmtEur(net.res.net)+' sur l’année, sur '
-              + fmtEur(net.ca)+' encaissés</div>'
-          + '</div>'
-          + '<div class="acc-hero-r">'+anneauCa(net.res, net.ca, 132)+'</div>'
-        + '</div>'
-        + '<div class="acc-slider">'
-          + '<div class="acc-slider-h">Et si ton chiffre d’affaires était de '
-            + '<span class="acc-slider-val">'+fmtEur(caReel)+'</span> par an ?</div>'
-          + '<input type="range" data-accueil-ca min="10000" max="'+maxCa+'" step="1000" '
-            + 'value="'+caReel+'">'
-          + '<div class="acc-slider-b"><span>10 k€</span>'
-            + '<button class="acc-slider-reset" data-action="acc-ca-reset">Revenir à mon CA réel</button>'
-            + '<span>'+Math.round(maxCa/1000)+' k€</span></div>'
-        + '</div>'
-        + '</div>';
-    } else {
-      hero = '<div class="acc-hero vide">'
-        + '<div class="acc-hero-l">'
-          + '<div class="acc-bonjour">'+salutation()+(prenom ? ' '+esc(prenom) : '')+'</div>'
-          + '<div class="acc-hero-k">On ne connaît pas encore ton chiffre d’affaires</div>'
-          + '<div class="acc-hero-s">Renseigne-le et cet écran te dira, en direct, '
-            + 'ce qu’il te reste vraiment chaque mois.</div>'
-          + '<button class="acc-hero-cta" data-action="open-profil">Compléter mon profil →</button>'
-        + '</div></div>';
-    }
+    // Une salutation, pas un tableau de bord : le bandeau chiffré a été retiré,
+    // le simulateur fait déjà ce travail mieux que lui.
+    var hero = '<div class="acc-salut">'+salutation()
+      + (prenom ? ' '+esc(prenom) : '')+' <span class="acc-salut-m">👋</span></div>';
 
     // --- L'échéance : une ligne datée, pas un pavé ---
     var carteEch = ech
@@ -7705,26 +7671,27 @@
   var CHAT_EMOJIS = ['👍', '👎', '🙏', '❤️', '🔥'];
 
   function chatReactionsHtml(m){
-    if(m.supprime) return '';
-    var posees = {};
-    (m.reactions || []).forEach(function(x){ posees[x.e] = true; });
-    var pastilles = (m.reactions || []).map(function(x){
+    if(m.supprime || !(m.reactions || []).length) return '';
+    var pastilles = m.reactions.map(function(x){
       return '<button class="ch-react'+(x.moi ? ' moi' : '')+'"'
         + (state.compte ? ' data-action="chat-react" data-id="'+m.id+'" data-e="'+x.e+'"'
                         : ' disabled')
         + ' title="'+esc((x.qui || []).join(', '))+'">'+x.e
         + '<span class="ch-react-n">'+x.n+'</span></button>';
     }).join('');
-    // Les emojis pas encore posés apparaissent au survol du message.
-    var rapides = state.compte
-      ? CHAT_EMOJIS.filter(function(e){ return !posees[e]; }).map(function(e){
-          return '<button class="ch-react ajout" data-action="chat-react"'
-            + ' data-id="'+m.id+'" data-e="'+e+'">'+e+'</button>';
-        }).join('')
-      : '';
-    if(!pastilles && !rapides) return '';
-    return '<div class="ch-reacts">'+pastilles
-      + (rapides ? '<span class="ch-rapides">'+rapides+'</span>' : '')+'</div>';
+    return '<div class="ch-reacts">'+pastilles+'</div>';
+  }
+
+  // La barre de réactions : une pastille de verre qui se pose sur le message
+  // au survol — les cinq gestes, celui déjà posé marqué.
+  function chatPopHtml(m){
+    if(m.supprime || !state.compte) return '';
+    var mienne = null;
+    (m.reactions || []).forEach(function(x){ if(x.moi) mienne = x.e; });
+    return '<div class="ch-pop">'+CHAT_EMOJIS.map(function(e2){
+      return '<button class="ch-pop-e'+(mienne === e2 ? ' on' : '')+'"'
+        + ' data-action="chat-react" data-id="'+m.id+'" data-e="'+e2+'">'+e2+'</button>';
+    }).join('')+'</div>';
   }
 
   function chatHeure(iso){
@@ -7741,6 +7708,9 @@
   // Avatar : la photo du profil si le membre en a une, sinon ses initiales sur
   // une couleur stable dérivée du nom — chacun garde la sienne.
   var CH_AV_COULEURS = ['#2f6bff', '#7c3aed', '#0f9d6e', '#b45309', '#e11d48', '#0891b2'];
+  // Les photos (data URL) pèsent lourd : on ne les demande qu'une fois par
+  // auteur, puis chaque relevé passe en mode léger. C'est ce qui fluidifie.
+  var chatAvatars = {};
   function chatAvatarHtml(a){
     if(a && a.photo){
       return '<span class="ch-av"><img src="'+esc(a.photo)+'" alt=""></span>';
@@ -7782,12 +7752,14 @@
         + '<div class="ch-txt">'+esc(m.contenu).replace(/\n/g, '<br>')+'</div>'
         + '<div class="ch-pied">'
           + (!dansAparte && m.nbReponses
-              ? '<button class="ch-fil-n" data-action="chat-aparte" data-id="'+m.id+'">💬 '
-                + m.nbReponses+' réponse'+(m.nbReponses>1?'s':'')+'</button>'
+              ? '<button class="ch-fil-n" data-action="chat-aparte" data-id="'+m.id+'">'
+                + '💬 Aparté ouvert · '+m.nbReponses+' message'+(m.nbReponses>1?'s':'')
+                + ' <span class="ch-fil-go">rejoindre →</span></button>'
               : '')
           + chatReactionsHtml(m)
         + '</div>'
       + '</div>'
+      + chatPopHtml(m)
     + '</div>';
   }
 
@@ -7826,13 +7798,16 @@
         + '<button class="cat-x" data-action="chat-aparte-close" aria-label="Fermer">✕</button>'
       + '</div>'
       + '<div class="ch-ap-fil" data-chat-fil-b>'+corps+'</div>'
-      + (state.compte && !c.muet
-          ? '<form class="ch-form ap" data-chat-form-fil>'
-            + '<textarea data-chat-fil-input rows="1" maxlength="800"'
-              + ' placeholder="Répondre dans l’aparté…"></textarea>'
-            + '<button type="submit" class="ch-envoi">Envoyer</button>'
-          + '</form>'
-          : '')
+      + (c.filClos
+          ? '<div class="ch-ap-clos">Aparté clôturé : plus personne n’y a écrit '
+            + 'depuis 24 h</div>'
+          : (state.compte && !c.muet
+              ? '<form class="ch-form ap" data-chat-form-fil>'
+                + '<textarea data-chat-fil-input rows="1" maxlength="800"'
+                  + ' placeholder="Répondre dans l’aparté…"></textarea>'
+                + '<button type="submit" class="ch-envoi">Envoyer</button>'
+              + '</form>'
+              : ''))
     + '</aside>';
   }
 
@@ -7886,8 +7861,11 @@
   function chatCharger(silencieux){
     // On recharge toujours la fenêtre complète : les réactions et les retraits
     // touchent d'anciens messages, qu'un chargement incrémental ne verrait pas.
-    var appels = [apiJson('GET', '/api/chat')];
-    if(state.chat.fil) appels.push(apiJson('GET', '/api/chat?fil=' + state.chat.fil));
+    // Mode léger dès qu'on connaît déjà les visages du fil.
+    var leger = state.chat.charge ? '?leger=1' : '';
+    var appels = [apiJson('GET', '/api/chat' + leger)];
+    if(state.chat.fil) appels.push(apiJson('GET', '/api/chat?fil=' + state.chat.fil
+      + (leger ? '&leger=1' : '')));
     Promise.all(appels).then(function(reps){
       var r = reps[0], rf = reps[1] || null;
       if(!r.ok){
@@ -7897,10 +7875,17 @@
       }
       var neufs = r.data.messages || [];
       var filMsgs = rf && rf.ok ? (rf.data.messages || []) : state.chat.filMessages;
+      // Mémorise les photos reçues, réinjecte celles déjà connues.
+      neufs.concat(filMsgs).forEach(function(m){
+        var a2 = m.auteur || {};
+        if(a2.photo && a2.id) chatAvatars[a2.id] = a2.photo;
+        else if(a2.id && chatAvatars[a2.id]) a2.photo = chatAvatars[a2.id];
+      });
       // Rien n'a bougé ? On ne re-rend pas : c'est ce re-rendu périodique qui
       // vidait le champ de saisie en pleine frappe.
       var empreinte = JSON.stringify([neufs, filMsgs, r.data.muet || null,
-        !!r.data.admin, r.data.enLigne, r.data.total]);
+        !!r.data.admin, r.data.enLigne, r.data.total,
+        rf && rf.ok ? !!rf.data.clos : null]);
       if(state.chat.charge && empreinte === state.chat.empreinte) return;
 
       var dernierAvant = state.chat.messages.length
@@ -7910,6 +7895,7 @@
         muet:r.data.muet || null, admin:!!r.data.admin,
         enLigne:r.data.enLigne || 0, total:r.data.total || 0,
         filMessages:filMsgs, filCharge:!!(rf && rf.ok) || state.chat.filCharge,
+        filClos: rf && rf.ok ? !!rf.data.clos : state.chat.filClos,
         nbSignales: neufs.filter(function(m){ return m.signale && !m.supprime; }).length,
       });
       if(state.tab !== 'chat' && dernierAvant){
@@ -7973,15 +7959,47 @@
 
   // Termes suggérés : ceux qui touchent aux domaines des objectifs pris, et au
   // statut déclaré. On propose au lieu de tout déverser.
+  // Chaque objectif appelle deux ou trois mots précis — pas son domaine entier.
+  // C'est cette carte qui rend la suggestion personnelle : un utilisateur qui a
+  // tout épinglé n'a simplement plus rien à se voir proposer.
+  var LEX_PAR_OBJECTIF = {
+    'creer-ae':             ['micro', 'siret', 'guichet'],
+    'obligations-creation': ['cfe', 'cotisations', 'siret'],
+    'statut':               ['eurl', 'sasu', 'tns', 'assimile'],
+    'creer-societe':        ['kbis', 'is', 'guichet'],
+    'cfe':                  ['cfe'],
+    'tva-comprendre':       ['franchise', 'tva-collectee', 'tva-deductible'],
+    'tva-passer':           ['franchise', 'tva-intra', 'client-recup'],
+    'vfl':                  ['vfl', 'rfr', 'bareme'],
+    'compte-pro':           ['siret', 'tresorerie'],
+    'piloter':              ['deductible', 'amortissement', 'dividendes'],
+    'domicilier':           ['domiciliation', 'kbis'],
+    'facture-elec':         ['tva-collectee', 'autoliquidation'],
+    'facturer-etranger':    ['tva-intra', 'autoliquidation', 'client-recup'],
+    'urssaf-1':             ['cotisations', 'abattement'],
+    'impot-ae':             ['abattement', 'ir', 'bareme', 'quotient'],
+    'impot-societe':        ['is', 'dividendes', 'quotepart'],
+    'droits-independant':   ['tns', 'assimile', 'acre'],
+    'embaucher-alternant':  ['dpae'],
+    'revenu-regulier':      ['dividendes', 'tresorerie', 'cotisations'],
+  };
+  var LEX_PAR_STATUT = {
+    micro:   ['micro', 'abattement', 'franchise'],
+    societe: ['is', 'pfu', 'assimile'],
+  };
+
   function lexSuggestions(n){
-    var doms = {};
-    state.added.forEach(function(id){ var o = obj(id); if(o) doms[o.dom] = 1; });
-    if(estMicro(state.profil)) doms.statut = 1;
-    if(/franchise/i.test(state.profil.tva || '')) doms.tva = 1;
-    // Uniquement ce qui touche vraiment au profil : compléter avec des termes
-    // hors sujet donnait l'impression d'une liste qui se remplit toute seule.
-    var pertinents = LEXIQUE.filter(function(x){ return doms[x.cat] && !estEpingle(x.id); });
-    return pertinents.slice(0, n || 6);
+    var vus = {}, ordre = [];
+    var pousser = function(id){
+      if(!vus[id] && terme(id) && !estEpingle(id)){ vus[id] = 1; ordre.push(id); }
+    };
+    // D'abord les objectifs mis en avant, puis les autres en cours.
+    state.avant.concat(state.added).forEach(function(oid){
+      if(etatObjectif(oid) === 'fait') return;
+      (LEX_PAR_OBJECTIF[oid] || []).forEach(pousser);
+    });
+    (LEX_PAR_STATUT[estMicro(state.profil) ? 'micro' : 'societe'] || []).forEach(pousser);
+    return ordre.slice(0, n || 6).map(terme);
   }
 
   function lexPastillesHtml(actif, action){
