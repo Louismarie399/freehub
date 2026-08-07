@@ -286,14 +286,14 @@
      l'entête et n'apparaissent qu'au survol - plus de bloc qui gonfle. */
   .ch-msg{position:relative;display:flex;gap:10px;padding:7px 10px;border-radius:12px;
     transition:background .15s var(--ease)}
-  .ch-msg:hover{background:rgba(255,255,255,.85)}
-  .ch-msg.moi{background:rgba(47,107,255,.055)}
+  .ch-msg:hover{background:rgba(255,255,255,.5)}
+  .ch-msg.moi:hover{background:rgba(47,107,255,.04)}
   /* Un objectif bouclé partagé : une carte de fête, pas un message ordinaire */
   .ch-msg.celebration{background:linear-gradient(120deg,#f0fdf4 0%,#fefce8 100%);
     border:1px solid #bbf7d0;border-radius:14px;margin:4px 0}
   .ch-msg.celebration:hover{background:linear-gradient(120deg,#dcfce7 0%,#fef9c3 100%)}
-  .ch-msg.celebration .ch-txt{font-weight:700;color:#166534}
-  .ch-msg.moi:hover{background:rgba(47,107,255,.09)}
+  /* La fête a déjà son fond : pas de bulle dans la bulle. */
+  .ch-msg.celebration .ch-txt{font-weight:700;color:#166534;background:none;padding:0}
   .ch-msg.efface{padding:4px 10px}
   .ch-efface{font-size:12px;font-style:italic;color:#a3adc0}
   .ch-av{flex:none;width:32px;height:32px;border-radius:50%;overflow:hidden;
@@ -317,7 +317,12 @@
   .ch-tag{padding:1px 7px;border-radius:999px;background:#f1f5f9;color:var(--muted2);
     font-size:9.5px;font-weight:800}
   .ch-tag.signale{background:#fef3c7;color:#b45309}
-  .ch-txt{font-size:13.5px;line-height:1.5;color:var(--ink);overflow-wrap:break-word;margin-top:1px}
+  /* Le texte vit dans sa propre bulle, dimensionnée par son contenu (façon
+     messagerie) : l'avatar reste dehors, à gauche. */
+  .ch-txt{display:inline-block;max-width:min(100%,540px);margin-top:4px;padding:10px 13px;
+    background:#f1f4f9;border-radius:4px 14px 14px 14px;
+    font-size:13.5px;line-height:1.5;color:var(--ink);overflow-wrap:break-word}
+  .ch-msg.moi .ch-txt{background:var(--soft);border-radius:14px 4px 14px 14px}
   /* Le pied ne prend de la place que s'il a quelque chose à montrer */
   .ch-pied{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .ch-pied:not(:has(*)){display:none}
@@ -350,8 +355,10 @@
   .ch-ap-clos{padding:12px 14px;border-top:1px solid var(--border);background:#f8fafc;
     font-size:12px;font-weight:600;color:var(--muted2);text-align:center}
   .ch-form.ap{margin:0;padding:10px;border-top:1px solid var(--border)}
-  .ch-form.ap textarea{min-height:40px;padding:9px 12px;font-size:12.5px}
-  .ch-form.ap .ch-envoi{padding:10px 14px;font-size:12.5px}
+  .ch-form.ap textarea{min-height:40px;padding:10px 16px;font-size:12.5px}
+  .ch-form.ap .ch-envoi{width:40px;height:40px;font-size:14px}
+  /* L'aparté est étroit : la bulle y prend toute la largeur utile. */
+  .ch-aparte .ch-txt{max-width:100%}
 
   /* L'avatar et sa bulle de badge accolée */
   .ch-avw{position:relative;flex:none;margin-top:2px}
@@ -427,19 +434,25 @@
 
   .ch-muet{margin-top:12px;padding:11px 15px;border-radius:12px;background:#fef3c7;
     color:#92400e;font-size:13px;font-weight:600}
+  /* Saisie en pilule + envoi dans sa propre bulle ronde, à côté. */
   .ch-form{display:flex;gap:10px;align-items:flex-end;margin-top:12px}
-  .ch-form textarea{flex:1;resize:none;padding:12px 16px;border:1px solid var(--border);
-    border-radius:13px;font-family:inherit;font-size:13.5px;line-height:1.5;background:#fff;
-    color:var(--ink);min-height:46px;max-height:140px}
+  .ch-form textarea{flex:1;resize:none;padding:13px 20px;border:1.5px solid var(--border);
+    border-radius:999px;font-family:inherit;font-size:13.5px;line-height:1.5;background:#fff;
+    color:var(--ink);min-height:48px;max-height:140px}
+  /* Dès que le texte passe à la ligne, la pilule s'adoucit en carte arrondie. */
+  .ch-form textarea.multi{border-radius:22px}
   .ch-form textarea:focus{outline:none;border-color:var(--blue);
     box-shadow:0 0 0 3px rgba(47,107,255,.14)}
   .ch-form textarea:disabled{background:#f5f7fb;color:var(--muted)}
   /* L'envoi suit la couleur de l'app, pas celle de l'onglet */
-  .ch-envoi{flex:none;padding:13px 20px;border:none;border-radius:13px;background:var(--blue);
-    color:#fff;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;
+  .ch-envoi{flex:none;width:48px;height:48px;padding:0;border:none;border-radius:50%;
+    background:var(--blue);color:#fff;font-family:inherit;font-size:16px;font-weight:800;
+    cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 20px -8px rgba(47,107,255,.75);
     transition:filter .18s var(--ease),transform .18s var(--ease)}
   .ch-envoi:hover{filter:brightness(1.08);transform:translateY(-1px)}
-  .ch-envoi:disabled{background:#e2e8f0;color:#94a3b8;cursor:default;transform:none;filter:none}
+  .ch-envoi:disabled{background:#e2e8f0;color:#94a3b8;cursor:default;transform:none;filter:none;
+    box-shadow:none}
   .ch-regles{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.5}
   .ch-modmsg{padding:12px 14px;border:1px solid var(--border);border-radius:13px;margin-bottom:10px}
   .ch-modmsg.efface{opacity:.55}
@@ -2697,4 +2710,78 @@
     .pcharge > button{grid-column:2;justify-self:end}
     .field-row{grid-template-columns:1fr}
     .res-topbar h2{font-size:19px}
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Téléphones - la barre latérale devient un tiroir                    */
+  /* ------------------------------------------------------------------ */
+  /* Hors mobile, le bouton d'ouverture et le voile n'existent pas. */
+  .side-burger,.side-voile{display:none}
+
+  @media (max-width:860px){
+    /* Le tiroir sort de l'écran ; « side-plie » veut dire « fermé » ici. */
+    .sidebar{position:fixed;top:0;bottom:0;left:0;width:264px;padding:20px 14px;z-index:60;
+      transform:translateX(0);transition:transform .28s var(--ease);
+      box-shadow:14px 0 44px -20px rgba(15,27,51,.65)}
+    .app.side-plie .sidebar{transform:translateX(-100%);width:264px}
+    /* Les libellés restent lisibles même en état « plié » (= fermé). */
+    .app.side-plie .nav-text,.app.side-plie .brand,
+    .app.side-plie .user > div,.app.side-plie .side-foot{opacity:1;width:auto}
+    /* min-width:0 est indispensable : sans lui, l'élément flex refuse de
+       rétrécir sous la largeur de son contenu et la page déborde. */
+    .app > main,.app.side-plie > main{margin-left:0;min-width:0;max-width:100vw}
+    .app{min-width:0}
+    .view,.content{min-width:0;max-width:100%}
+
+    .side-burger{display:inline-flex;align-items:center;justify-content:center;
+      position:fixed;top:12px;left:12px;z-index:55;width:42px;height:42px;padding:0;
+      border:1px solid var(--border);border-radius:13px;background:rgba(255,255,255,.94);
+      backdrop-filter:blur(10px);color:var(--ink);cursor:pointer;
+      box-shadow:0 10px 26px -14px rgba(15,27,51,.5)}
+    .side-burger svg{width:20px;height:20px}
+    /* Une fois le tiroir ouvert, le bouton disparaît sous le voile. */
+    .app:not(.side-plie) .side-burger{display:none}
+    .side-voile{display:block;position:fixed;inset:0;z-index:59;background:rgba(15,27,51,.45);
+      backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .28s var(--ease)}
+    .app:not(.side-plie) .side-voile{opacity:1;pointer-events:auto}
+
+    /* Le contenu récupère toute la largeur, et laisse la place au bouton. */
+    .ptitre-zone:not(:empty){padding:16px 16px 0;margin-left:52px}
+    .content{padding:12px 16px 40px}
+    .ptitre-t{font-size:19px}
+
+    /* Grilles : une colonne partout, plus de débordement horizontal. */
+    .tuis,.dep-grid,.cards,.part-grid,.lex-grid,.badges-grid,.sim-grid,.sim-list{
+      grid-template-columns:1fr}
+    .acc-hero,.acc-hero-top,.obj-tete,.detail-head{flex-wrap:wrap}
+    .sim-hero{padding:18px 16px}
+    .sim-hero-title{font-size:19px}
+    .pcharge{grid-template-columns:1fr 1fr;gap:8px}
+    table{display:block;overflow-x:auto}
+
+    /* L'entraide : le fil prend l'écran, l'aparté passe en plein écran. */
+    .ch-corps{flex-direction:column}
+    .ch-corps.avec-aparte .ch-principal{max-width:100%}
+    .ch-fil{height:auto;min-height:46vh;max-height:58vh}
+    .ch-aparte{position:fixed;inset:0;width:auto;border-radius:0;z-index:70}
+    .ch-tete-b{flex-wrap:wrap;gap:10px}
+    .ch-msg{padding:6px 4px}
+    .ch-txt{max-width:100%}
+    .ch-form textarea{padding:11px 16px;font-size:16px}
+    .ch-envoi{width:44px;height:44px}
+
+    /* Modales et pop-ups : plein écran plutôt que carte étriquée. */
+    .modal,.cat-panneau,.lex-panneau,.sav-panneau{width:100%;max-width:100%;
+      max-height:92vh;border-radius:18px}
+  }
+
+  @media (max-width:600px){
+    .ptitre-t{font-size:17.5px}
+    .content{padding:10px 13px 36px}
+    .ptitre-zone:not(:empty){padding:14px 13px 0}
+    .pcharge{grid-template-columns:1fr}
+    .pcharge > button{grid-column:1;justify-self:start}
+    /* 16px minimum sur les champs : en dessous, iOS zoome tout seul. */
+    input,select,textarea{font-size:16px}
+    .step-cta,.btn,.chip{font-size:13px}
   }

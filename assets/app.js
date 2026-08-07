@@ -2221,8 +2221,13 @@
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
+    // Sur mobile la barre latérale est un tiroir : elle démarre TOUJOURS fermée,
+    // quelle que soit la préférence enregistrée sur ordinateur.
     sidePlie: (function(){
-      try { return localStorage.getItem('freehub_side_plie') === '1'; } catch(e){ return false; }
+      try {
+        if(window.matchMedia && window.matchMedia('(max-width:860px)').matches) return true;
+        return localStorage.getItem('freehub_side_plie') === '1';
+      } catch(e){ return false; }
     })(),
     badgePorte: (function(){
       try { return localStorage.getItem('freehub_badge_porte') || null; } catch(e){ return null; }
@@ -7891,6 +7896,18 @@
     + '</span>';
   }
 
+  // Le seuil où la barre latérale devient un tiroir (aligné sur app.css).
+  function surMobile(){
+    try { return window.matchMedia('(max-width:860px)').matches; } catch(e){ return false; }
+  }
+
+  // La saisie est une pilule tant qu'elle tient sur une ligne ; au-delà elle
+  // s'arrondit en carte, sinon les coins ronds mangent le texte.
+  function majFormeSaisie(champ){
+    if(!champ) return;
+    champ.classList.toggle('multi', champ.scrollHeight > 56);
+  }
+
   function chatMessageHtml(m, c, dansAparte){
     // Un message retiré ne laisse qu'une trace discrète, pour tout le monde.
     if(m.supprime){
@@ -7981,7 +7998,8 @@
               ? '<form class="ch-form ap" data-chat-form-fil>'
                 + '<textarea data-chat-fil-input rows="1" maxlength="800"'
                   + ' placeholder="Répondre dans l’aparté…"></textarea>'
-                + '<button type="submit" class="ch-envoi">Envoyer</button>'
+                + '<button type="submit" class="ch-envoi" aria-label="Envoyer"'
+                  + ' title="Envoyer">➤</button>'
               + '</form>'
               : ''))
     + '</aside>';
@@ -8079,8 +8097,10 @@
           + muet
           + '<form class="ch-form" data-chat-form'+(c.muet ? ' data-inactif' : '')+'>'
             + '<textarea data-chat-input rows="1" maxlength="800"'+(c.muet ? ' disabled' : '')
-              + ' placeholder="Une question, un retour d’expérience…"></textarea>'
-            + '<button type="submit" class="ch-envoi"'+(c.muet ? ' disabled' : '')+'>Envoyer</button>'
+              + ' placeholder="'+(surMobile() ? 'Ta question…' : 'Une question, un retour d’expérience…')
+              + '"></textarea>'
+            + '<button type="submit" class="ch-envoi"'+(c.muet ? ' disabled' : '')
+              + ' aria-label="Envoyer" title="Envoyer">➤</button>'
           + '</form>'
         + '</div>'
         + chatAparteHtml()
@@ -8751,6 +8771,13 @@
         + '<div class="ptitre-zone"></div>'
         + '<div class="content"></div>'
       + '</main>'
+      // Sur mobile la barre latérale devient un tiroir : ce bouton l'ouvre et
+      // le voile la referme. Les deux sont masqués sur grand écran.
+      + '<button class="side-burger" data-action="side-repli" aria-label="Ouvrir le menu">'
+        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+        + ' stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'
+      + '</button>'
+      + '<div class="side-voile" data-action="side-repli"></div>'
       + '</div>'
       + '<div id="modal-root"></div>'
       + '<div id="cat-root"></div>'
@@ -8867,6 +8894,7 @@
       chApres.value = chVal;
       chApres.style.height = 'auto';
       chApres.style.height = Math.min(chApres.scrollHeight, 140) + 'px';
+      majFormeSaisie(chApres);
       if(chFocus){
         chApres.focus();
         try { chApres.setSelectionRange(chPos, chPos); } catch(e){}
@@ -9162,6 +9190,8 @@
         // Revenir sur l'onglet Simulateur ramène à la liste des simulateurs.
         if(target === 'simulateur') state.sim.open = null;
         if(target === 'objectifs') state.objectifOuvert = null;
+        // Sur mobile, le menu est un tiroir : il se referme dès qu'on a choisi.
+        if(surMobile()) state.sidePlie = true;
         setState({ tab: target, partOpen: null, lexOuvert: null });
         break;
       }
@@ -9239,7 +9269,11 @@
         break;
       case 'side-repli': {
         var plie = !state.sidePlie;
-        try { localStorage.setItem('freehub_side_plie', plie ? '1' : '0'); } catch(err){}
+        // Sur mobile c'est un tiroir, pas une préférence : on ne l'enregistre
+        // pas, sinon l'ordinateur hériterait d'un menu replié sans raison.
+        if(!surMobile()){
+          try { localStorage.setItem('freehub_side_plie', plie ? '1' : '0'); } catch(err){}
+        }
         setState({ sidePlie: plie });
         break;
       }
@@ -10442,6 +10476,7 @@
       // Le champ grandit avec le texte, jusqu'à une limite raisonnable.
       ci.style.height = 'auto';
       ci.style.height = Math.min(ci.scrollHeight, 140) + 'px';
+      majFormeSaisie(ci);
       return;
     }
     var ls = e.target.closest('[data-lex-search]');

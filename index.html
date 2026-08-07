@@ -3,102 +3,417 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Freehub - Le hub des freelances</title>
+<title>Freehub - L'administratif, enfin compris</title>
+<meta name="description" content="Le premier espace qui rassemble tout pour comprendre l'administratif et la fiscalité de ton activité d'indépendant. Expliqué simplement, adapté à ton profil, gratuit.">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
-  body{margin:0;background:#fff;font-family:'Nunito',system-ui,sans-serif;color:#0f1b33;-webkit-font-smoothing:antialiased}
+  /* Le curseur URSSAF (recolorié en camaïeu de bleus) : réservé à la landing. */
+  body{margin:0;background:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#0f1b33;
+    -webkit-font-smoothing:antialiased;cursor:url('assets/curseur-urssaf.png') 3 3, auto}
   a{color:#2f6bff;text-decoration:none}
   a:hover{color:#1e46b8}
-  input,select,textarea,button{font-family:'Nunito',sans-serif}
+  input,select,textarea,button{font-family:'Plus Jakarta Sans',sans-serif}
   input:focus,select:focus,textarea:focus{border-color:#2f6bff!important;box-shadow:0 0 0 3px rgba(47,107,255,.14)}
+  /* L'ancre s'arrête juste sous la nav flottante : pas de vide inutile en haut. */
+  section{scroll-margin-top:22px}
+  /* Sélection de texte aux couleurs de la maison */
+  ::selection{background:#2f6bff;color:#fff}
+  ::-moz-selection{background:#2f6bff;color:#fff}
+  /* Le mot en dégradé (texte transparent) redevient lisible une fois sélectionné */
+  .grad::selection{-webkit-text-fill-color:#fff;color:#fff;background:#2f6bff}
   @keyframes fhfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
   @keyframes fhpop{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
   @keyframes fhfade{from{opacity:0}to{opacity:1}}
-  @keyframes fhdrift{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-7px) rotate(var(--r,0deg))}}
+  @keyframes fhdrift{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-8px) rotate(var(--r,0deg))}}
+  @keyframes fhdrift-c{0%,100%{transform:translate(-50%,0) rotate(var(--r,0deg))}50%{transform:translate(-50%,-8px) rotate(var(--r,0deg))}}
+  @keyframes fhtape{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-2px)}}
 
-  /* Interactions : gérées en CSS plutôt qu'en style inline. */
-  .nav-login{background:none;border:none;font-size:14.5px;font-weight:700;color:#0f1b33;cursor:pointer;transition:color .2s;white-space:nowrap}
-  .nav-login:hover{color:#2f6bff}
-  .nav-cta{font-size:14px;font-weight:700;color:#fff;background:#2f6bff;padding:9px 17px;border:none;border-radius:10px;cursor:pointer;transition:background .2s;white-space:nowrap}
-  .nav-cta:hover{background:#1e46b8}
-  .btn-hero{font-size:15.5px;font-weight:800;color:#fff;background:#2f6bff;padding:16px 30px;border:none;border-radius:13px;cursor:pointer;box-shadow:0 12px 26px -12px rgba(47,107,255,.7);transition:transform .2s,background .2s,box-shadow .2s}
-  .btn-hero:hover{background:#1e46b8;transform:translateY(-2px);box-shadow:0 16px 30px -12px rgba(47,107,255,.7)}
-  .card-prob{border:1px solid rgba(15,27,51,.09);border-radius:16px;padding:28px;transition:transform .25s,box-shadow .25s,border-color .25s}
-  .card-prob:hover{border-color:rgba(47,107,255,.25);transform:translateY(-4px);box-shadow:0 20px 40px -28px rgba(15,27,51,.5)}
-  .btn-white-cta{font-size:17px;font-weight:800;color:#2f6bff;background:#fff;padding:18px 36px;border:none;border-radius:14px;cursor:pointer;transition:transform .2s,box-shadow .2s}
-  .btn-white-cta:hover{transform:translateY(-3px);box-shadow:0 20px 40px -18px rgba(0,0,0,.4)}
-  .btn-blue{width:100%;padding:14px;background:#2f6bff;color:#fff;border:none;border-radius:12px;font-weight:800;font-size:15.5px;cursor:pointer;transition:background .2s}
-  .btn-blue:hover{background:#1e46b8}
-  .btn-blue[disabled]{opacity:.55;cursor:default}
-  .fld{width:100%;padding:12px 14px;border:1.5px solid rgba(15,27,51,.12);border-radius:11px;font-size:14.5px;outline:none;transition:.15s}
-  .fld-label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
-  .auth-err{display:none;font-size:13px;font-weight:600;color:#b91c1c;background:#fef2f2;border-radius:9px;padding:10px 12px;line-height:1.45}
+  /* ------------------------------------------------------------------ */
+  /* Boutons - remplissage animé au survol + halo bleu                   */
+  /* ------------------------------------------------------------------ */
+  .nav-cta,.btn-dark,.btn-ghost,.btn-white-cta{position:relative;overflow:hidden;z-index:0}
+  /* Le remplissage arrive en diagonale, depuis le coin haut-gauche. */
+  .nav-cta::before,.btn-dark::before,.btn-ghost::before,.btn-white-cta::before{content:'';position:absolute;
+    left:0;top:0;width:150%;aspect-ratio:1;border-radius:50%;
+    background:linear-gradient(120deg,#2f6bff,#1e46b8);
+    transform:translate(-50%,-50%) scale(0);transform-origin:center;z-index:-1;
+    transition:transform .4s cubic-bezier(.3,.7,.3,1)}
+  .nav-cta:hover::before,.btn-dark:hover::before,.btn-ghost:hover::before,.btn-white-cta:hover::before{transform:translate(-50%,-50%) scale(2.1)}
 
-  /* Bandeau + nav solidaires, collés en haut de l'écran pendant le défilement */
-  .top-fixe{position:sticky;top:0;z-index:50}
-
-  /* Nav - hauteur réduite */
-  .nav{display:flex;align-items:center;justify-content:space-between;gap:14px;
-    padding:9px 28px;background:rgba(255,255,255,.82);backdrop-filter:blur(12px);
-    border-bottom:1px solid rgba(15,27,51,.06);transition:box-shadow .3s}
-  .nav-logo{height:21px;display:block}
-  .nav-liens{display:flex;align-items:center;gap:30px;font-size:14px;font-weight:600}
+  /* ------------------------------------------------------------------ */
+  /* Nav flottante en pilule - halo bleu, se réduit au défilement        */
+  /* ------------------------------------------------------------------ */
+  .navwrap{position:sticky;top:14px;z-index:50;padding:0 16px}
+  /* Grille en 3 colonnes égales : les liens sont centrés sur la page, pas
+     poussés par la largeur du logo ou des boutons. */
+  .nav{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;
+    padding:9px;background:rgba(255,255,255,.88);backdrop-filter:blur(14px);
+    border:1px solid rgba(47,107,255,.1);border-radius:100px;
+    box-shadow:0 14px 40px -24px rgba(15,27,51,.35), 0 0 26px -8px rgba(47,107,255,.35);
+    transition:padding .35s,box-shadow .35s,background .35s}
+  .nav.mini{padding:5px;background:rgba(255,255,255,.94);
+    box-shadow:0 18px 46px -20px rgba(15,27,51,.5), 0 0 38px -6px rgba(47,107,255,.55)}
+  .nav-logo{height:21px;display:block;transition:height .35s}
+  .nav.mini .nav-logo{height:18px}
+  /* Padding porté par le logo, pas par la nav : la grille reste symétrique,
+     donc les liens tombent pile au centre de la page. */
+  .nav-marque{display:flex;align-items:center;padding-left:15px}
+  .nav-liens{display:flex;align-items:center;justify-content:center;gap:28px;font-size:14px;font-weight:600}
   .nav-liens a{color:#5b6b85}
-  .nav-actions{display:flex;align-items:center;gap:14px}
+  .nav-liens a:hover{color:#0f1b33}
+  .nav-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+  .nav-login{background:none;border:none;font-size:14px;font-weight:700;color:#0f1b33;cursor:pointer;
+    padding:10px 14px;border-radius:100px;transition:background .2s;white-space:nowrap}
+  .nav-login:hover{background:#f0f4fb}
+  .nav-cta{font-size:14px;font-weight:700;color:#fff;background:#0f1b33;padding:11px 20px;border:none;
+    border-radius:100px;cursor:pointer;transition:box-shadow .3s,transform .3s,padding .35s;white-space:nowrap;
+    box-shadow:0 0 20px -6px rgba(47,107,255,.55)}
+  .nav-cta:hover{transform:translateY(-1px);box-shadow:0 0 30px -4px rgba(47,107,255,.8)}
+  .nav.mini .nav-cta{padding:10px 17px}
 
   /* ------------------------------------------------------------------ */
-  /* Mise en page responsive                                            */
+  /* Hero - épuré, quadrillage discret + jeux de lumière bleus           */
   /* ------------------------------------------------------------------ */
-  /* Chaque section garde son fond pleine largeur ; le CONTENU est centré
-     dans un couloir max, au lieu d'être collé aux bords. */
-  .sec{padding:clamp(44px,7.5vw,84px) clamp(18px,4.5vw,48px)}
-  .sec-bleu{background:#f4f8ff;overflow:hidden}
+  .hero{position:relative;padding:clamp(56px,9vw,110px) clamp(18px,4.5vw,48px) clamp(48px,7vw,88px);
+    background:linear-gradient(180deg,#f6f9ff 0%,#fff 82%);overflow:hidden;margin-top:-76px;
+    /* La nav flottante mange le haut : on redescend le contenu d'autant pour
+       qu'il soit optiquement centré dans l'espace réellement libre. */
+    padding-top:clamp(168px,18.5vw,238px)}
+  .hero::before{content:'';position:absolute;inset:0;pointer-events:none;
+    background-image:linear-gradient(rgba(47,107,255,.06) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(47,107,255,.06) 1px,transparent 1px);
+    background-size:46px 46px;
+    -webkit-mask-image:radial-gradient(ellipse 72% 62% at 50% 36%,#000 20%,transparent 74%);
+    mask-image:radial-gradient(ellipse 72% 62% at 50% 36%,#000 20%,transparent 74%)}
+  .hero::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(640px 340px at 26% 20%,rgba(47,107,255,.13),transparent 65%),
+               radial-gradient(560px 320px at 74% 30%,rgba(124,58,237,.09),transparent 65%),
+               radial-gradient(420px 260px at 50% 78%,rgba(34,163,85,.05),transparent 70%)}
+  .hero-inner{max-width:860px;margin:0 auto;text-align:center;position:relative;z-index:2}
+  .hero-badge{display:inline-flex;align-items:center;gap:9px;background:#fff;border:1px solid rgba(47,107,255,.22);
+    color:#2f6bff;font-weight:700;font-size:13px;padding:8px 16px;border-radius:100px;margin-bottom:28px;
+    box-shadow:0 8px 24px -14px rgba(47,107,255,.6), 0 0 20px -8px rgba(47,107,255,.4)}
+  .hero-badge .pt{width:7px;height:7px;border-radius:50%;background:#2f6bff;box-shadow:0 0 0 3px rgba(47,107,255,.18)}
+  .hero h1{font-size:clamp(36px,6.2vw,66px);line-height:1.05;letter-spacing:-.04em;font-weight:800;margin:0 0 24px}
+  .hero h1 .grad{background:linear-gradient(100deg,#2f6bff 20%,#7c3aed 90%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#2f6bff}
+  .hero-sub{font-size:clamp(16px,2vw,18.5px);line-height:1.65;color:#5b6b85;margin:0 auto 34px;max-width:620px;font-weight:500}
+  .hero-ctas{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+  .btn-dark{font-size:15.5px;font-weight:700;color:#fff;background:#0f1b33;padding:16px 30px;border:none;
+    border-radius:100px;cursor:pointer;transition:box-shadow .3s,transform .3s;
+    box-shadow:0 14px 30px -16px rgba(15,27,51,.5), 0 0 30px -6px rgba(47,107,255,.45)}
+  .btn-dark:hover{transform:translateY(-2px);
+    box-shadow:0 18px 34px -14px rgba(47,107,255,.6), 0 0 44px -4px rgba(47,107,255,.65)}
+  .btn-ghost{font-size:15.5px;font-weight:700;color:#0f1b33;background:#fff;padding:16px 28px;
+    border:1.5px solid rgba(15,27,51,.13);border-radius:100px;cursor:pointer;
+    transition:color .35s,border-color .35s,transform .3s,box-shadow .3s}
+  .btn-ghost:hover{border-color:#2f6bff;color:#fff;transform:translateY(-2px);
+    box-shadow:0 0 30px -8px rgba(47,107,255,.6)}
+  /* Celui-ci se remplit depuis le bas-gauche, à contre-sens des autres. */
+  .btn-ghost::before{top:auto;bottom:0;transform:translate(-50%,50%) scale(0)}
+  .btn-ghost:hover::before{transform:translate(-50%,50%) scale(2.1)}
 
-  .hero{background:linear-gradient(180deg,#f4f8ff,#fff);
-    padding:clamp(40px,7vw,80px) clamp(18px,4.5vw,48px) clamp(38px,6.5vw,72px)}
-  .hero-grid{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;
-    gap:clamp(28px,4vw,56px);align-items:center}
+  /* Aperçus flottants (très grands écrans seulement) */
+  .hero-flot{position:absolute;z-index:1;background:#fff;border:1px solid rgba(15,27,51,.09);border-radius:16px;
+    padding:14px 17px;box-shadow:0 22px 50px -30px rgba(15,27,51,.5);font-size:13px;font-weight:700;
+    max-width:250px;animation:fhdrift 7s ease-in-out infinite}
+  @media (max-width:1439px){.hero-flot{display:none}}
 
-  .prob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1000px;margin:0 auto}
-  .temo-grid{max-width:960px;margin:0 auto;display:grid;grid-template-columns:repeat(2,1fr);
-    gap:22px 40px;align-items:start}
-  .sol-grid{max-width:1040px;margin:0 auto;display:grid;grid-template-columns:1fr 64px 1fr;
-    align-items:center;gap:0}
-  .sol-fleche{display:flex;align-items:center;justify-content:center}
-  .sol-fleche > div{width:48px;height:48px;border-radius:50%;background:#2f6bff;color:#fff;
-    display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;
-    box-shadow:0 14px 26px -12px rgba(47,107,255,.8);transition:transform .3s}
-  .cta-bloc{max-width:1040px;margin:0 auto;background:#2f6bff;border-radius:26px;
-    padding:clamp(36px,6vw,64px);text-align:center;color:#fff;position:relative;overflow:hidden}
-  .footer{padding:30px clamp(18px,4.5vw,48px);border-top:1px solid rgba(15,27,51,.07);
+  /* ------------------------------------------------------------------ */
+  /* Sections                                                            */
+  /* ------------------------------------------------------------------ */
+  .sec{padding:clamp(48px,8vw,96px) clamp(18px,4.5vw,48px)}
+  .sec-head{text-align:center;max-width:660px;margin:0 auto}
+
+  /* 100 % gratuit - le projecteur suit le curseur et colore le texte.
+     La section occupe presque tout l'écran : à un moment du défilement, le
+     chiffre est seul, c'est ce vide qui lui donne son impact. */
+  #gratuit{display:flex;align-items:center;justify-content:center;
+    min-height:min(86vh,720px);padding:clamp(60px,12vw,150px) clamp(18px,4.5vw,48px)}
+  .gratuit{max-width:1020px;margin:0 auto;text-align:center}
+  .gratuit-titre{font-size:clamp(62px,12.5vw,168px);line-height:1;letter-spacing:-.05em;font-weight:800;
+    margin:0;cursor:default;
+    background:radial-gradient(min(200px,26vw) circle at var(--mx,-999px) var(--my,-999px),
+      #2f6bff 0%, #7c3aed 52%, #d9e2f2 78%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+  /* Sans souris (tactile), pas de projecteur possible : couleur centrée fixe. */
+  @media (hover:none){.gratuit-titre{--mx:50%;--my:45%}}
+  .gratuit-titre::selection{-webkit-text-fill-color:#fff}
+
+  /* La promesse - 4 cartes qui montrent au lieu d'affirmer */
+  .promesses{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:1100px;margin:46px auto 0}
+  .pro{border-radius:22px;padding:26px 22px;position:relative;overflow:hidden;
+    transition:transform .35s cubic-bezier(.2,.8,.3,1),box-shadow .35s}
+  /* Léger flottement : la carte s'approche au lieu de simplement s'ombrer. */
+  .pro:hover{transform:translateY(-6px) scale(1.025);
+    box-shadow:0 22px 44px -26px rgba(47,107,255,.4)}
+  .pro .em{width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,.75);
+    display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px}
+  .pro .t{font-weight:800;font-size:18px;letter-spacing:-.025em;margin-bottom:14px}
+  .pro .demo{background:rgba(255,255,255,.78);border-radius:14px;padding:13px 15px;
+    font-size:13px;font-weight:700;line-height:1.5}
+  .pro .av{text-decoration:line-through;opacity:.45}
+  .pro .fl{display:block;font-size:11px;font-weight:800;opacity:.5;margin:3px 0}
+  .pro .etapes{display:flex;flex-direction:column;gap:7px}
+  .pro .et{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700}
+  .pro .et .n{width:18px;height:18px;border-radius:50%;background:currentColor;
+    display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .pro .et .n b{color:#fff;font-size:9.5px;font-weight:900}
+  .pro .prix{display:flex;align-items:baseline;gap:10px}
+  .pro .prix .z{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1}
+  .pro .prix .barre{font-size:15px;text-decoration:line-through;opacity:.4;font-weight:700}
+  .pro .src{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800}
+  .pro .src .pt{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+  .sec-head h2{font-size:clamp(28px,4.4vw,44px);line-height:1.08;letter-spacing:-.035em;font-weight:800;margin:0 0 16px}
+  .sec-head p{font-size:17px;color:#5b6b85;margin:0;line-height:1.6;font-weight:500}
+
+  /* Les peurs - petites scènes vécues, personnages + bulles             */
+  .scenes{max-width:900px;margin:clamp(30px,5vw,56px) auto 0;display:grid;
+    grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,46px) clamp(20px,4vw,52px)}
+  .scene{display:flex;align-items:center;gap:2px}
+  .scene.inv{flex-direction:row-reverse}
+  .scene:nth-child(2){margin-top:44px}
+  .scene:nth-child(3){margin-top:-14px}
+  .scene-illu{width:clamp(130px,15vw,185px);height:auto;flex:none}
+  .scene-bulle{background:#fff;border:1px solid rgba(15,27,51,.1);border-radius:20px 20px 20px 5px;
+    padding:16px 20px;font-size:clamp(15.5px,1.8vw,18px);font-weight:700;line-height:1.35;letter-spacing:-.01em;
+    box-shadow:0 18px 38px -26px rgba(15,27,51,.55);animation:fhdrift 7.5s ease-in-out infinite}
+  .scene.inv .scene-bulle{border-radius:20px 20px 5px 20px}
+
+  /* Le retournement - boîte sombre arrondie + schéma de la délégation   */
+  .flip-boite{max-width:1160px;margin:0 auto;background:#0f1b33;color:#fff;border-radius:clamp(28px,4vw,46px);
+    position:relative;overflow:hidden;padding:clamp(36px,5.5vw,68px) clamp(22px,4.5vw,60px)}
+  .flip-boite::before{content:'';position:absolute;top:-160px;left:18%;width:680px;height:460px;
+    background:radial-gradient(ellipse,rgba(47,107,255,.42),transparent 65%);pointer-events:none}
+  .flip-boite::after{content:'';position:absolute;bottom:-180px;right:-80px;width:560px;height:420px;
+    background:radial-gradient(ellipse,rgba(47,107,255,.24),transparent 65%);pointer-events:none}
+  .flip-grille{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,4.5vw,64px);align-items:center;position:relative;z-index:1}
+  .flip-texte h2{font-size:clamp(26px,3.8vw,40px);line-height:1.12;letter-spacing:-.035em;font-weight:800;margin:0 0 18px}
+  .flip-texte .accent{color:#7aa7ff}
+  .flip-texte p{font-size:16.5px;line-height:1.65;color:rgba(255,255,255,.75);margin:0 0 26px;font-weight:500}
+  .flip-pts{display:flex;flex-direction:column;gap:11px}
+  .flip-pt{display:inline-flex;align-items:center;gap:11px;font-size:14.5px;font-weight:600}
+  .flip-pt .ck{width:21px;height:21px;border-radius:50%;background:#2f6bff;display:inline-flex;align-items:center;
+    justify-content:center;font-size:11px;font-weight:800;flex:none;box-shadow:0 0 14px -2px rgba(47,107,255,.8)}
+
+  /* Le relevé : ce que tu paies d'un côté, ce que tu comprends de l'autre. */
+  .releve{background:#fff;border-radius:22px;padding:24px 22px 20px;color:#0f1b33;
+    transform:rotate(-1.5deg);font-family:'Nunito',sans-serif;
+    box-shadow:0 34px 70px -34px rgba(0,0,0,.75), 0 0 40px -12px rgba(47,107,255,.55)}
+  .rv-tete{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;
+    padding-bottom:11px;border-bottom:1.5px dashed rgba(15,27,51,.16);
+    font-size:10.5px;font-weight:900;letter-spacing:.06em;color:#8a97ad}
+  .rv-l{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;
+    padding:13px 0;border-bottom:1px solid rgba(15,27,51,.07)}
+  .rv-q{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;min-width:0}
+  .rv-q .e{width:29px;height:29px;border-radius:9px;background:#f2f5fb;display:inline-flex;
+    align-items:center;justify-content:center;font-size:14px;flex:none}
+  .rv-q small{display:block;font-size:11px;font-weight:600;color:#8a97ad;letter-spacing:0}
+  .rv-cout{font-size:13px;font-weight:900;color:#8a5a00;background:#ffefd0;border-radius:100px;
+    padding:4px 11px;white-space:nowrap}
+  .rv-jauge{width:74px;height:8px;border-radius:100px;background:#eef1f7;position:relative;overflow:hidden}
+  .rv-jauge i{position:absolute;inset:0 auto 0 0;width:var(--w,0);border-radius:100px;background:#d6dce8}
+  .rv-total{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;
+    margin-top:14px;padding-top:14px;border-top:1.5px dashed rgba(15,27,51,.16)}
+  .rv-total .lb{font-size:14px;font-weight:900}
+  .rv-total .rv-cout{background:#0f1b33;color:#fff}
+  .rv-zero{font-size:13px;font-weight:900;color:#b91c1c;background:#fee2e2;border-radius:100px;
+    padding:4px 11px;text-align:center;white-space:nowrap}
+  .rv-tampon{position:absolute;right:-10px;bottom:-30px;background:#000;color:#fff;border-radius:100px;
+    padding:11px 20px;font-size:12.5px;font-weight:800;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;
+    box-shadow:0 18px 36px -14px rgba(0,0,0,.85), 0 0 26px -8px rgba(47,107,255,.7);
+    --r:2deg;animation:fhdrift 7s ease-in-out infinite}
+
+  /* L'outil - chaque bloc prend la couleur de son univers dans l'app    */
+  .featbox{max-width:1100px;margin:0 auto 20px;background:var(--fb,#f6f9ff);border-radius:clamp(24px,3vw,36px);
+    padding:clamp(22px,4vw,50px)}
+  .feat{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,4.5vw,64px);align-items:center}
+  .feat-txt .fchip{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--fc,#2f6bff);
+    font-weight:700;font-size:13px;padding:7px 14px;border-radius:100px;margin-bottom:18px;
+    box-shadow:0 8px 20px -14px rgba(15,27,51,.4)}
+  .feat-txt h3{font-size:clamp(22px,2.9vw,30px);line-height:1.16;letter-spacing:-.03em;font-weight:800;margin:0 0 14px}
+  .feat-txt p{font-size:15.5px;line-height:1.65;color:#5b6b85;margin:0 0 18px;font-weight:500}
+  .feat-stats{display:flex;gap:8px;flex-wrap:wrap}
+  .fstat{font-size:12.5px;font-weight:700;color:#0f1b33;background:#fff;border-radius:100px;padding:6px 13px}
+  .feat-visu{position:relative}
+  @media (min-width:961px){.feat.inv .feat-txt{order:2}.feat.inv .feat-visu{order:1}}
+
+  /* Cartes visuelles : légèrement inclinées, sans habillage navigateur */
+  .visu-carte{background:#fff;border:1px solid rgba(15,27,51,.08);border-radius:20px;
+    box-shadow:0 30px 64px -34px rgba(15,27,51,.5);transform:rotate(var(--tilt,0deg))}
+  .mock{padding:18px;font-family:'Nunito',sans-serif}
+  .mock-fil{font-size:11.5px;font-weight:800;color:var(--fc,#2f6bff);margin-bottom:10px}
+  .mock-titre{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:800;font-size:14.5px;margin-bottom:14px}
+  .mock-tag{font-size:11.5px;font-weight:800;background:var(--fb,#e6efff);color:var(--fc,#2f6bff);padding:4px 10px;border-radius:100px}
+
+  /* Pastilles en orbite autour du parcours : le large panel de sujets */
+  .orbite{position:absolute;z-index:2;background:#fff;border:1px solid rgba(15,27,51,.09);border-radius:100px;
+    padding:8px 14px;font-size:12.5px;font-weight:800;font-family:'Nunito',sans-serif;white-space:nowrap;
+    box-shadow:0 14px 30px -18px rgba(15,27,51,.55);animation:fhdrift 7s ease-in-out infinite}
+
+  /* Maquette parcours */
+  .mk-ok{display:flex;align-items:center;gap:10px;background:#effaf3;color:#1c7c3f;border-radius:11px;
+    padding:10px 13px;font-size:13.5px;font-weight:700;margin-bottom:8px}
+  .mk-ok .c{width:19px;height:19px;border-radius:50%;background:#22a355;color:#fff;display:inline-flex;
+    align-items:center;justify-content:center;font-size:10.5px;font-weight:900;flex:none}
+  .mk-now{background:#f2f6ff;border:1.5px solid rgba(37,99,235,.35);border-radius:14px;padding:16px;margin:10px 0 8px}
+  .mk-now .sur{font-size:11px;font-weight:900;letter-spacing:.08em;color:#2563eb;margin-bottom:7px}
+  .mk-now .tt{font-size:16.5px;font-weight:800;letter-spacing:-.01em;margin-bottom:12px}
+  .mk-now .go{display:inline-block;background:#2563eb;color:#fff;font-size:13px;font-weight:800;
+    border:none;border-radius:100px;padding:9px 16px;box-shadow:0 0 18px -6px rgba(37,99,235,.7)}
+  .mk-apres{font-size:13.5px;color:#a3aec2;font-weight:700;padding:9px 13px}
+
+  /* Le jeu de cartes des simulateurs */
+  .deck{position:relative;max-width:430px;margin:0 auto;padding-top:52px}
+  .deck-dos{position:absolute;top:0;background:#fff;border:1px solid rgba(15,27,51,.09);border-radius:16px;
+    padding:13px 16px 26px;font-family:'Nunito',sans-serif;font-weight:800;font-size:13.5px;white-space:nowrap;
+    box-shadow:0 16px 36px -26px rgba(15,27,51,.6)}
+  .deck-dos.g{left:1%;transform:rotate(-5deg)}
+  .deck-dos.d{right:1%;transform:rotate(4deg)}
+  .deck > .visu-carte{position:relative;z-index:1}
+
+  /* Maquette dépenses */
+  .mk-dep{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 4px;
+    border-bottom:1px solid rgba(15,27,51,.06);font-size:14px;font-weight:700}
+  .mk-dep:last-child{border-bottom:none}
+  .mk-verdict{font-size:11.5px;font-weight:800;padding:5px 11px;border-radius:100px;white-space:nowrap}
+  .v-ok{background:#e7f6ec;color:#1c7c3f}
+  .v-non{background:#f2f4f8;color:#7b8798}
+  .v-info{background:#fff3e0;color:#b45309}
+
+  /* Le schéma « ton profil irrigue tout » */
+  .prof-schema{position:relative;aspect-ratio:4/3.1}
+  .prof-schema svg{position:absolute;inset:0;width:100%;height:100%}
+  .prof-centre{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;
+    background:#0f1b33;color:#fff;border-radius:16px;padding:12px 20px;font-family:'Nunito',sans-serif;
+    font-weight:800;font-size:14px;box-shadow:0 18px 40px -18px rgba(15,27,51,.7), 0 0 26px -8px rgba(47,107,255,.55)}
+  .prof-centre .ss{display:block;font-size:11px;font-weight:700;opacity:.65;margin-top:2px}
+  .prof-noeud{position:absolute;transform:translate(-50%,-50%);border-radius:100px;padding:8px 14px;
+    font-size:12.5px;font-weight:800;font-family:'Nunito',sans-serif;white-space:nowrap;
+    box-shadow:0 12px 26px -16px rgba(15,27,51,.55)}
+
+  /* Maquette calendrier + notification */
+  .mk-chev{width:22px;height:22px;border-radius:50%;background:#f0f3f9;color:#5b6b85;display:inline-flex;
+    align-items:center;justify-content:center;font-size:12px;font-weight:900}
+  .mk-mois{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px}
+  .mk-mois i{font-style:normal;font-size:11.5px;font-weight:700;color:#7b8798;display:flex;align-items:center;
+    justify-content:center;aspect-ratio:1;border-radius:8px}
+  .mk-mois i.pt{background:#4a6180;color:#fff;font-weight:900;box-shadow:0 6px 14px -6px rgba(74,97,128,.8)}
+  .mk-avenir{border-top:1px dashed rgba(15,27,51,.12);margin-top:13px;padding-top:12px}
+  .mk-av-l{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;padding:5px 0}
+  .mk-av-l .pt2{width:9px;height:9px;border-radius:50%;flex:none}
+  .mk-av-l .dans{margin-left:auto;font-size:11px;font-weight:800;color:#5b6b85;background:#f0f3f9;
+    border-radius:100px;padding:3px 9px;white-space:nowrap}
+  .mk-notif{position:absolute;right:-14px;bottom:-22px;width:min(300px,86%);background:#fff;
+    border:1px solid rgba(15,27,51,.1);border-radius:15px;padding:14px 16px;font-family:'Nunito',sans-serif;
+    box-shadow:0 26px 50px -26px rgba(15,27,51,.6);animation:fhdrift 8s ease-in-out infinite;--r:1.2deg;z-index:2}
+  .mk-notif .de{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:#8a97ad;margin-bottom:6px}
+  .mk-notif .tx{font-size:13.5px;font-weight:700;line-height:1.45}
+
+  /* Maquette entraide - un vrai chat en direct */
+  .mk-direct{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:900;letter-spacing:.05em;
+    color:#0f9d6e;background:#f0fdf6;border-radius:100px;padding:4px 10px}
+  .mk-direct .pt3{width:7px;height:7px;border-radius:50%;background:#0f9d6e;animation:fhtape 1.4s infinite}
+  .mk-msg{display:flex;gap:10px;margin-bottom:13px}
+  .mk-av{width:34px;height:34px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:12.5px;flex:none}
+  .mk-bulle{background:#f4f6fa;border-radius:4px 14px 14px 14px;padding:10px 13px;font-size:13.5px;line-height:1.45;font-weight:600}
+  .mk-qui{font-size:11.5px;font-weight:800;margin-bottom:3px}
+  .mk-qui .hh{font-weight:700;color:#a3aec2;margin-left:6px}
+  .mk-merci{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;color:#0f9d6e;
+    background:#f0fdf6;border-radius:100px;padding:4px 10px;margin-top:7px}
+  .mk-tape{display:flex;align-items:center;gap:8px;font-size:12px;color:#8a97ad;font-weight:700;margin:4px 0 12px}
+  .mk-tape .p{width:5px;height:5px;border-radius:50%;background:#8a97ad;display:inline-block;animation:fhtape 1.2s infinite}
+  .mk-input{display:flex;align-items:center;gap:8px;border:1.5px solid rgba(15,27,51,.12);border-radius:100px;
+    padding:7px 7px 7px 15px;font-size:13px;color:#a3aec2;font-weight:600}
+  .mk-input .env{margin-left:auto;width:30px;height:30px;border-radius:50%;background:#0f9d6e;color:#fff;
+    display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:none;
+    box-shadow:0 0 16px -5px rgba(15,157,110,.8)}
+
+  /* CTA final - l'onde bleue qui remplit le bloc au survol du bouton    */
+  .cta-bloc{max-width:1100px;margin:0 auto;background:linear-gradient(135deg,#1e46b8,#2f6bff);border-radius:32px;
+    padding:clamp(40px,6.5vw,72px);text-align:center;color:#fff;position:relative;overflow:hidden;
+    box-shadow:0 30px 70px -30px rgba(47,107,255,.6)}
+  .cta-bloc::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);
+    background-size:46px 46px;transition:opacity .9s ease}
+  /* Pendant l'onde, seul le voile plein écran garde le quadrillage : pas de doublon. */
+  .cta-bloc:has(.btn-white-cta:hover)::before{opacity:0}
+  /* L'onde part du bouton et recouvre TOUTE la page (position fixe), nav comprise. */
+  /* Hors survol = état de SORTIE : courbe franche qui part vite, l'onde se
+     rétracte d'un coup au lieu de traîner. L'entrée garde sa montée douce. */
+  .cta-onde{position:fixed;left:var(--ox,50%);top:var(--oy,85%);width:70px;height:70px;border-radius:50%;
+    transform:translate(-50%,-50%) scale(0);background:radial-gradient(circle at 50% 38%,#1e46b8 0%,#0f1b33 72%);
+    transition:transform .5s cubic-bezier(.55,0,.35,1);pointer-events:none;z-index:0;
+    box-shadow:0 0 90px 40px rgba(47,107,255,.55)}
+  .cta-bloc:has(.btn-white-cta:hover) .cta-onde{transition:transform 1.05s cubic-bezier(.3,.6,.2,1)}
+  .cta-voile{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease;z-index:0;
+    background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);
+    background-size:46px 46px}
+  .cta-bloc:has(.btn-white-cta:hover){z-index:70}
+  .cta-bloc:has(.btn-white-cta:hover) .cta-onde{transform:translate(-50%,-50%) scale(95)}
+  .cta-bloc:has(.btn-white-cta:hover) .cta-voile{opacity:1;transition:opacity .9s ease}
+  .cta-contenu{position:relative;z-index:2}
+  .btn-white-cta{font-size:16.5px;font-weight:700;color:#2f6bff;background:#fff;padding:17px 34px;border:none;
+    border-radius:100px;cursor:pointer;transition:color .35s,transform .3s,box-shadow .3s;
+    box-shadow:0 0 34px -8px rgba(255,255,255,.7)}
+  .btn-white-cta:hover{color:#fff;transform:translateY(-3px);
+    box-shadow:0 20px 40px -18px rgba(0,0,0,.5), 0 0 46px -4px rgba(122,167,255,.9)}
+  .cta-login{background:none;border:none;color:rgba(255,255,255,.85);font-size:14px;font-weight:600;
+    cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+  .cta-login:hover{color:#fff}
+
+  .footer{max-width:1120px;margin:0 auto;padding:30px clamp(18px,4.5vw,48px);border-top:1px solid rgba(15,27,51,.07);
     display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 
+  /* ------------------------------------------------------------------ */
+  /* Responsive                                                          */
+  /* ------------------------------------------------------------------ */
   @media (max-width:960px){
-    .hero-grid{grid-template-columns:1fr;text-align:left}
-    .hero-visu{max-width:480px;width:100%;margin:0 auto}
-    .prob-grid{grid-template-columns:1fr;max-width:520px}
-    .temo-grid{grid-template-columns:1fr;max-width:560px}
-    .temo-grid > div{justify-self:stretch !important}
-    .sol-grid{grid-template-columns:1fr;max-width:560px;gap:18px}
-    .sol-fleche > div{transform:rotate(90deg)}
+    .scenes{grid-template-columns:1fr;max-width:520px;gap:26px}
+    .scene:nth-child(2),.scene:nth-child(3){margin-top:0}
+    .flip-grille{grid-template-columns:1fr}
+    .feat{grid-template-columns:1fr}
+    .feat-visu{max-width:480px;width:100%;margin:0 auto}
+    .mk-notif{right:0;bottom:-18px}
+    .promesses{grid-template-columns:1fr 1fr;max-width:660px}
   }
   @media (max-width:820px){
     .nav-liens{display:none}
   }
   @media (max-width:600px){
-    .nav{padding:9px 16px}
-    .nav-cta{padding:9px 14px;font-size:13.5px}
-    .nav-login{font-size:13.5px}
-    .alpha-extra{display:none}
-    .footer{justify-content:center;text-align:center}
+    .navwrap{top:10px;padding:0 10px}
+    .nav{padding:7px;gap:8px}
+    .nav-marque{padding-left:7px}
+    .nav-logo{height:17px}
+    .nav-actions{gap:2px}
+    .nav-cta{padding:9px 13px;font-size:12.5px}
+    .nav-login{font-size:12.5px;padding:9px 7px}
+    .hero-ctas .btn-ghost{display:none}
+    .scene-illu{width:112px}
+    .orbite{font-size:11px;padding:6px 11px}
+    .deck-dos{font-size:11.5px;padding:11px 12px 24px}
+    .promesses{grid-template-columns:1fr;max-width:400px}
+    /* Le relevé perd sa colonne « ça coûte » : l'essentiel reste lisible. */
+    .releve{padding:20px 16px 16px;transform:rotate(-1deg)}
+    .rv-tete,.rv-l,.rv-total{grid-template-columns:1fr auto;gap:9px}
+    .rv-tete span:nth-child(2),.rv-l .rv-cout,.rv-total .rv-cout{display:none}
+    .rv-q{font-size:13px;gap:8px}
+    .rv-q .e{width:26px;height:26px;font-size:13px}
+    .rv-q small{font-size:10.5px}
+    .rv-jauge{width:54px}
+    .rv-tampon{right:auto;left:50%;transform:translateX(-50%) rotate(2deg);bottom:-18px;
+      font-size:11.5px;padding:9px 15px;animation:none}
   }
 
   /* ------------------------------------------------------------------ */
@@ -131,14 +446,12 @@
     .auth-right{padding:24px 20px}
   }
 
-  /* Bandeau alpha - tout en haut, au-dessus de la nav */
-  .alpha-bar{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
-    padding:9px 24px;background:linear-gradient(90deg,#0f1b33 0%,#1e46b8 55%,#2f6bff 100%);
-    color:#fff;font-size:13px;font-weight:600;letter-spacing:.01em;text-align:center}
-  .alpha-tag{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
-    background:rgba(255,255,255,.16);padding:3px 9px;border-radius:100px}
-  .alpha-sep{opacity:.45}
-  .alpha-strong{font-weight:700;color:#cfe0ff}
+  .btn-blue{width:100%;padding:14px;background:#2f6bff;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:15.5px;cursor:pointer;transition:background .2s}
+  .btn-blue:hover{background:#1e46b8}
+  .btn-blue[disabled]{opacity:.55;cursor:default}
+  .fld{width:100%;padding:12px 14px;border:1.5px solid rgba(15,27,51,.12);border-radius:11px;font-size:14.5px;outline:none;transition:.15s}
+  .fld-label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+  .auth-err{display:none;font-size:13px;font-weight:600;color:#b91c1c;background:#fef2f2;border-radius:9px;padding:10px 12px;line-height:1.45}
 
   /* Champ « code d'accès » : mis en avant, saisie en majuscules */
   .code-box{background:#f4f8ff;border:1.5px dashed #b9cdf6;border-radius:12px;padding:13px 14px}
@@ -158,178 +471,359 @@
 <body>
 
 <div id="top">
-  <!-- ============ BANDEAU ALPHA ============ -->
-  <!-- Bandeau + nav collés ensemble en haut : le bandeau alpha reste visible au scroll. -->
-  <div class="top-fixe">
-  <div class="alpha-bar">
-    <span class="alpha-tag">Alpha</span>
-    <span>FreeHub est en <span class="alpha-strong">alpha privée jusqu'en septembre 2026</span></span>
-    <span class="alpha-sep alpha-extra">·</span>
-    <span class="alpha-extra">Accès ultra limité, sur code d'invitation</span>
+  <!-- ============ NAV FLOTTANTE ============ -->
+  <div class="navwrap">
+    <nav id="fhnav" class="nav">
+      <div class="nav-marque"><a href="#top"><img src="assets/freehub-logo.png" alt="Freehub" class="nav-logo"></a></div>
+      <div class="nav-liens">
+        <a href="#probleme">Toi aussi ?</a>
+        <a href="#outil">Nos outils</a>
+      </div>
+      <div class="nav-actions">
+        <button class="nav-login" onclick="openAuth('login')">Se connecter</button>
+        <button class="nav-cta" onclick="openAuth('signup')">Rejoindre l'alpha</button>
+      </div>
+    </nav>
   </div>
-
-  <!-- ============ NAV ============ -->
-  <nav id="fhnav" class="nav">
-    <a href="#top"><img src="assets/freehub-logo.png" alt="Freehub" class="nav-logo"></a>
-    <div class="nav-liens">
-      <a href="#probleme">Le problème</a>
-      <a href="#solution">La solution</a>
-      <a href="#temoignages">Témoignages</a>
-    </div>
-    <div class="nav-actions">
-      <button class="nav-login" onclick="openAuth('login')">Se connecter</button>
-      <button class="nav-cta" onclick="openAuth('signup')">Créer mon compte</button>
-    </div>
-  </nav>
-  </div><!-- /.top-fixe -->
 
   <!-- ============ HERO ============ -->
   <section class="hero">
-    <div class="hero-grid">
-    <div>
-      <div data-reveal data-reveal-delay="0" style="display:inline-flex;align-items:center;gap:8px;background:#e6efff;color:#2f6bff;font-weight:700;font-size:13px;padding:7px 14px;border-radius:100px;margin-bottom:22px">🇫🇷 Pensé pour les indépendants français</div>
-      <h1 data-reveal data-reveal-delay="90" style="font-size:clamp(33px,5.2vw,54px);line-height:1.06;letter-spacing:-.03em;font-weight:800;margin:0 0 20px">L'administratif ne devrait jamais te bloquer.</h1>
-      <p data-reveal data-reveal-delay="180" style="font-size:clamp(15.5px,2vw,18px);line-height:1.55;color:#5b6b85;margin:0 0 30px;max-width:470px">Statuts, cotisations, impôts… On te l'explique simplement, on te donne les bons outils, et on personnalise tout selon ton profil. Tu avances, enfin sereinement.</p>
-      <div data-reveal data-reveal-delay="270" style="display:flex;gap:14px;margin-bottom:22px">
-        <button class="btn-hero" onclick="openAuth('signup')">Commencer gratuitement</button>
+    <!-- Aperçus flottants : de vraies bribes du produit, pas du décor. -->
+    <div class="hero-flot" style="left:calc(50% - 710px);top:38%;--r:-2deg">
+      <div style="display:flex;align-items:center;gap:9px">
+        <span style="width:20px;height:20px;border-radius:50%;background:#22a355;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">✓</span>
+        Récupérer ton SIRET
       </div>
-      <div data-reveal data-reveal-delay="360" style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#5b6b85;font-weight:600"><span style="color:#2f6bff;font-weight:800">✓</span> 100% gratuit · Prêt en 2 minutes · Sans carte bancaire</div>
+      <div style="font-size:11.5px;color:#8a97ad;margin-top:4px;font-weight:600">Étape terminée · parcours auto-entreprise</div>
     </div>
-    <div class="hero-visu" data-reveal data-reveal-delay="200" style="position:relative">
-      <div style="background:#fff;border:1px solid rgba(15,27,51,.1);border-radius:18px;box-shadow:0 34px 70px -34px rgba(47,107,255,.45);padding:22px;animation:fhfloat 6s ease-in-out infinite">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><span style="font-weight:700;font-size:14px">Ton simulateur de charges</span><span style="font-size:12px;color:#2f6bff;font-weight:700;background:#e6efff;padding:4px 9px;border-radius:7px">Micro-BNC</span></div>
-        <!-- Courbe du revenu net : SVG maison (aucune image externe, net sur tout écran).
-             vector-effect garde l'épaisseur du trait constante malgré l'étirement. -->
-        <div style="position:relative;height:150px;border-radius:12px;background:linear-gradient(180deg,#f7faff,#eef4ff);overflow:hidden">
-          <svg width="100%" height="150" viewBox="0 0 340 150" preserveAspectRatio="none" role="img" aria-label="Courbe du revenu net, en progression sur l'année">
-            <defs>
-              <linearGradient id="fhAire" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#2f6bff" stop-opacity=".26"/>
-                <stop offset="100%" stop-color="#2f6bff" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <g stroke="#d3e0f7" stroke-width="1" vector-effect="non-scaling-stroke" opacity=".9">
-              <line x1="0" y1="45" x2="340" y2="45"/>
-              <line x1="0" y1="85" x2="340" y2="85"/>
-              <line x1="0" y1="125" x2="340" y2="125"/>
-            </g>
-            <path fill="url(#fhAire)" d="M0.0,105.5 C5.1,103.2 20.6,92.9 30.9,91.7 C41.2,90.5 51.5,100.5 61.8,98.6 C72.1,96.7 82.4,82.5 92.7,80.2 C103.0,77.9 113.3,86.7 123.6,84.8 C133.9,82.9 144.2,70.6 154.5,68.7 C164.8,66.8 175.2,75.2 185.5,73.3 C195.8,71.4 206.1,59.1 216.4,57.2 C226.7,55.3 237.0,63.3 247.3,61.8 C257.6,60.3 267.9,51.5 278.2,48.0 C288.5,44.5 298.8,44.0 309.1,41.1 C319.4,38.2 334.9,32.5 340.0,30.8 L340,150 L0,150 Z"/>
-            <path fill="none" stroke="#2f6bff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" d="M0.0,105.5 C5.1,103.2 20.6,92.9 30.9,91.7 C41.2,90.5 51.5,100.5 61.8,98.6 C72.1,96.7 82.4,82.5 92.7,80.2 C103.0,77.9 113.3,86.7 123.6,84.8 C133.9,82.9 144.2,70.6 154.5,68.7 C164.8,66.8 175.2,75.2 185.5,73.3 C195.8,71.4 206.1,59.1 216.4,57.2 C226.7,55.3 237.0,63.3 247.3,61.8 C257.6,60.3 267.9,51.5 278.2,48.0 C288.5,44.5 298.8,44.0 309.1,41.1 C319.4,38.2 334.9,32.5 340.0,30.8"/>
-          </svg>
-          <!-- Le point de fin et l'étiquette sont en HTML : jamais déformés par l'étirement. -->
-          <span style="position:absolute;right:9px;top:15px;width:9px;height:9px;border-radius:50%;background:#2f6bff;box-shadow:0 0 0 3px rgba(47,107,255,.22)"></span>
-          <span style="position:absolute;left:12px;top:11px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8a9bbb">Revenu net · 12 mois</span>
-          <span style="position:absolute;right:11px;bottom:9px;font-size:11px;font-weight:800;color:#2f6bff;background:rgba(255,255,255,.86);padding:2px 7px;border-radius:100px">+38 % sur l'année</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
-          <div style="background:#f4f8ff;border-radius:11px;padding:13px"><div style="font-size:12px;color:#5b6b85;font-weight:600">Cotisations</div><div style="font-size:22px;font-weight:800">21,1%</div></div>
-          <div style="background:#f4f8ff;border-radius:11px;padding:13px"><div style="font-size:12px;color:#5b6b85;font-weight:600">Net estimé</div><div style="font-size:22px;font-weight:800;color:#2f6bff">3 940€</div></div>
-        </div>
+    <div class="hero-flot" style="right:calc(50% - 710px);top:50%;--r:2deg;animation-delay:.8s">
+      <div style="display:flex;align-items:center;gap:9px">📬 La CFE arrive dans 15 jours</div>
+      <div style="font-size:11.5px;color:#8a97ad;margin-top:4px;font-weight:600">On t'explique comment la payer, en 3 étapes</div>
+    </div>
+
+    <div class="hero-inner">
+      <div class="hero-badge" data-reveal><span class="pt"></span> Alpha privée · Accès sur invitation</div>
+      <h1 data-reveal data-reveal-delay="90">Ton métier, tu gères.<br><span class="grad">L'administratif</span>, tu pries.</h1>
+      <p class="hero-sub" data-reveal data-reveal-delay="180">Freehub rassemble au même endroit tout ce qu'il faut pour comprendre l'administratif et la fiscalité de ton activité. <strong style="color:#0f1b33">On t'explique, tu décides.</strong></p>
+      <div class="hero-ctas" data-reveal data-reveal-delay="280">
+        <button class="btn-dark" onclick="openAuth('signup')">Rejoindre l'alpha</button>
+        <button class="btn-ghost" onclick="document.getElementById('outil').scrollIntoView({behavior:'smooth'})">Voir ce qu'il y a dedans</button>
       </div>
     </div>
-    </div><!-- /.hero-grid -->
   </section>
 
-  <!-- ============ PROBLÈME ============ -->
+  <!-- ============ LA PROMESSE ============ -->
+  <section class="sec">
+    <div class="sec-head" data-reveal>
+      <h2 style="max-width:860px;margin-left:auto;margin-right:auto">Du sérieux, sans se prendre au sérieux.</h2>
+    </div>
+    <div class="promesses">
+      <div class="pro" data-reveal style="background:#f2f6ff;color:#1e3a8a">
+        <div class="em">🗣️</div>
+        <div class="t">Zéro jargon</div>
+        <div class="demo">
+          <span class="av">« Abattement forfaitaire »</span>
+          <span class="fl">↓ chez nous</span>
+          La part de ton chiffre d'affaires que le fisc ne taxe pas.
+        </div>
+      </div>
+      <div class="pro" data-reveal data-reveal-delay="80" style="background:#fffbef;color:#7c4a03">
+        <div class="em">🎓</div>
+        <div class="t">Jamais à ta place</div>
+        <div class="demo">
+          <div class="etapes">
+            <span class="et"><span class="n"><b>1</b></span> On t'explique</span>
+            <span class="et"><span class="n"><b>2</b></span> Tu comprends</span>
+            <span class="et"><span class="n"><b>3</b></span> Tu décides</span>
+          </div>
+        </div>
+      </div>
+      <div class="pro" data-reveal data-reveal-delay="160" style="background:#f7f3ff;color:#5b21b6">
+        <div class="em">🧾</div>
+        <div class="t">Zéro chiffre inventé</div>
+        <div class="demo">
+          Chaque seuil, chaque taux vient d'ici :
+          <div class="src" style="margin-top:8px"><span class="pt"></span> impots.gouv.fr</div>
+          <div class="src" style="margin-top:5px"><span class="pt"></span> urssaf.fr</div>
+        </div>
+      </div>
+      <div class="pro" data-reveal data-reveal-delay="240" style="background:#f0fdf6;color:#065f46">
+        <div class="em">🆓</div>
+        <div class="t">Gratuit, point</div>
+        <div class="demo">
+          <div class="prix"><span class="z">0 €</span><span class="barre">/ mois</span></div>
+          <div style="margin-top:9px;font-size:12.5px">Pas de carte bancaire, pas d'offre « pro » qui te bloque à la première question.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 100 % GRATUIT ============ -->
+  <!-- Volontairement seule à l'écran : le vide autour est ce qui donne au
+       chiffre sa force. Ne pas resserrer ces marges. -->
+  <section id="gratuit">
+    <div class="gratuit" data-reveal>
+      <h2 class="gratuit-titre">100 % gratuit.</h2>
+    </div>
+  </section>
+
+  <!-- ============ LES PEURS ============ -->
   <section id="probleme" class="sec">
-    <div data-reveal style="text-align:center;max-width:640px;margin:0 auto 48px">
-      <div style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#2f6bff;margin-bottom:12px">On connaît le blocage</div>
-      <h2 style="font-size:clamp(27px,4.2vw,40px);line-height:1.1;letter-spacing:-.025em;font-weight:800;margin:0 0 14px">Trop de lois, trop de paperasse, trop de doutes.</h2>
-      <p style="font-size:17px;color:#5b6b85;margin:0;line-height:1.55">En France, la moindre démarche donne l'impression d'être un parcours du combattant. Résultat : on procrastine, on paie trop, ou on n'ose même pas se lancer.</p>
+    <div class="sec-head" data-reveal style="max-width:920px">
+      <h2>Le problème, ce n'est pas la paperasse.<br>C'est la peur.</h2>
+      <p>L'erreur, tu la découvres des années plus tard, avec les pénalités. Alors un jour, tout le monde se dit…</p>
     </div>
-    <div class="prob-grid">
-      <div class="card-prob" data-reveal data-reveal-delay="0"><div style="font-size:28px;margin-bottom:12px">😵‍💫</div><div style="font-weight:800;font-size:18px;margin-bottom:8px">Le labyrinthe des statuts</div><div style="font-size:14.5px;color:#5b6b85;line-height:1.5">Micro, EURL, SASU… Personne ne t'explique clairement ce qui te convient vraiment.</div></div>
-      <div class="card-prob" data-reveal data-reveal-delay="120"><div style="font-size:28px;margin-bottom:12px">🧾</div><div style="font-weight:800;font-size:18px;margin-bottom:8px">Le brouillard fiscal</div><div style="font-size:14.5px;color:#5b6b85;line-height:1.5">Cotisations, impôts, TVA : impossible de savoir ce qu'il te reste vraiment à la fin.</div></div>
-      <div class="card-prob" data-reveal data-reveal-delay="240"><div style="font-size:28px;margin-bottom:12px">⏳</div><div style="font-weight:800;font-size:18px;margin-bottom:8px">Le « je verrai plus tard »</div><div style="font-size:14.5px;color:#5b6b85;line-height:1.5">Le blocage psychologique s'installe et te fait perdre du temps… et de l'argent.</div></div>
-    </div>
-  </section>
-
-  <!-- ============ TÉMOIGNAGES ============ -->
-  <section id="temoignages" class="sec sec-bleu">
-    <div data-reveal style="text-align:center;max-width:660px;margin:0 auto 52px">
-      <div style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#2f6bff;margin-bottom:12px">Ça te parle ?</div>
-      <h2 style="font-size:clamp(27px,4.2vw,40px);line-height:1.1;letter-spacing:-.025em;font-weight:800;margin:0 0 14px">Ces phrases, tu te les es déjà dites ?</h2>
-      <p style="font-size:17px;color:#5b6b85;margin:0">Le blocage, c'est humain. On est là pour le lever - un pote à la fois.</p>
-    </div>
-    <div class="temo-grid">
-      <div data-reveal data-reveal-delay="0" style="justify-self:start">
-        <div style="--r:-1.5deg;animation:fhdrift 7s ease-in-out infinite;display:flex;gap:13px;align-items:flex-end">
-          <div style="width:44px;height:44px;border-radius:50%;background:#2f6bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">KM</div>
-          <div style="background:#fff;border-radius:20px 20px 20px 5px;padding:16px 20px;box-shadow:0 14px 30px -22px rgba(15,27,51,.6)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« Je comprends rien à mes cotisations. »</div><div style="font-size:12.5px;color:#8a97ad;font-weight:600;margin-top:6px">Karim · développeur freelance</div></div>
-        </div>
+    <div class="scenes">
+      <div class="scene" data-reveal>
+        <img src="assets/illus/obj-statut.svg" alt="" class="scene-illu">
+        <div class="scene-bulle" style="--r:-1.5deg">« Est-ce que j'ai le droit&nbsp;? »</div>
       </div>
-      <div data-reveal data-reveal-delay="140" style="justify-self:end">
-        <div style="--r:1.5deg;animation:fhdrift 8s ease-in-out infinite .5s;display:flex;gap:13px;align-items:flex-end;flex-direction:row-reverse">
-          <div style="width:44px;height:44px;border-radius:50%;background:#0f1b33;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">SB</div>
-          <div style="background:#2f6bff;color:#fff;border-radius:20px 20px 5px 20px;padding:16px 20px;box-shadow:0 14px 30px -20px rgba(47,107,255,.8)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« J'ai peur de faire une erreur qui coûte cher. »</div><div style="font-size:12.5px;color:#cfe0ff;font-weight:600;margin-top:6px">Sofia · consultante</div></div>
-        </div>
+      <div class="scene inv" data-reveal data-reveal-delay="120">
+        <img src="assets/illus/rien-en-cours.svg" alt="" class="scene-illu">
+        <div class="scene-bulle" style="--r:1.5deg;animation-delay:.6s">« J'ai forcément oublié un truc. »</div>
       </div>
-      <div data-reveal data-reveal-delay="80" style="justify-self:start">
-        <div style="--r:1deg;animation:fhdrift 7.5s ease-in-out infinite .8s;display:flex;gap:13px;align-items:flex-end">
-          <div style="width:44px;height:44px;border-radius:50%;background:#5b8dff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">TP</div>
-          <div style="background:#fff;border-radius:20px 20px 20px 5px;padding:16px 20px;box-shadow:0 14px 30px -22px rgba(15,27,51,.6)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« Micro ou société, je choisis quoi ? »</div><div style="font-size:12.5px;color:#8a97ad;font-weight:600;margin-top:6px">Thomas · photographe</div></div>
-        </div>
+      <div class="scene" data-reveal data-reveal-delay="80">
+        <img src="assets/illus/obj-tva-comprendre.svg" alt="" class="scene-illu">
+        <div class="scene-bulle" style="--r:1deg;animation-delay:.3s">« Tout le monde comprend sauf moi. »</div>
       </div>
-      <div data-reveal data-reveal-delay="200" style="justify-self:end">
-        <div style="--r:-1deg;animation:fhdrift 8.5s ease-in-out infinite .3s;display:flex;gap:13px;align-items:flex-end;flex-direction:row-reverse">
-          <div style="width:44px;height:44px;border-radius:50%;background:#1e46b8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">IN</div>
-          <div style="background:#fff;border-radius:20px 20px 5px 20px;padding:16px 20px;box-shadow:0 14px 30px -22px rgba(15,27,51,.6)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« La TVA, ça me dépasse complètement. »</div><div style="font-size:12.5px;color:#8a97ad;font-weight:600;margin-top:6px">Inès · illustratrice</div></div>
-        </div>
-      </div>
-      <div data-reveal data-reveal-delay="160" style="justify-self:start">
-        <div style="--r:-1.5deg;animation:fhdrift 7.2s ease-in-out infinite .6s;display:flex;gap:13px;align-items:flex-end">
-          <div style="width:44px;height:44px;border-radius:50%;background:#7aa0ff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">LC</div>
-          <div style="background:#fff;border-radius:20px 20px 20px 5px;padding:16px 20px;box-shadow:0 14px 30px -22px rgba(15,27,51,.6)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« Je repousse mon immatriculation depuis 6 mois… »</div><div style="font-size:12.5px;color:#8a97ad;font-weight:600;margin-top:6px">Lucas · coach sportif</div></div>
-        </div>
-      </div>
-      <div data-reveal data-reveal-delay="260" style="justify-self:end">
-        <div style="--r:1.5deg;animation:fhdrift 8s ease-in-out infinite .9s;display:flex;gap:13px;align-items:flex-end;flex-direction:row-reverse">
-          <div style="width:44px;height:44px;border-radius:50%;background:#0f1b33;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none">CH</div>
-          <div style="background:#fff;border-radius:20px 20px 5px 20px;padding:16px 20px;box-shadow:0 14px 30px -22px rgba(15,27,51,.6)"><div style="font-size:16.5px;font-weight:600;line-height:1.4">« On m'a dit que je payais trop, mais où ? »</div><div style="font-size:12.5px;color:#8a97ad;font-weight:600;margin-top:6px">Chloé · rédactrice web</div></div>
-        </div>
+      <div class="scene inv" data-reveal data-reveal-delay="200">
+        <img src="assets/illus/en-route.svg" alt="" class="scene-illu">
+        <div class="scene-bulle" style="--r:-1deg;animation-delay:.9s">« Je paie trop. Mais où&nbsp;? »</div>
       </div>
     </div>
   </section>
 
-  <!-- ============ SOLUTION ============ -->
-  <section id="solution" class="sec">
-    <div data-reveal style="text-align:center;max-width:640px;margin:0 auto 50px">
-      <div style="font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#2f6bff;margin-bottom:12px">Le déclic</div>
-      <h2 style="font-size:clamp(27px,4.2vw,40px);line-height:1.1;letter-spacing:-.025em;font-weight:800;margin:0 0 14px">Ce qui change quand tout est clair.</h2>
-      <p style="font-size:17px;color:#5b6b85;margin:0">Bien comprise, la fiscalité te fait gagner de l'argent. Voilà la différence.</p>
-    </div>
-    <div class="sol-grid">
-      <!-- AVANT -->
-      <div data-reveal data-reveal-delay="0" style="background:#f3f5f9;border-radius:22px;padding:36px 32px">
-        <div style="display:inline-block;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#94a1b8;background:#fff;padding:7px 13px;border-radius:8px;margin-bottom:26px">Avant Freehub</div>
-        <div style="display:flex;flex-direction:column;gap:16px">
-          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:#e4e8ef;color:#94a1b8;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✕</span><span style="font-size:16px;color:#5b6b85;line-height:1.45">10 onglets ouverts, 3 forums contradictoires, 0 réponse claire.</span></div>
-          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:#e4e8ef;color:#94a1b8;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✕</span><span style="font-size:16px;color:#5b6b85;line-height:1.45">Tu paies « au cas où » et tu perds de l'argent chaque mois.</span></div>
-          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:#e4e8ef;color:#94a1b8;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✕</span><span style="font-size:16px;color:#5b6b85;line-height:1.45">Le blocage psychologique t'empêche de te lancer.</span></div>
+  <!-- ============ LE RETOURNEMENT ============ -->
+  <section class="sec" style="padding-top:clamp(10px,2vw,24px)">
+    <div class="flip-boite">
+      <div class="flip-grille">
+        <!-- Le relevé : chaque ligne coûte quelque chose et n'explique rien -->
+        <div style="position:relative" data-reveal>
+          <div class="releve">
+            <div class="rv-tete">
+              <span>CE QUE TU DÉLÈGUES</span><span>ÇA COÛTE</span><span>TU COMPRENDS</span>
+            </div>
+            <div class="rv-l">
+              <span class="rv-q"><span class="e">🧾</span><span>Le comptable<small>Ta compta, ta liasse</small></span></span>
+              <span class="rv-cout">€€ / mois</span>
+              <span class="rv-jauge"><i style="--w:0"></i></span>
+            </div>
+            <div class="rv-l">
+              <span class="rv-q"><span class="e">⚖️</span><span>La legaltech<small>Tes statuts, ton immatriculation</small></span></span>
+              <span class="rv-cout">€€ / acte</span>
+              <span class="rv-jauge"><i style="--w:0"></i></span>
+            </div>
+            <div class="rv-l">
+              <span class="rv-q"><span class="e">🏦</span><span>La banque pro<small>Ton compte, tes justificatifs</small></span></span>
+              <span class="rv-cout">€ / mois</span>
+              <span class="rv-jauge"><i style="--w:0"></i></span>
+            </div>
+            <div class="rv-l" style="border-bottom:none">
+              <span class="rv-q"><span class="e">📮</span><span>L'administration<small>Tes déclarations, tes échéances</small></span></span>
+              <span class="rv-cout">tes soirées</span>
+              <span class="rv-jauge"><i style="--w:0"></i></span>
+            </div>
+            <div class="rv-total">
+              <span class="lb">Au total</span>
+              <span class="rv-cout">ça part vite</span>
+              <span class="rv-zero">0 %</span>
+            </div>
+          </div>
+          <div class="rv-tampon">Tu paies. Tu ne comprends pas toujours.</div>
+        </div>
+        <div class="flip-texte" data-reveal data-reveal-delay="120">
+          <h2>Les autres font à ta place.<br><span class="accent">Chez nous, tu comprends, pour faire.</span></h2>
+          <p>Déléguer sans comprendre, c'est rester dépendant, et garder la peur. Freehub est le premier espace où tout est rassemblé pour comprendre l'administratif et la fiscalité selon ton activité et ton niveau.</p>
+          <div class="flip-pts">
+            <span class="flip-pt"><span class="ck">✓</span> On t'explique, tu décides</span>
+            <span class="flip-pt"><span class="ck">✓</span> Zéro chiffre inventé, sources officielles</span>
+            <span class="flip-pt"><span class="ck">✓</span> Ton activité, ton stade, ton rythme</span>
+          </div>
         </div>
       </div>
-      <!-- flèche -->
-      <div class="sol-fleche" data-reveal data-reveal-delay="180"><div>→</div></div>
-      <!-- AVEC -->
-      <div data-reveal data-reveal-delay="120" style="background:#2f6bff;color:#fff;border-radius:22px;padding:36px 32px;box-shadow:0 34px 70px -36px rgba(47,107,255,.9)">
-        <div style="display:inline-block;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#2f6bff;background:#fff;padding:7px 13px;border-radius:8px;margin-bottom:26px">Avec Freehub</div>
-        <div style="display:flex;flex-direction:column;gap:16px">
-          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✓</span><span style="font-size:16px;line-height:1.45">Une seule plateforme, des réponses claires adaptées à ton cas.</span></div>
-          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✓</span><span style="font-size:16px;line-height:1.45">Des simulateurs qui montrent exactement quoi optimiser.</span></div>
-          <div style="display:flex;gap:13px;align-items:flex-start"><span style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none">✓</span><span style="font-size:16px;line-height:1.45">La confiance de savoir ce que tu fais - et de passer à l'action.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ L'OUTIL ============ -->
+  <section id="outil" class="sec" style="padding-bottom:clamp(24px,4vw,40px)">
+    <div class="sec-head" data-reveal style="margin-bottom:clamp(26px,4vw,44px)">
+      <h2>Ce qui t'attend à l'intérieur.</h2>
+    </div>
+
+    <!-- Parcours guidés (univers Statut, bleu) -->
+    <div class="featbox" style="--fb:#f2f6ff;--fc:#2563eb">
+      <div class="feat">
+        <div class="feat-txt" data-reveal>
+          <div class="fchip">🧭 Parcours guidés</div>
+          <h3>Tu sais toujours quoi faire, et combien de temps ça prend.</h3>
+          <p>Créer ton auto-entreprise, passer à la TVA, choisir ton statut… Chaque étape annonce sa durée, ce qu'il faut préparer, et là où ça coince souvent. Tu coches, tu avances.</p>
+          <div class="feat-stats"><span class="fstat">19 parcours</span><span class="fstat">78 étapes</span><span class="fstat">Durée annoncée</span></div>
+        </div>
+        <div class="feat-visu" data-reveal data-reveal-delay="120">
+          <div class="orbite" style="top:-14px;right:-6px;--r:2deg">📊 Passer à la TVA</div>
+          <div class="orbite" style="left:-26px;top:52%;--r:-3deg;animation-delay:.5s">⚖️ Choisir son statut</div>
+          <div class="orbite" style="bottom:-14px;right:10%;--r:2deg;animation-delay:.9s">🧾 Anticiper la CFE</div>
+          <div class="visu-carte" style="--tilt:-2deg">
+            <div class="mock">
+              <div class="mock-fil">🏛 Objectifs · Statut</div>
+              <div class="mock-titre">Créer ton auto-entreprise <span class="mock-tag">2 / 5 faites</span></div>
+              <div class="mk-ok"><span class="c">✓</span> Vérifier que ton activité est éligible</div>
+              <div class="mk-ok"><span class="c">✓</span> Réunir tes justificatifs</div>
+              <div class="mk-now">
+                <div class="sur">ÉTAPE 3 SUR 5 · ⏱ 15 MIN</div>
+                <div class="tt">Remplir la déclaration de début d'activité</div>
+                <span class="go">C'est fait, étape suivante →</span>
+              </div>
+              <div class="mk-apres">Puis : récupérer ton SIRET, mettre en place ta facturation</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Simulateurs (univers Fiscalité, ambre) -->
+    <div class="featbox" style="--fb:#fffbef;--fc:#b45309">
+      <div class="feat inv">
+        <div class="feat-txt" data-reveal>
+          <div class="fchip">🧮 Simulateurs</div>
+          <h3>Tes chiffres, pas des exemples.</h3>
+          <p>« Cette dépense, je peux la passer ? », « Quand basculer à la TVA ? », « Micro ou société ? » Cinq simulateurs répondent avec tes chiffres. Dont un guide qui passe 49 dépenses au crible, selon ton régime.</p>
+          <div class="feat-stats"><span class="fstat">5 simulateurs</span><span class="fstat">49 dépenses au crible</span><span class="fstat">Selon ton régime</span></div>
+        </div>
+        <div class="feat-visu" data-reveal data-reveal-delay="120">
+          <div class="deck">
+            <div class="deck-dos g">💶 Quand passer à la TVA ?</div>
+            <div class="deck-dos d">⚖️ Micro ou société ?</div>
+            <div class="visu-carte" style="--tilt:-1.5deg">
+              <div class="mock">
+                <div class="mock-fil">🧾 Fiscalité · Le guide des dépenses</div>
+                <div class="mock-titre">Je peux la passer, celle-là ? <span class="mock-tag">Ton régime : micro</span></div>
+                <div class="mk-dep"><span>💻 Ordinateur portable</span><span class="mk-verdict v-non">Couvert par l'abattement</span></div>
+                <div class="mk-dep"><span style="color:#8a97ad">💻 Le même, en société ?</span><span class="mk-verdict v-ok">Déductible</span></div>
+                <div class="mk-dep"><span>🚗 Frais de déplacement</span><span class="mk-verdict v-info">Ça dépend, on t'explique</span></div>
+                <div class="mk-dep"><span>☕ Café du matin</span><span class="mk-verdict v-non">Non, désolé</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S'adapte à toi (univers TVA, violet) -->
+    <div class="featbox" style="--fb:#f7f3ff;--fc:#7c3aed">
+      <div class="feat">
+        <div class="feat-txt" data-reveal>
+          <div class="fchip">🎯 Adapté à toi</div>
+          <h3>Ton profil décide de ce que tu vois.</h3>
+          <p>Renseigné une seule fois, ton profil irrigue tout : les parcours proposés, les mots du lexique, les échéances, les simulateurs. Micro ou société, débutant ou lancé, tu ne vois jamais ce qui ne te concerne pas.</p>
+          <div class="feat-stats"><span class="fstat">Saisi une fois</span><span class="fstat">Tout se personnalise</span><span class="fstat">35 mots traduits en clair</span></div>
+        </div>
+        <div class="feat-visu" data-reveal data-reveal-delay="120">
+          <div class="visu-carte" style="--tilt:2deg">
+            <div class="mock">
+              <div class="prof-schema">
+                <svg viewBox="0 0 400 310" fill="none" aria-hidden="true">
+                  <g stroke="#c9d6f2" stroke-dasharray="4 6" stroke-width="1.5">
+                    <line x1="200" y1="155" x2="84" y2="48"/>
+                    <line x1="200" y1="155" x2="316" y2="48"/>
+                    <line x1="200" y1="155" x2="84" y2="262"/>
+                    <line x1="200" y1="155" x2="316" y2="262"/>
+                  </g>
+                </svg>
+                <div class="prof-noeud" style="left:21%;top:15.5%;background:#f2f6ff;color:#2563eb">🧭 Tes parcours</div>
+                <div class="prof-noeud" style="left:79%;top:15.5%;background:#fffbef;color:#b45309">🧮 Tes simulateurs</div>
+                <div class="prof-noeud" style="left:21%;top:84.5%;background:#ecf0f8;color:#4a6180">📅 Tes échéances</div>
+                <div class="prof-noeud" style="left:79%;top:84.5%;background:#f7f3ff;color:#7c3aed">📖 Ton lexique</div>
+                <div class="prof-centre">👤 Ton profil<span class="ss">Graphiste · Micro-BNC · Franchise de TVA</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendrier + rappels (univers Administratif, ardoise) -->
+    <div class="featbox" style="--fb:#ecf0f8;--fc:#4a6180">
+      <div class="feat inv">
+        <div class="feat-txt" data-reveal>
+          <div class="fchip">📅 Calendrier + rappels</div>
+          <h3>Les dates importantes ne te surprennent plus.</h3>
+          <p>Tes échéances projetées sur l'année, CFE, versement libératoire, déclaration de revenus, avec le compte à rebours. Et Freehub te prévient par e-mail avant chaque date : tu n'as plus besoin d'y penser.</p>
+          <div class="feat-stats"><span class="fstat">Vue année, mois, semaine</span><span class="fstat">Compte à rebours</span><span class="fstat">Rappels par e-mail</span></div>
+        </div>
+        <div class="feat-visu" data-reveal data-reveal-delay="120" style="padding-bottom:26px">
+          <div class="visu-carte" style="--tilt:-2deg">
+            <div class="mock">
+              <div class="mock-fil">📁 Calendrier</div>
+              <div class="mock-titre"><span style="display:inline-flex;align-items:center;gap:9px"><span class="mk-chev">‹</span> Décembre <span class="mk-chev">›</span></span> <span class="mock-tag">1 échéance</span></div>
+              <div class="mk-mois">
+                <i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i>
+                <i>8</i><i>9</i><i>10</i><i>11</i><i>12</i><i>13</i><i>14</i>
+                <i class="pt">15</i><i>16</i><i>17</i><i>18</i><i>19</i><i>20</i><i>21</i>
+              </div>
+              <div class="mk-avenir">
+                <div class="mk-av-l"><span class="pt2" style="background:#2563eb"></span> Demande de versement libératoire <span class="dans">dans 54 j</span></div>
+                <div class="mk-av-l"><span class="pt2" style="background:#4a6180"></span> Paiement de la CFE <span class="dans">dans 130 j</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="mk-notif">
+            <div class="de">📬 Freehub · Rappel</div>
+            <div class="tx">La CFE arrive dans 15 jours. On t'explique comment la payer, en 3 étapes.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Entraide (univers Pilotage, vert) -->
+    <div class="featbox" style="--fb:#f0fdf6;--fc:#0f9d6e">
+      <div class="feat" id="entraide">
+        <div class="feat-txt" data-reveal>
+          <div class="fchip">💬 Entraide</div>
+          <h3>La question que tu n'oses pas poser ? Quelqu'un l'a déjà posée ici.</h3>
+          <p>Un salon en direct, entre indépendants, en petit comité. Tu poses ta question « bête », quelqu'un te répond dans la foulée, tu laisses un merci. Personne ne te jugera de demander ce que veut dire un mot.</p>
+          <div class="feat-stats"><span class="fstat">En direct</span><span class="fstat">Entre indépendants</span><span class="fstat">Modéré</span></div>
+        </div>
+        <div class="feat-visu" data-reveal data-reveal-delay="120">
+          <div class="visu-carte" style="--tilt:1.5deg">
+            <div class="mock">
+              <div class="mock-titre">Salon d'entraide <span style="display:inline-flex;align-items:center;gap:8px"><span class="mk-direct"><span class="pt3"></span>EN DIRECT</span><span style="font-size:12px;font-weight:800;color:#0f9d6e">4 en ligne</span></span></div>
+              <div class="mk-msg">
+                <div class="mk-av" style="background:#7aa0ff">LM</div>
+                <div>
+                  <div class="mk-qui" style="color:#4a5a75">Léa M.<span class="hh">14:32</span></div>
+                  <div class="mk-bulle">Je dois mettre quoi sur mes factures tant que je ne facture pas la TVA ? 😅</div>
+                </div>
+              </div>
+              <div class="mk-msg">
+                <div class="mk-av" style="background:#0f1b33">KD</div>
+                <div>
+                  <div class="mk-qui" style="color:#4a5a75">Karim D. 🏆<span class="hh">14:33</span></div>
+                  <div class="mk-bulle">« TVA non applicable, art. 293 B du CGI », direct sous le total 👌</div>
+                  <div class="mk-merci">🙏 3 mercis</div>
+                </div>
+              </div>
+              <div class="mk-tape">Léa écrit <span class="p"></span><span class="p" style="animation-delay:.2s"></span><span class="p" style="animation-delay:.4s"></span></div>
+              <div class="mk-input">Écris ton message… <span class="env">➤</span></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
   <!-- ============ CTA final ============ -->
-  <section style="padding:20px clamp(18px,4.5vw,48px) clamp(56px,8vw,90px)">
+  <section class="sec" style="padding-top:clamp(14px,2.5vw,28px)">
     <div class="cta-bloc" data-reveal>
-      <div style="position:absolute;top:-120px;right:-60px;width:360px;height:360px;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 65%)"></div>
-      <div style="position:relative">
-        <h2 style="font-size:clamp(25px,3.8vw,38px);font-weight:800;letter-spacing:-.025em;margin:0 0 14px">Reprends le contrôle de ton activité.</h2>
-        <p style="font-size:18px;opacity:.88;margin:0 0 30px">Rejoins les indépendants qui ont arrêté de subir l'administratif. C'est gratuit.</p>
-        <button class="btn-white-cta" onclick="openAuth('signup')">Créer mon compte gratuit</button>
+      <div class="cta-onde"></div>
+      <div class="cta-voile"></div>
+      <div class="cta-contenu">
+        <h2 style="font-size:clamp(26px,4vw,40px);font-weight:800;letter-spacing:-.035em;margin:0 0 14px">Et si l'administratif devenait ton point fort ?</h2>
+        <p style="font-size:17.5px;opacity:.9;margin:0 0 30px;line-height:1.6">L'alpha privée est ouverte jusqu'en septembre 2026.<br>Si tu as un code d'invitation, ton espace t'attend. C'est gratuit.</p>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+          <button class="btn-white-cta" onclick="openAuth('signup')">Rejoindre l'alpha</button>
+          <button class="cta-login" onclick="openAuth('login')">J'ai déjà un compte</button>
+        </div>
       </div>
     </div>
   </section>
@@ -337,7 +831,7 @@
   <!-- ============ FOOTER ============ -->
   <footer class="footer">
     <img src="assets/freehub-logo.png" alt="Freehub" style="height:22px;display:block">
-    <span style="font-size:13px;color:#8a97ad;font-weight:500">© 2026 Freehub · Le hub des freelances</span>
+    <span style="font-size:13px;color:#8a97ad;font-weight:500">© 2026 Freehub · Le hub des indépendants</span>
   </footer>
 </div>
 
@@ -421,7 +915,7 @@
 </div>
 
 <script>
-  // ---- Révélation au scroll + ombre de la nav ----
+  // ---- Révélation au scroll + nav qui se réduit ----
   (function(){
     var els = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
 
@@ -433,11 +927,13 @@
     }
     function montrerTout(){ els.forEach(function(el){ montrer(el, 0); }); }
 
+    initNav();
+
     // Sans IntersectionObserver (ou si l'utilisateur limite les animations), on
     // n'escamote rien : le contenu doit rester lisible en toutes circonstances.
     var animer = ('IntersectionObserver' in window)
       && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    if(!animer) return initNav();
+    if(!animer) return;
 
     els.forEach(function(el){
       el.style.opacity = '0';
@@ -460,14 +956,49 @@
     document.addEventListener('visibilitychange', function(){
       if(!document.hidden) setTimeout(montrerTout, 1200);
     });
-    initNav();
 
     function initNav(){
       var nav = document.getElementById('fhnav');
       window.addEventListener('scroll', function(){
-        if(nav) nav.style.boxShadow = window.scrollY > 8 ? '0 8px 24px -18px rgba(15,27,51,.5)' : 'none';
+        if(nav) nav.classList.toggle('mini', window.scrollY > 50);
       }, { passive: true });
     }
+  })();
+
+  // ---- L'onde du CTA part du centre réel du bouton (coordonnées écran) ----
+  (function(){
+    var btn = document.querySelector('.cta-bloc .btn-white-cta');
+    var onde = document.querySelector('.cta-onde');
+    var voile = document.querySelector('.cta-voile');
+    var bloc = document.querySelector('.cta-bloc');
+    if(!btn || !onde) return;
+    btn.addEventListener('mouseenter', function(){
+      var r = btn.getBoundingClientRect();
+      onde.style.setProperty('--ox', Math.round(r.left + r.width / 2) + 'px');
+      onde.style.setProperty('--oy', Math.round(r.top + r.height / 2) + 'px');
+      // Le quadrillage du voile est calé sur celui du bloc : pendant le fondu
+      // croisé, les deux grilles se superposent exactement, aucun doublon.
+      if(voile && bloc){
+        var b = bloc.getBoundingClientRect();
+        voile.style.backgroundPosition = Math.round(b.left) + 'px ' + Math.round(b.top) + 'px';
+      }
+    });
+  })();
+
+  // ---- « 100 % gratuit » : le projecteur de couleur suit le curseur ----
+  (function(){
+    var titre = document.querySelector('.gratuit-titre');
+    if(!titre) return;
+    var zone = titre.closest('section');
+    zone.addEventListener('mousemove', function(e){
+      var r = titre.getBoundingClientRect();
+      titre.style.setProperty('--mx', Math.round(e.clientX - r.left) + 'px');
+      titre.style.setProperty('--my', Math.round(e.clientY - r.top) + 'px');
+    });
+    zone.addEventListener('mouseleave', function(){
+      titre.style.setProperty('--mx', '50%');
+      titre.style.setProperty('--my', '45%');
+    });
   })();
 
   // ---- Modal d'authentification ----
