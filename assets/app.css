@@ -3231,7 +3231,8 @@
 
     .side-burger{display:inline-flex;align-items:center;justify-content:center;
       position:fixed;top:12px;left:12px;z-index:55;width:42px;height:42px;padding:0;
-      border:1px solid var(--border);border-radius:13px;background:rgba(255,255,255,.94);
+      border:1px solid var(--border);border-radius:13px;
+      background:color-mix(in srgb,var(--surface) 94%,transparent);
       backdrop-filter:blur(10px);color:var(--ink);cursor:pointer;
       box-shadow:0 10px 26px -14px rgba(15,27,51,.5)}
     .side-burger svg{width:20px;height:20px}
@@ -3285,6 +3286,15 @@
     /* 16px minimum sur les champs : en dessous, iOS zoome tout seul. */
     input,select,textarea{font-size:16px}
     .step-cta,.btn,.chip{font-size:13px}
+    /* Le bouton « ce qui le ferait monter » est en flex:none : à 375 px il
+       écrasait le texte du score à une colonne d'un mot par ligne. */
+    .ser-h{flex-wrap:wrap;gap:14px}
+    .ser-x{flex:1 1 100%;order:3}
+    .ser-jauge{order:1}
+    .ser-plus{order:2;margin-left:auto}
+    .acc-reprise{flex-wrap:wrap}
+    .acc-reprise-x{flex:1 1 100%}
+    .acc-reprise .btn-primary,.acc-reprise > a{width:100%;justify-content:center}
   }
 
   /* ------------------------------------------------------------------ */
