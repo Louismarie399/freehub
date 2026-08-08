@@ -2677,6 +2677,28 @@
      cartes restent ainsi alignés, avec ou sans code promo. */
   .part-card.a-promo .part-head{padding-right:74px}
 
+  /* ---------- Partenaire fraîchement arrivé ---------- */
+  /* Même doré et même respiration que les tuiles d'objectifs, mais la carte
+     n'a pas de bordure (border:none) : le contour passe donc par une première
+     ombre fixe, doublée de l'onde qui s'éloigne. */
+  @keyframes part-halo{
+    0%,100%{box-shadow:0 0 0 2px #eab308,0 0 0 0 rgba(234,179,8,.5)}
+    50%    {box-shadow:0 0 0 2px #eab308,0 0 0 10px rgba(234,179,8,0)}}
+  .part-card.inedit{animation:part-halo 2.4s ease-out infinite}
+  /* Même cloche dorée penchée que sur les tuiles d'objectifs. Elle se range à
+     gauche du « + » : le bandeau est en overflow:hidden, une troisième ligne
+     dans la colonne du coin serait tronquée. */
+  .part-coin-h{display:flex;align-items:center;gap:6px}
+  .part-neuf{flex:none;width:24px;height:24px;border-radius:50%;display:flex;
+    align-items:center;justify-content:center;font-size:12px;transform:rotate(8deg);
+    background:linear-gradient(135deg,#fbbf24,#d97706);
+    box-shadow:0 6px 16px -6px rgba(217,119,6,.9), 0 0 0 2px rgba(255,255,255,.35);
+    animation:tui-cloche 3.2s ease-in-out infinite}
+  @media (prefers-reduced-motion: reduce){
+    .part-card.inedit{animation:none;box-shadow:0 0 0 2px #eab308}
+    .part-neuf{animation:none}
+  }
+
   /* Provenance d'un paramètre fiscal */
   .pbadge{margin-left:8px;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;
     letter-spacing:.02em;vertical-align:middle}

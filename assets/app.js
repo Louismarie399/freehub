@@ -1211,7 +1211,7 @@
     // désignent les partenaires par leur index, l'insérer plus haut les
     // ferait tous pointer un cran à côté.
     {
-      gag:true,
+      gag:true, neuf:true,
       nom:'URSSAF', kind:'Cotisations & protection sociale',
       img:'assets/partenaires/urssaf.png',
       color:'#1257a8', grad:'#25c3d4', soft:'#eef6fc',
@@ -1232,6 +1232,20 @@
       ],
     },
   ].filter(function(p){ return !p.gag || GAG_URSSAF; });
+
+  // Mise en avant d'un partenaire fraîchement arrivé : « New » dans la barre
+  // latérale et contour doré sur sa carte, sur le modèle des objectifs. Deux
+  // extinctions possibles - la date butoir ci-dessous, ou l'ouverture de la
+  // fiche, qui vaut découverte. Il suffit de changer la date pour prolonger.
+  var PART_NEUF_FIN = '2026-08-17';   // borne exclue : visible jusqu'au 16 inclus
+  function partenairesNouveaux(){
+    if(Date.now() >= Date.parse(PART_NEUF_FIN)) return [];
+    var out = [];
+    PARTENAIRES.forEach(function(p, i){
+      if(p.neuf && !state.faits['part-neuf-vu:' + p.nom]) out.push(i);
+    });
+    return out;
+  }
 
   var titles = {
     accueil:    ['Accueil',         '🏠', '#2f6bff'],
@@ -2907,7 +2921,8 @@
           + 'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+NAV_ICONES[t.key]+'</svg></span>'
         + '<span class="nav-text">'+esc(t.label)+'</span>'
         + '<span class="nav-tip">'+esc(t.label)+'</span>'
-        + (t.key === 'objectifs' && objectifsNouveaux().length
+        + ((t.key === 'objectifs' && objectifsNouveaux().length)
+           || (t.key === 'partenaires' && partenairesNouveaux().length)
             ? '<span class="nav-badge">New</span>' : '')
         + (t.alpha ? '<span class="nav-badge alpha">Alpha</span>' : '')
         + (t.key === 'chat' && state.chat.nonLus
@@ -9574,6 +9589,7 @@
   }
 
   function partenairesHtml(){
+    var neufs = partenairesNouveaux();
     var cards = PARTENAIRES.map(function(p, i){
       // La carte reste volontairement courte : 3 points, le reste est dans la fiche.
       var pts = p.points.slice(0, 3).map(function(pt){
@@ -9581,12 +9597,19 @@
           + '<span>'+esc(pt)+'</span></li>';
       }).join('');
 
-      return '<article class="part-card'+(p.promo?' a-promo':'')+'" style="'+partVars(p)+'"'
+      var inedit = neufs.indexOf(i) >= 0;
+      return '<article class="part-card'+(p.promo?' a-promo':'')+(inedit?' inedit':'')
+        + '" style="'+partVars(p)+'"'
         + ' data-action="part-open" data-i="'+i+'">'
         + '<div class="part-head">'
           + '<div class="part-coin">'
-            + '<button class="part-more" data-action="part-open" data-i="'+i+'"'
-              + ' aria-label="En savoir plus sur '+esc(p.nom)+'">+</button>'
+            // La cloche se range à côté du « + » plutôt qu'en dessous : le
+            // bandeau est en overflow:hidden, une troisième ligne serait coupée.
+            + '<div class="part-coin-h">'
+              + (inedit ? '<span class="part-neuf" title="Nouveau partenaire">🔔</span>' : '')
+              + '<button class="part-more" data-action="part-open" data-i="'+i+'"'
+                + ' aria-label="En savoir plus sur '+esc(p.nom)+'">+</button>'
+            + '</div>'
             + (p.promo ? '<span class="part-flag">🎁 Promo</span>' : '')
           + '</div>'
           + (p.tease
@@ -9826,8 +9849,23 @@
     [].forEach.call(app.querySelectorAll('.nav-row'), function(row){
       row.classList.toggle('on', row.getAttribute('data-tab') === state.tab);
     });
-    // Badge « New » : gardé affiché en permanence pendant la construction du
-    // dashboard (pas de masquage après ouverture, pour l'instant).
+    // Badge « New » : il doit s'éteindre à l'instant où la découverte est faite,
+    // sans attendre un rechargement. On le pose ou le retire à chaque rendu
+    // plutôt que de reconstruire la nav entière.
+    [['objectifs', objectifsNouveaux().length],
+     ['partenaires', partenairesNouveaux().length]].forEach(function(n){
+      var row = app.querySelector('.nav-row[data-tab="'+n[0]+'"]');
+      if(!row) return;
+      var pastille = row.querySelector('.nav-badge:not(.alpha)');
+      if(n[1] && !pastille){
+        var s = document.createElement('span');
+        s.className = 'nav-badge';
+        s.textContent = 'New';
+        row.appendChild(s);
+      } else if(!n[1] && pastille){
+        pastille.remove();
+      }
+    });
     // Le bloc utilisateur est reconstruit par titreOutilsHtml() à chaque rendu :
     // rien à mettre à jour ici depuis que la barre latérale ne le porte plus.
 
@@ -10496,10 +10534,16 @@
       case 'stop':
         e.stopPropagation();
         break;
-      case 'part-open':
+      case 'part-open': {
         marquerFait('part:vu');
-        setState({ partOpen: parseInt(el.getAttribute('data-i'), 10) });
+        var pi = parseInt(el.getAttribute('data-i'), 10);
+        // Ouvrir la fiche vaut découverte : le halo doré s'éteint pour de bon,
+        // comme sur une tuile d'objectif.
+        var pn = PARTENAIRES[pi];
+        if(pn && pn.neuf) marquerFait('part-neuf-vu:' + pn.nom);
+        setState({ partOpen: pi });
         break;
+      }
       case 'part-close':
         setState({ partOpen: null });
         break;
