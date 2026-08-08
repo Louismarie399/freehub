@@ -2393,7 +2393,20 @@
     suiteAjout: null,       // {id, retour} : objectif suggéré qu'on vient d'ajouter
     catOpen: false,         // pop-up du catalogue d'objectifs
     // Onboarding au premier lancement : tant que le drapeau n'est pas posé.
-    onboarding: { actif: !localStorageOk('freehub_onboarded'), etape: 0, rep: {} },
+    // L'onboarding reprend là où il s'est arrêté : fermer l'onglet ne permet
+    // pas d'y échapper, on retombe sur la même question.
+    onboarding: (function(){
+      var repris = { actif: !localStorageOk('freehub_onboarded'), etape: 0, rep: {} };
+      try {
+        var brut = localStorage.getItem('freehub_onb_cours');
+        if(brut && repris.actif){
+          var d = JSON.parse(brut) || {};
+          if(typeof d.etape === 'number') repris.etape = d.etape;
+          if(d.rep) repris.rep = d.rep;
+        }
+      } catch(e){}
+      return repris;
+    })(),
     // Compte (optionnel) : null = déconnecté, sinon { email }.
     compte: null, authOpen: false, authMode: 'login', authErr: '', authBusy: false,
     syncEtat: '',           // '' | 'en cours' | 'ok' | 'erreur'
@@ -7647,6 +7660,10 @@
     { v:'Je ne sais pas encore', l:'Je ne sais pas encore' },
   ];
 
+  // Le nombre d'écrans « profil » avant les questions de ressenti. Assez pour
+  // que les simulateurs soient justes, pas au point de refaire tout le profil.
+  var ONB_PROFIL = 10;
+
   // Le corps seul (sans l'overlay) : c'est lui qu'on met à jour à chaque étape,
   // sans recréer l'overlay - sinon son animation d'apparition se rejoue et laisse
   // voir le dashboard derrière.
@@ -7654,9 +7671,9 @@
     var o = state.onboarding;
     var r = o.rep;
     var e = o.etape;
-    // 5 étapes de profil, puis les 4 questions de ressenti : elles alimentent
+    // 9 étapes de profil, puis les questions de ressenti : elles alimentent
     // le score de sérénité affiché en fin de parcours.
-    var total = 5 + SERENITE_Q.length;
+    var total = ONB_PROFIL + SERENITE_Q.length;
 
     var dots = '';
     if(e >= 1 && e <= total){
@@ -7671,25 +7688,42 @@
     if(e === 0){
       corps = '<div class="onb-emoji">👋</div>'
         + '<div class="onb-q">'+(prenom ? 'Bienvenue '+esc(prenom)+' !' : 'Bienvenue sur FreeHub')+'</div>'
-        + '<div class="onb-sub">Trois questions rapides pour personnaliser ton espace. '
+        + '<div class="onb-sub">Quelques questions pour personnaliser ton espace. '
           + 'Tu pourras tout modifier ensuite dans ton profil.</div>'
-        + '<div class="onb-actions"><button class="onb-primary" data-action="onb-next">C’est parti →</button></div>'
-        + '<button class="onb-skip" data-action="onb-skip">Passer pour l’instant</button>';
+        + '<div class="onb-chrono">⏱ Rempli en 2 minutes chrono</div>'
+        + '<div class="onb-actions"><button class="onb-primary" data-action="onb-next">C’est parti →</button></div>';
     } else if(e === 1){
       corps = dots + '<div class="onb-q">Tu fais quoi ?</div>'
         + '<div class="onb-sub">Ton activité principale, en quelques mots.</div>'
         + '<input class="onb-input" data-onb="activite" value="'+esc(r.activite||'')+'" placeholder="Ex : monteur vidéo, consultant marketing…">'
         + onbNav(true);
     } else if(e === 2){
-      corps = dots + '<div class="onb-q">Sous quel statut ?</div>'
+      corps = dots + '<div class="onb-q">Quel type d’activité as-tu ?</div>'
         + '<div class="onb-sub">Si tu ne sais pas encore, ce n’est pas grave.</div>'
         + '<div class="onb-choix">' + ONB_FORMES.map(function(f){
             return '<button class="onb-opt'+(r.forme===f.v?' on':'')+'" data-action="onb-forme" data-v="'+esc(f.v)+'">'
               + esc(f.l)+'</button>'; }).join('') + '</div>'
         + onbNav(false);
     } else if(e === 3){
+      // La catégorie fixe l'abattement et le taux du versement libératoire :
+      // sans elle, tous les calculs partent d'un défaut arbitraire.
+      corps = dots + '<div class="onb-q">Tu vends quoi, exactement ?</div>'
+        + '<div class="onb-sub">Ça détermine ton abattement et tes taux.</div>'
+        + '<div class="onb-choix">'
+          + [['bnc','Des prestations intellectuelles','Conseil, design, développement, coaching…'],
+             ['serviceBIC','Des services','Artisanat, réparation, transport, beauté…'],
+             ['venteBIC','Des produits','Vente, restauration, hébergement…'],
+             ['inconnu','Je ne sais pas','On te le dira dans un parcours']]
+            .map(function(c){
+              return '<button class="onb-opt onb-opt-x'+(r.categorieFiscale===c[0]?' on':'')+'"'
+                + ' data-action="onb-categorie" data-v="'+c[0]+'">'
+                + '<span class="onb-opt-t">'+esc(c[1])+'</span>'
+                + '<span class="onb-opt-d">'+esc(c[2])+'</span></button>';
+            }).join('')
+        + '</div>'
+        + onbNav(false);
+    } else if(e === 4){
       corps = dots + '<div class="onb-q">Ton chiffre d’affaires, à peu près ?</div>'
-        + '<div class="onb-sub">Une estimation suffit - pour situer tes simulateurs.</div>'
         + '<div class="onb-ca">'
           + '<input class="onb-input" data-onb="ca" type="number" min="0" value="'+esc(r.ca||'')+'" placeholder="60 000">'
           + '<div class="onb-seg">'
@@ -7698,15 +7732,27 @@
           + '</div>'
         + '</div>'
         + onbNav(true);
-    } else if(e === 4){
+    } else if(e === 5){
+      // La TVA conditionne le simulateur de provision et les échéances.
+      corps = dots + '<div class="onb-q">Et la TVA, tu en es où ?</div>'
+        + '<div class="onb-sub">C’est ce qui change le plus tes calculs.</div>'
+        + '<div class="onb-choix">'
+          + [['Je ne suis pas à la TVA (franchise en base)','Je n’en facture pas encore'],
+             ['Je suis à la TVA','J’en facture à mes clients'],
+             ['Je ne sais pas','Je ne sais pas']]
+            .map(function(c){
+              return '<button class="onb-opt'+(r.tva===c[0]?' on':'')+'"'
+                + ' data-action="onb-tva" data-v="'+esc(c[0])+'">'+esc(c[1])+'</button>';
+            }).join('')
+        + '</div>'
+        + onbNav(false);
+    } else if(e === 6){
       // La périodicité conditionne tout le calendrier : sans elle, on n'invente
       // aucune échéance. « Je ne sais pas » est une réponse acceptable.
       var micro = /micro|auto/i.test(r.forme || '');
       corps = dots + '<div class="onb-q">'
           + (micro ? 'Tu déclares à l’URSSAF…' : 'Tu déclares ta TVA…')+'</div>'
-        + '<div class="onb-sub">'+(micro
-            ? 'C’est le choix fait à ton immatriculation. Il place tes échéances dans le calendrier.'
-            : 'Pour placer tes déclarations dans ton calendrier. Si tu n’y es pas encore, passe.')+'</div>'
+        + '<div class="onb-sub">Ce choix va permettre de placer tes échéances dans le calendrier.</div>'
         + '<div class="onb-choix">'
           + ['mensuel','trimestriel'].map(function(v){
               var actif = (micro ? r.periodeUrssaf : r.periodeTva) === v;
@@ -7718,7 +7764,46 @@
             + '" data-action="onb-periodicite" data-v="nsp">Je ne sais pas encore</button>'
         + '</div>'
         + onbNav(false);
-    } else if(e === 5){
+    } else if(e === 7){
+      // Ce que la personne veut se verser : c'est le point de départ des
+      // simulateurs de rémunération et du passage en société.
+      corps = dots + '<div class="onb-q">Tu veux te verser combien par mois ?</div>'
+        + '<div class="onb-sub">Net, dans ta poche. Une cible suffit.</div>'
+        + '<div class="onb-ca">'
+          + '<input class="onb-input" data-onb="remMensuelle" type="number" min="0"'
+            + ' value="'+esc(r.remMensuelle||'')+'" placeholder="2 500">'
+          + '<div class="onb-unite">€ / mois</div>'
+        + '</div>'
+        + onbNav(true);
+    } else if(e === 8){
+      // Le foyer fiscal : indispensable pour l'impôt, et souvent oublié.
+      corps = dots + '<div class="onb-q">Ton foyer fiscal, c’est combien de parts ?</div>'
+        + '<div class="onb-sub">Célibataire = 1 · Couple = 2 · + 0,5 par enfant.</div>'
+        + '<div class="onb-choix onb-choix-l">'
+          + ['1','1.5','2','2.5','3','4'].map(function(v){
+              return '<button class="onb-opt onb-opt-c'+((r.parts||'1')===v?' on':'')+'"'
+                + ' data-action="onb-parts" data-v="'+v+'">'+v.replace('.', ',')+'</button>';
+            }).join('')
+        + '</div>'
+        + onbNav(false);
+    } else if(e === 9){
+      // La photo : facultative, mais proposée ici sinon personne n'y pense.
+      var apercu = r.photo
+        ? '<img class="onb-photo-img" src="'+esc(r.photo)+'" alt="">'
+        : '<span class="onb-photo-vide">'+(prenom ? esc(prenom.charAt(0).toUpperCase()) : '🙂')+'</span>';
+      corps = dots + '<div class="onb-q">Une photo pour ton profil ?</div>'
+        + '<div class="onb-sub">Elle apparaît dans l’Entraide, à côté de tes messages.</div>'
+        + '<div class="onb-photo">'+apercu+'</div>'
+        + '<label class="onb-photo-cta">'
+          + (r.photo ? 'Changer la photo' : 'Choisir une photo')
+          + '<input type="file" accept="image/*" data-onb-photo hidden>'
+        + '</label>'
+        + '<div class="onb-nav">'
+          + '<button class="onb-back" data-action="onb-prev">← Retour</button>'
+          + '<button class="onb-primary" data-action="onb-next">'
+            + (r.photo ? 'Continuer →' : 'Plus tard →')+'</button>'
+        + '</div>';
+    } else if(e === 10){
       var g = state.notif.genres && state.notif.genres.length
         ? state.notif.genres
         : [{id:'echeances', ico:'📅', titre:'Mes échéances',
@@ -7727,9 +7812,8 @@
             desc:'Quand quelqu’un te répond dans l’Entraide'},
            {id:'recap', ico:'📮', titre:'Le récap du mois',
             desc:'Ce qui t’attend le mois prochain, en un e-mail'}];
-      corps = dots + '<div class="onb-q">On te prévient de quoi ?</div>'
-        + '<div class="onb-sub">Par e-mail, seulement si tu le demandes. '
-          + 'Modifiable à tout moment dans ton profil.</div>'
+      corps = dots + '<div class="onb-q">De quoi souhaites-tu être prévenu ?</div>'
+        + '<div class="onb-sub">*Modifiable à tout moment dans ton espace</div>'
         + '<div class="onb-notifs">' + g.map(function(x){
             var on = !!(r.notif || {})[x.id];
             return '<button class="onb-notif'+(on?' on':'')+'" data-action="onb-notif"'
@@ -7740,9 +7824,10 @@
               + '<span class="notif-sw"><i></i></span></button>';
           }).join('') + '</div>'
         + onbNav(true);
-    } else if(e >= 6 && e <= 5 + SERENITE_Q.length){
-      // Les questions de ressenti : une échelle de 1 à 10, un clic par réponse.
-      var qs = SERENITE_Q[e - 6];
+    } else if(e >= ONB_PROFIL + 1 && e <= ONB_PROFIL + SERENITE_Q.length){
+      // Les questions de ressenti : un curseur, même structure que le reste
+      // (retour à gauche, « Continuer » à droite).
+      var qs = SERENITE_Q[e - ONB_PROFIL - 1];
       var val = (r.serenite || {})[qs.id] || 5;
       corps = dots + '<div class="onb-q">'+esc(qs.q)+'</div>'
         + '<div class="onb-curseur" style="--p:'+((val - 1) / 9 * 100)+'%">'
@@ -7752,10 +7837,10 @@
             + ' aria-label="'+esc(qs.bas)+' à '+esc(qs.haut)+'">'
           + '<div class="onb-cur-l"><span>'+esc(qs.bas)+'</span><span>'+esc(qs.haut)+'</span></div>'
         + '</div>'
-        + '<div class="onb-actions">'
+        + '<div class="onb-nav">'
           + '<button class="onb-back" data-action="onb-prev">← Retour</button>'
           + '<button class="onb-primary" data-action="onb-serenite" data-id="'+qs.id+'">'
-            + (e === 5 + SERENITE_Q.length ? 'Voir mon score →' : 'Suivant →')+'</button>'
+            + 'Continuer →</button>'
         + '</div>';
     } else {
       // Le bilan : le score calculé, et le premier pas à faire tout de suite.
@@ -7816,6 +7901,12 @@
     var root = document.getElementById('onb-root');
     if(!root) return;
     if(!state.onboarding.actif){ root.innerHTML = ''; return; }
+    // On garde la trace de l'avancement : recharger ou fermer l'onglet ne
+    // fait pas repartir de zéro, et ne permet pas de sauter les questions.
+    try {
+      localStorage.setItem('freehub_onb_cours', JSON.stringify({
+        etape: state.onboarding.etape, rep: state.onboarding.rep }));
+    } catch(e){}
     var card = root.querySelector('.onb-card');
     if(!card){
       root.innerHTML = '<div class="onb-overlay"><div class="onb-card"></div></div>';
@@ -7850,6 +7941,11 @@
     if((r.activite||'').trim()) p.activite = r.activite.trim();
     if(r.forme && r.forme !== 'Je ne sais pas encore') p.forme = r.forme;
     if((r.ca||'').toString().trim()){ p.ca = r.ca; p.periodeCa = r.periodeCa || 'annuel'; }
+    if(r.categorieFiscale) p.categorieFiscale = r.categorieFiscale;
+    if(r.tva && r.tva !== 'Je ne sais pas') p.tva = r.tva;
+    if((r.remMensuelle||'').toString().trim()) p.remMensuelle = r.remMensuelle;
+    if(r.parts) p.parts = r.parts;
+    if(r.photo) p.photo = r.photo;
     // « nsp » n'est pas une périodicité : on laisse vide plutôt que d'inventer.
     var micro = /micro|auto/i.test(p.forme || r.forme || '');
     var per = micro ? r.periodeUrssaf : r.periodeTva;
@@ -7869,9 +7965,16 @@
       try { localStorage.setItem('freehub_serenite', JSON.stringify(r.serenite)); } catch(e){}
       pousserServeur();
     }
-    try { localStorage.setItem('freehub_onboarded', '1'); } catch(e){}
+    try {
+      localStorage.setItem('freehub_onboarded', '1');
+      localStorage.removeItem('freehub_onb_cours');
+    } catch(e){}
     state.onboarding.actif = false;
-    setState({ tab: 'accueil' });
+    // On atterrit sur le profil : c'est le moment où l'on est le plus enclin
+    // à finir de le remplir, et il reste des champs utiles aux simulateurs.
+    notifCharger(false);
+    state.profilReturn = 'accueil';
+    setState({ tab: 'profil' });
   }
 
   // ---------------------------------------------------------------------------
@@ -8489,12 +8592,12 @@
   var SERENITE_Q = [
     { id:'confiance', q:'L’administratif, tu le vis comment ?',
       bas:'Je subis', haut:'Je maîtrise' },
-    { id:'charge', q:'Ça t’occupe l’esprit ?',
+    { id:'charge', q:'Ça t’occupe l’esprit…',
       bas:'Tout le temps', haut:'Jamais' },
-    { id:'dates', q:'Tes prochaines échéances, tu les connais ?',
+    { id:'apprehension', q:'L’administratif français, ça t’angoisse ?',
+      bas:'Ça me bloque', haut:'Pas du tout' },
+    { id:'dates', q:'Tes prochaines échéances déclaratives, tu les connais ?',
       bas:'Aucune idée', haut:'Toutes' },
-    { id:'argent', q:'Sur 1 000 € encaissés, tu sais ce qu’il te reste ?',
-      bas:'Pas du tout', haut:'Au centime près' },
   ];
 
   // Ce que la plateforme sait, sans rien demander.
@@ -10367,6 +10470,22 @@
         majOnboarding();
         break;
       }
+      // Les choix qui avancent d'eux-mêmes : un clic vaut réponse.
+      case 'onb-categorie':
+        state.onboarding.rep.categorieFiscale = el.getAttribute('data-v');
+        state.onboarding.etape += 1;
+        majOnboarding();
+        break;
+      case 'onb-tva':
+        state.onboarding.rep.tva = el.getAttribute('data-v');
+        state.onboarding.etape += 1;
+        majOnboarding();
+        break;
+      case 'onb-parts':
+        state.onboarding.rep.parts = el.getAttribute('data-v');
+        state.onboarding.etape += 1;
+        majOnboarding();
+        break;
       case 'onb-notif': {
         var nid = el.getAttribute('data-id');
         state.onboarding.rep.notif = state.onboarding.rep.notif || {};
@@ -10418,11 +10537,8 @@
         setState({ tab:'objectifs', objectifOuvert: oid, stepOuvert: 0 });
         break;
       }
-      case 'onb-skip':
-        try { localStorage.setItem('freehub_onboarded', '1'); } catch(err){}
-        state.onboarding.actif = false;
-        render();
-        break;
+      // « onb-skip » n'existe plus : l'onboarding se termine, il ne se saute
+      // pas. Sans ces réponses, la moitié de l'app fonctionne à l'aveugle.
       case 'onb-finish':
         onbTerminer();
         break;
@@ -11337,6 +11453,29 @@
     var imp = e.target.closest('[data-import-donnees]');
     if(imp){
       if(imp.files && imp.files[0]) importerDonnees(imp.files[0]);
+      return;
+    }
+    // Même traitement que le profil, mais la photo atterrit dans les réponses
+    // de l'onboarding (elle sera versée au profil à la fin).
+    var pho = e.target.closest('[data-onb-photo]');
+    if(pho){
+      var f2 = pho.files && pho.files[0];
+      if(!f2) return;
+      var l2 = new FileReader();
+      l2.onload = function(ev){
+        var im = new Image();
+        im.onload = function(){
+          var c2 = Math.min(im.width, im.height);
+          var cv2 = document.createElement('canvas');
+          cv2.width = cv2.height = 256;
+          cv2.getContext('2d').drawImage(im, (im.width - c2) / 2, (im.height - c2) / 2,
+                                         c2, c2, 0, 0, 256, 256);
+          state.onboarding.rep.photo = cv2.toDataURL('image/jpeg', 0.85);
+          majOnboarding();
+        };
+        im.src = ev.target.result;
+      };
+      l2.readAsDataURL(f2);
       return;
     }
     var ph = e.target.closest('[data-profil-photo]');
