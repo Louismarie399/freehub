@@ -6,13 +6,16 @@
     --track:#eef1f6; --soft:#f4f8ff; --nav:#0f1b33;
     --surface:#fff; --surface-2:#fafbfd; --ombre:rgba(15,27,51,.5);
   }
+  /* Un sombre « ardoise » plutôt qu'un noir : assez clair pour ne pas peser,
+     assez contrasté pour que le texte respire. Les gris de texte sont
+     volontairement hauts - c'est un outil qu'on lit, pas une vitrine. */
   [data-theme="sombre"]{
-    --bg:#0b1220; --ink:#e8edf7; --blue:#5b8cff; --blue-dark:#7aa3ff;
-    --muted:#93a1ba; --muted2:#b8c4d8; --border:rgba(255,255,255,.14);
+    --bg:#151d2e; --ink:#eef2f9; --blue:#6d99ff; --blue-dark:#8fb2ff;
+    --muted:#a3b0c6; --muted2:#c6d0e0; --border:rgba(255,255,255,.16);
     /* --soft doit trancher NETTEMENT sur --surface, sinon les encarts teintés
        disparaissent : c'est la cause n°1 des éléments « qui ne ressortent plus ». */
-    --track:#232f47; --soft:#1e2b47; --nav:#070d18;
-    --surface:#141c2e; --surface-2:#0e1524; --ombre:rgba(0,0,0,.7);
+    --track:#2c3a55; --soft:#26344f; --nav:#101728;
+    --surface:#1e2739; --surface-2:#182131; --ombre:rgba(0,0,0,.6);
   }
   /* En sombre, les aplats très clairs des univers deviennent illisibles :
      on les rabat sur la surface, la couleur reste portée par le texte. */
@@ -736,14 +739,15 @@
   /* Charte d'accueil de l'Entraide, montrée une seule fois */
   .charte-modal{width:430px}
   .charte-haut{padding:30px 30px 8px;text-align:center}
-  .charte-ico{width:58px;height:58px;margin:0 auto 12px;border-radius:19px;background:#ffe4e6;
+  .charte-ico{width:58px;height:58px;margin:0 auto 12px;border-radius:19px;background:#d9f5e9;
     display:flex;align-items:center;justify-content:center;font-size:26px}
   .charte-corps{padding:14px 30px 4px;display:flex;flex-direction:column;gap:10px}
   .charte-r{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;line-height:1.5;
     color:#3f4b60;font-weight:500}
   .charte-r span{flex:none}
   .charte-pied{padding:20px 30px 26px}
-  .charte-ok{width:100%;padding:13px;border:none;border-radius:12px;background:#e11d48;color:#fff;
+  /* Vert et non rouge : c'est une entrée, pas un avertissement. */
+  .charte-ok{width:100%;padding:13px;border:none;border-radius:12px;background:#0f9d6e;color:#fff;
     font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;transition:.18s var(--ease)}
   .charte-ok:hover{filter:brightness(1.08);transform:translateY(-1px)}
 
@@ -1973,7 +1977,9 @@
   .bulle-form input,.bulle-form textarea{padding:10px 13px;border:1px solid var(--border);
     border-radius:11px;font-family:inherit;font-size:13px;resize:none}
   .bulle-form input:focus,.bulle-form textarea:focus{outline:none;border-color:var(--blue)}
-  .bulle-envoi{width:100%}
+  /* Le bouton d'envoi de la bulle d'aide est pleine largeur : il ne doit pas
+     hériter du rond de la chatbox, sinon il devient une ellipse. */
+  .bulle-envoi{width:100%;height:auto;padding:13px 20px;border-radius:13px;font-size:14px}
   .bulle-erreur{font-size:12px;font-weight:700;color:#b91c1c}
   .bulle-merci{padding:20px 18px;font-size:13.5px;line-height:1.55;color:var(--ink);
     font-weight:600}
@@ -2868,8 +2874,15 @@
   [data-theme="sombre"] .cal-vue.on{box-shadow:0 1px 3px rgba(0,0,0,.5)}
   [data-theme="sombre"] .cal-m-jn i{color:var(--muted)}
   [data-theme="sombre"] .cal-m-g i.auj{box-shadow:0 0 0 1.5px var(--ink) inset}
+  /* La couleur du domaine est déjà foncée : on l'éclaircit d'abord vers le
+     blanc, sinon le mélange donne un brun sale sur fond sombre. */
   [data-theme="sombre"] .cal-m-g i.etale{
-    background:color-mix(in srgb,currentColor 22%,transparent) !important}
+    background:color-mix(in srgb,
+      color-mix(in srgb,currentColor 45%,#ffffff) 26%,transparent) !important;
+    filter:brightness(1.55) saturate(.75)}
+  /* Sur les bandeaux de couleur pleine, le blanc reste blanc. */
+  [data-theme="sombre"] .cal-hero-cta{background:#fff}
+  [data-theme="sombre"] .cal-hero-pt{background:#fff !important}
   [data-theme="sombre"] .cal-an.on{color:#db2777}
 
   /* Les encarts ambrés : recalculés en ambre sombre, texte doré lisible. */
@@ -2898,12 +2911,31 @@
   [data-theme="sombre"] .modal-body{background:var(--surface) !important}
 
   /* Retouches propres au thème sombre : ce que les variables ne couvrent pas. */
-  [data-theme="sombre"] .ch-fil{background:#0d1524}
+  [data-theme="sombre"] .ch-fil{background:#182131}
   [data-theme="sombre"] .ch-txt{background:var(--surface-2);border-color:rgba(255,255,255,.09)}
   [data-theme="sombre"] .ch-msg:hover{background:rgba(255,255,255,.04)}
   [data-theme="sombre"] .sq{background:linear-gradient(90deg,#1a2439 0%,#222d47 50%,#1a2439 100%)}
+  /* Les illustrations sont des traits noirs + aplats bleus : une inversion
+     rendait le bleu fluo. On en fait des silhouettes claires et discrètes,
+     ce que ces dessins décoratifs sont censés être. */
   [data-theme="sombre"] .tui-illu,[data-theme="sombre"] .illu-img,
-  [data-theme="sombre"] .scene-illu{filter:invert(1) hue-rotate(180deg) brightness(1.08)}
+  [data-theme="sombre"] .obj-illu,[data-theme="sombre"] .detail-illu{
+    filter:brightness(0) invert(1);opacity:.16}
+  [data-theme="sombre"] .ch-vide .illu-img,[data-theme="sombre"] .cote-vide .illu-img{opacity:.3}
+
+  /* Les textes codés en gris foncé restent lisibles : ils étaient posés sur
+     des aplats clairs devenus sombres. */
+  [data-theme="sombre"] .sc-astuce,[data-theme="sombre"] .sc-intro,
+  [data-theme="sombre"] .sc-faire li,[data-theme="sombre"] .sc-liste,
+  [data-theme="sombre"] .step-h,[data-theme="sombre"] .et-now-h,
+  [data-theme="sombre"] .modal-body,[data-theme="sombre"] .part-modal-desc,
+  [data-theme="sombre"] .cat-s,[data-theme="sombre"] .obj-suite-d{color:var(--muted2)}
+  [data-theme="sombre"] .sc-vigilance{color:#fcd34d}
+  [data-theme="sombre"] .charte-r{color:var(--muted2)}
+  [data-theme="sombre"] .charte-ico{background:rgba(15,157,110,.2)}
+  /* Textes en gris moyen sur les cartes : un cran plus clair pour rester nets. */
+  [data-theme="sombre"] .tui-d,[data-theme="sombre"] .acc-card-d,
+  [data-theme="sombre"] .lex-d,[data-theme="sombre"] .dep-d{color:var(--muted2)}
   [data-theme="sombre"] .notif-l.on{background:rgba(15,157,110,.14)}
   [data-theme="sombre"] .cote-reste{background:rgba(15,157,110,.12);border-color:rgba(15,157,110,.3)}
   [data-theme="sombre"] .cote-p-b,[data-theme="sombre"] .rv-jauge{background:rgba(255,255,255,.09)}
@@ -2943,6 +2975,23 @@
   .sq-b{height:38px;border-radius:4px 16px 16px 16px}
   .sq-notif{height:66px;border-radius:15px}
   @media (prefers-reduced-motion: reduce){ .sq{animation:none} }
+
+  /* ---------- Accueil d'un simulateur, à la première ouverture ---------- */
+  .sim-intro{width:460px;max-width:100%;padding:0;overflow:hidden}
+  .sim-intro-h{display:flex;align-items:center;gap:15px;padding:24px 26px;
+    background:linear-gradient(135deg,#0f1b33,#1e46b8 130%);color:#fff}
+  .sim-intro-i{width:46px;height:46px;border-radius:14px;flex:none;font-size:22px;
+    background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center}
+  .sim-intro-k{font-size:11px;font-weight:900;letter-spacing:.08em;opacity:.7}
+  .sim-intro-t{font-size:19px;font-weight:800;letter-spacing:-.02em;margin-top:1px}
+  .sim-intro-b{padding:20px 26px 6px;display:flex;flex-direction:column;gap:14px}
+  .sim-intro-l{display:flex;flex-direction:column;gap:3px;font-size:14px;line-height:1.55;
+    color:var(--muted2)}
+  .sim-intro-p{font-size:10.5px;font-weight:900;letter-spacing:.07em;color:var(--blue)}
+  .sim-intro-ok{margin:18px 26px 24px;width:calc(100% - 52px);padding:13px;border:none;
+    border-radius:13px;background:var(--blue);color:#fff;font-family:inherit;font-size:14.5px;
+    font-weight:800;cursor:pointer;transition:.18s var(--ease)}
+  .sim-intro-ok:hover{filter:brightness(1.08);transform:translateY(-1px)}
 
   /* ---------- Combien mettre de côté ---------- */
   /* Même construction que les autres cartes : sombre au départ, saturé au bout. */
@@ -3244,144 +3293,228 @@
   /* Dérivés automatiquement du thème clair : même teinte, luminosité
      inversée et bornée entre 8,5 % et 20 %. Un texte clair passe donc sur
      chacun de ces fonds. Régénérable : voir le script du 2026-08-08. */
-  [data-theme="sombre"] .moi-grade.admin{background:#3c3519}
-  [data-theme="sombre"] .moi-grade.rang-bronze{background:#322114}
-  [data-theme="sombre"] .moi-grade.rang-argent{background:#131923}
-  [data-theme="sombre"] .moi-grade.rang-or{background:#3c3519}
-  [data-theme="sombre"] .zone-avant{background:#211a0e}
-  [data-theme="sombre"] .zone-p{background:#46381c}
-  [data-theme="sombre"] .zone.survol{background:#2f2513}
-  [data-theme="sombre"] .zone-avant.plein{background:#261c10}
-  [data-theme="sombre"] .zone-avant.plein.survol{background:#261c10}
-  [data-theme="sombre"] .ch-fil{background:#131a29}
-  [data-theme="sombre"] .ch-role.admin{background:#271012}
-  [data-theme="sombre"] .ch-tag{background:#0e1822}
-  [data-theme="sombre"] .ch-tag.signale{background:#3c3519}
-  [data-theme="sombre"] .ch-ap-clos{background:#0d161e}
-  [data-theme="sombre"] .ch-mercis{background:#3f3c1a}
-  [data-theme="sombre"] .sond-b{background:#0d131f}
-  [data-theme="sombre"] .sond-l{background:#0d131f}
-  [data-theme="sombre"] .sond-l i{background:#131f2e}
-  [data-theme="sombre"] .sond-l.mien i{background:#1b2c42}
-  [data-theme="sombre"] .ch-muet{background:#3c3519}
-  [data-theme="sombre"] .ch-form textarea:disabled{background:#0d131f}
-  [data-theme="sombre"] .ch-envoi:disabled{background:#19222f}
-  [data-theme="sombre"] .ch-modmsg .ch-txt{background:#0d131f}
-  [data-theme="sombre"] .acc-ech{background:#21180d}
-  [data-theme="sombre"] .acc-ech:hover{background:#322514}
-  [data-theme="sombre"] .acc-ech-j{background:#48351e}
-  [data-theme="sombre"] .med-prog{background:#111724}
-  [data-theme="sombre"] .ch-alerte{background:#291111}
-  [data-theme="sombre"] .charte-ico{background:#271012}
-  [data-theme="sombre"] .bf-prog-b{background:#111724}
-  [data-theme="sombre"] .bf-ico.verrou{background:#0e1622}
-  [data-theme="sombre"] .bf-indice{background:#0d131f}
-  [data-theme="sombre"] .tui-pin:hover{background:#322a14}
-  [data-theme="sombre"] .tui-pin.on:hover{background:#291111}
-  [data-theme="sombre"] .fin-modal{background:#11291a}
-  [data-theme="sombre"] .tui-x:hover{background:#291111}
-  [data-theme="sombre"] .tui.dispo{background:#11161f}
-  [data-theme="sombre"] .tui.dispo .tui-ico{background:#19202c}
-  [data-theme="sombre"] .tui.dispo .tui-add{background:#253241}
-  [data-theme="sombre"] .cat-x{background:#0d1521}
-  [data-theme="sombre"] .cat-x:hover{background:#141c2c}
-  [data-theme="sombre"] .obj-ech{background:#221e0e}
-  [data-theme="sombre"] .tui.fait{background:#10161b}
-  [data-theme="sombre"] .dp-segs i{background:#171e2b}
-  [data-theme="sombre"] .et-ok{background:#0d2013}
-  [data-theme="sombre"] .et-ok .sc-astuce{background:#122c1c}
-  [data-theme="sombre"] .et-apres{background:#0d131f}
-  [data-theme="sombre"] .et-apres-n{background:#171e2b}
-  [data-theme="sombre"] .sc-liste.warn{background:#221e0e}
-  [data-theme="sombre"] .sc-astuce{background:#0d131f}
-  [data-theme="sombre"] .btn-confirm{background:#1a212d}
-  [data-theme="sombre"] .btn-primary:disabled{background:#1a212d}
-  [data-theme="sombre"] .profil-saved{background:#132f1d}
-  [data-theme="sombre"] .sim-hero:hover .sim-hero-cta{background:#161616}
-  [data-theme="sombre"] .card.tinted{background:#221e0e}
-  [data-theme="sombre"] .stat.v{background:#0d2013}
-  [data-theme="sombre"] .stat.o{background:#221e0e}
-  [data-theme="sombre"] .stat.r{background:#1f0d0d}
-  [data-theme="sombre"] .stat.g{background:#0d161e}
-  [data-theme="sombre"] .icon-btn.danger:hover{background:#291111}
-  [data-theme="sombre"] .dep-add-plus{background:#0d1420}
-  [data-theme="sombre"] .vl-elig.ok{background:#0d2013}
-  [data-theme="sombre"] .vl-elig.ko{background:#1f0d0d}
-  [data-theme="sombre"] .vl-elig.na{background:#0d161e}
-  [data-theme="sombre"] .stat-card.best{background:#0d2013}
-  [data-theme="sombre"] .import-info{background:#0d2013}
-  [data-theme="sombre"] .sync-bar{background:#0d1420}
-  [data-theme="sombre"] .sync-bar.done{background:#0d2013}
-  [data-theme="sombre"] .pf-total{background:#1f0d0d}
-  [data-theme="sombre"] .pf-total.ok{background:#0d2013}
-  [data-theme="sombre"] .pf input:disabled{background:#0f141f}
-  [data-theme="sombre"] .pb-manque{background:#221e0e}
-  [data-theme="sombre"] .lexq{background:#162030}
-  [data-theme="sombre"] .compte.connecte{background:#0d2013}
-  [data-theme="sombre"] .onb-seg{background:#131923}
-  [data-theme="sombre"] .onb-dots span{background:#1b2432}
-  [data-theme="sombre"] .cal-vues{background:#111724}
-  [data-theme="sombre"] .cal-m-nb{background:#27101d}
-  [data-theme="sombre"] .cal-jns{background:#0d131f}
-  [data-theme="sombre"] .cal-c.hors{background:#0d131f}
-  [data-theme="sombre"] .cal-sj-h{background:#0d131f}
-  [data-theme="sombre"] .cal-sj.auj .cal-sj-h{background:#27101d}
-  [data-theme="sombre"] .dem-type.partenaire{background:#0e2319}
-  [data-theme="sombre"] .dem-type.sav{background:#1f0d0e}
-  [data-theme="sombre"] .dem-ok.on{background:#0d2013}
-  [data-theme="sombre"] .bulle-type{background:#0d131f}
-  [data-theme="sombre"] .tvo-dots span{background:#17202f}
-  [data-theme="sombre"] .tvo-ghost:hover{background:#0d131f}
-  [data-theme="sombre"] .tvo-recap{background:#0d131f}
-  [data-theme="sombre"] .tvo-ch{background:#0d131f}
-  [data-theme="sombre"] .tvo-vide{background:#0d131f}
-  [data-theme="sombre"] .tvo-dep-x{background:#1f0d0d}
-  [data-theme="sombre"] .tvo-add:hover{background:#0d131f}
-  [data-theme="sombre"] .tva-sim-x:hover{background:#1f0d0d}
-  [data-theme="sombre"] .tva-sim-btn:hover{background:#0d131f}
-  [data-theme="sombre"] .outil.alerte{background:#1f0d0d}
-  [data-theme="sombre"] .outil-n{background:#111724}
-  [data-theme="sombre"] .sim-avis{background:#0d1420}
-  [data-theme="sombre"] .outil-alerte{background:#1f0d0d}
-  [data-theme="sombre"] .tvo-alerte{background:#1f0d0d}
-  [data-theme="sombre"] .tvo-ch-x:hover{background:#1f0d0d}
-  [data-theme="sombre"] .tvo-dep-err{background:#1f0d0d}
-  [data-theme="sombre"] .tvo-aj{background:#11291b}
-  [data-theme="sombre"] .tva-scen-c.bon{background:#0d1f14}
-  [data-theme="sombre"] .tva-scen-c.mauvais{background:#1f0d0d}
-  [data-theme="sombre"] .tva-risque-b{background:#1f0d0d}
-  [data-theme="sombre"] .dg-micro{background:#261f10}
-  [data-theme="sombre"] .dg-note{background:#0d1420}
-  [data-theme="sombre"] .dg-pin:hover{background:#0e1523}
-  [data-theme="sombre"] .dg-dans{background:#122c1f}
-  [data-theme="sombre"] .dgf-jauge{background:#0d141f}
-  [data-theme="sombre"] .dga-err{background:#1f0d0d}
-  [data-theme="sombre"] .dgf-btn.sec:hover{background:#0d131f}
-  [data-theme="sombre"] .dgf-dans{background:#122c1f}
-  [data-theme="sombre"] .adm-stat{background:#0d131f}
-  [data-theme="sombre"] .adm-stat.bleu{background:#0d1420}
-  [data-theme="sombre"] .adm-stat.or{background:#292111}
-  [data-theme="sombre"] .adm-stat.violet{background:#120d21}
-  [data-theme="sombre"] .adm-stat.vert{background:#11291c}
-  [data-theme="sombre"] .adm-stat.orange{background:#26190f}
-  [data-theme="sombre"] .adm-rep-barre{background:#161d29}
-  [data-theme="sombre"] .adm-rep-legende .p2{background:#161d29}
-  [data-theme="sombre"] .adm-forme{background:#0d131f}
-  [data-theme="sombre"] .adm-tag{background:#111724}
-  [data-theme="sombre"] .adm-tag.or{background:#312814}
-  [data-theme="sombre"] .adm-retirer:hover{background:#1f0d0d}
-  [data-theme="sombre"] .adm-note code{background:#0e1523}
-  [data-theme="sombre"] .adm-msg{background:#11291c}
-  [data-theme="sombre"] .adm-msg.err{background:#1f0d0d}
-  [data-theme="sombre"] .part-join{background:#0d131f}
-  [data-theme="sombre"] .acc-hero-cta{background:#161616}
-  [data-theme="sombre"] .detail-ech{background:#221e0e}
-  [data-theme="sombre"] .obj-fini{background:#102618}
-  [data-theme="sombre"] .obj-done{background:#132f1d}
-  [data-theme="sombre"] .cote-reste{background:#0d2016}
-  [data-theme="sombre"] .cote-p-b{background:#111724}
-  [data-theme="sombre"] .ser-l-p{background:#0d1521}
-  [data-theme="sombre"] .notif-l:hover{background:#0d111f}
-  [data-theme="sombre"] .notif-l.on{background:#0d1f17}
-  [data-theme="sombre"] .notif-sw{background:#1d2736}
-  [data-theme="sombre"] .onb-notif.on{background:#0d1f17}
+  [data-theme="sombre"] .moi-grade.rang-bronze{background:#462e1c}
+  [data-theme="sombre"] .moi-grade.rang-argent{background:#1d2635}
+  [data-theme="sombre"] .zone-p{background:#5a4824}
+  [data-theme="sombre"] .zone-avant.plein{background:#3a2b18}
+  [data-theme="sombre"] .zone-avant.plein.survol{background:#3a2b18}
+  [data-theme="sombre"] .ch-role.admin{background:#3b181b}
+  [data-theme="sombre"] .ch-tag{background:#162636}
+  [data-theme="sombre"] .ch-ap-clos{background:#152432}
+  [data-theme="sombre"] .ch-mercis{background:#534f22}
+  [data-theme="sombre"] .sond-b{background:#151f33}
+  [data-theme="sombre"] .sond-l{background:#151f33}
+  [data-theme="sombre"] .sond-l i{background:#1b2c42}
+  [data-theme="sombre"] .sond-l.mien i{background:#233956}
+  [data-theme="sombre"] .ch-form textarea:disabled{background:#151f33}
+  [data-theme="sombre"] .ch-envoi:disabled{background:#232f41}
+  [data-theme="sombre"] .ch-modmsg .ch-txt{background:#151f33}
+  [data-theme="sombre"] .acc-ech-j{background:#5c4426}
+  [data-theme="sombre"] .med-prog{background:#1a2337}
+  [data-theme="sombre"] .ch-alerte{background:#3d1919}
+  [data-theme="sombre"] .bf-prog-b{background:#1a2337}
+  [data-theme="sombre"] .bf-ico.verrou{background:#162336}
+  [data-theme="sombre"] .bf-indice{background:#151f33}
+  [data-theme="sombre"] .tui-pin:hover{background:#463b1c}
+  [data-theme="sombre"] .tui-pin.on:hover{background:#3d1919}
+  [data-theme="sombre"] .fin-modal{background:#193d27}
+  [data-theme="sombre"] .tui-x:hover{background:#3d1919}
+  [data-theme="sombre"] .tui.dispo{background:#1b2331}
+  [data-theme="sombre"] .tui.dispo .tui-ico{background:#232d3e}
+  [data-theme="sombre"] .tui.dispo .tui-add{background:#2f4053}
+  [data-theme="sombre"] .cat-x{background:#152235}
+  [data-theme="sombre"] .cat-x:hover{background:#1d283f}
+  [data-theme="sombre"] .tui.fait{background:#1a242d}
+  [data-theme="sombre"] .dp-segs i{background:#212b3d}
+  [data-theme="sombre"] .et-ok{background:#15341f}
+  [data-theme="sombre"] .et-ok .sc-astuce{background:#1a4029}
+  [data-theme="sombre"] .et-apres{background:#151f33}
+  [data-theme="sombre"] .et-apres-n{background:#212b3d}
+  [data-theme="sombre"] .btn-confirm{background:#242e3f}
+  [data-theme="sombre"] .btn-primary:disabled{background:#242e3f}
+  [data-theme="sombre"] .profil-saved{background:#1b4329}
+  [data-theme="sombre"] .stat.v{background:#15341f}
+  [data-theme="sombre"] .stat.r{background:#331515}
+  [data-theme="sombre"] .stat.g{background:#152432}
+  [data-theme="sombre"] .icon-btn.danger:hover{background:#3d1919}
+  [data-theme="sombre"] .dep-add-plus{background:#152034}
+  [data-theme="sombre"] .vl-elig.ok{background:#15341f}
+  [data-theme="sombre"] .vl-elig.ko{background:#331515}
+  [data-theme="sombre"] .vl-elig.na{background:#152432}
+  [data-theme="sombre"] .stat-card.best{background:#15341f}
+  [data-theme="sombre"] .import-info{background:#15341f}
+  [data-theme="sombre"] .sync-bar{background:#152034}
+  [data-theme="sombre"] .sync-bar.done{background:#15341f}
+  [data-theme="sombre"] .pf-total.ok{background:#15341f}
+  [data-theme="sombre"] .pf input:disabled{background:#182032}
+  [data-theme="sombre"] .lexq{background:#1f2d43}
+  [data-theme="sombre"] .compte.connecte{background:#15341f}
+  [data-theme="sombre"] .onb-dots span{background:#253144}
+  [data-theme="sombre"] .cal-m-nb{background:#3b182c}
+  [data-theme="sombre"] .cal-jns{background:#151f33}
+  [data-theme="sombre"] .cal-c.hors{background:#151f33}
+  [data-theme="sombre"] .cal-sj-h{background:#151f33}
+  [data-theme="sombre"] .cal-sj.auj .cal-sj-h{background:#3b182c}
+  [data-theme="sombre"] .dem-type.partenaire{background:#163727}
+  [data-theme="sombre"] .dem-type.sav{background:#331517}
+  [data-theme="sombre"] .dem-ok.on{background:#15341f}
+  [data-theme="sombre"] .bulle-type{background:#151f33}
+  [data-theme="sombre"] .tvo-dots span{background:#202d42}
+  [data-theme="sombre"] .tvo-ghost:hover{background:#151f33}
+  [data-theme="sombre"] .tvo-recap{background:#151f33}
+  [data-theme="sombre"] .tvo-ch{background:#151f33}
+  [data-theme="sombre"] .tvo-vide{background:#151f33}
+  [data-theme="sombre"] .tvo-dep-x{background:#331515}
+  [data-theme="sombre"] .tvo-add:hover{background:#151f33}
+  [data-theme="sombre"] .tva-sim-x:hover{background:#331515}
+  [data-theme="sombre"] .tva-sim-btn:hover{background:#151f33}
+  [data-theme="sombre"] .outil.alerte{background:#331515}
+  [data-theme="sombre"] .outil-n{background:#1a2337}
+  [data-theme="sombre"] .sim-avis{background:#152034}
+  [data-theme="sombre"] .outil-alerte{background:#331515}
+  [data-theme="sombre"] .tvo-alerte{background:#331515}
+  [data-theme="sombre"] .tvo-ch-x:hover{background:#331515}
+  [data-theme="sombre"] .tvo-dep-err{background:#331515}
+  [data-theme="sombre"] .tvo-aj{background:#193d28}
+  [data-theme="sombre"] .tva-scen-c.bon{background:#153321}
+  [data-theme="sombre"] .tva-scen-c.mauvais{background:#331515}
+  [data-theme="sombre"] .tva-risque-b{background:#331515}
+  [data-theme="sombre"] .dg-note{background:#152034}
+  [data-theme="sombre"] .dg-pin:hover{background:#162137}
+  [data-theme="sombre"] .dg-dans{background:#1a402d}
+  [data-theme="sombre"] .dgf-jauge{background:#152133}
+  [data-theme="sombre"] .dga-err{background:#331515}
+  [data-theme="sombre"] .dgf-btn.sec:hover{background:#151f33}
+  [data-theme="sombre"] .dgf-dans{background:#1a402d}
+  [data-theme="sombre"] .adm-stat{background:#151f33}
+  [data-theme="sombre"] .adm-stat.bleu{background:#152034}
+  [data-theme="sombre"] .adm-stat.violet{background:#1d1535}
+  [data-theme="sombre"] .adm-stat.vert{background:#193d2a}
+  [data-theme="sombre"] .adm-stat.orange{background:#3a2617}
+  [data-theme="sombre"] .adm-rep-barre{background:#202a3b}
+  [data-theme="sombre"] .adm-rep-legende .p2{background:#202a3b}
+  [data-theme="sombre"] .adm-forme{background:#151f33}
+  [data-theme="sombre"] .adm-tag{background:#1a2337}
+  [data-theme="sombre"] .adm-retirer:hover{background:#331515}
+  [data-theme="sombre"] .adm-note code{background:#162137}
+  [data-theme="sombre"] .adm-msg{background:#193d2a}
+  [data-theme="sombre"] .adm-msg.err{background:#331515}
+  [data-theme="sombre"] .acc-hero-cta{background:#242424}
+  [data-theme="sombre"] .detail-ech{background:#363016}
+  [data-theme="sombre"] .obj-fini{background:#183a24}
+  [data-theme="sombre"] .obj-done{background:#1b4329}
+  [data-theme="sombre"] .ser-l-p{background:#152235}
+  [data-theme="sombre"] .notif-l:hover{background:#151c33}
+  [data-theme="sombre"] .notif-sw{background:#273448}
+
+  /* ------------------------------------------------------------------ */
+  /* Thème sombre - textes saturés foncés rendus lisibles                */
+  /* ------------------------------------------------------------------ */
+  [data-theme="sombre"] .ch-msg.celebration .ch-txt{color:#aaeec4}
+  [data-theme="sombre"] .ch-auteur.rang-argent{color:#c2cad6}
+  [data-theme="sombre"] .med.on.rang-bronze.fam-parcours .med-n{color:#a3f5ef}
+  [data-theme="sombre"] .med.on.rang-argent.fam-parcours .med-n{color:#9ddafb}
+  [data-theme="sombre"] .ch-auteur.rang-bronze.fam-parcours{color:#a3f5ef}
+  [data-theme="sombre"] .ch-auteur.rang-argent.fam-parcours{color:#9ddafb}
+  [data-theme="sombre"] .med.on.rang-bronze .med-n{color:#f8c1a0}
+  [data-theme="sombre"] .med.on.rang-argent .med-n{color:#c2cad6}
+  [data-theme="sombre"] .med.on.rang-or .med-n{color:#fbd59d}
+  [data-theme="sombre"] .teinte-p-bronze{color:#a3f5ef}
+  [data-theme="sombre"] .teinte-p-argent{color:#9ddafb}
+  [data-theme="sombre"] .bf-gain{color:var(--muted2)}
+  [data-theme="sombre"] .detail-prog.fini .dp-l{color:#a6f2c2}
+  [data-theme="sombre"] .et-ok-t{color:#a6f2c2}
+  [data-theme="sombre"] .et-ok-illu{color:#5fbd85}
+  [data-theme="sombre"] .et-defaire:hover{color:#a6f2c2}
+  [data-theme="sombre"] .sc-liste.warn li{color:#fbd9a5}
+  [data-theme="sombre"] .obj-suite.pret .obj-suite-t{color:#a6f2c2}
+  [data-theme="sombre"] .sim-consent-text{color:var(--muted2)}
+  [data-theme="sombre"] .field > label{color:var(--muted2)}
+  [data-theme="sombre"] .res-list li{color:var(--muted2)}
+  [data-theme="sombre"] .res-line{color:var(--muted2)}
+  [data-theme="sombre"] .card.tinted .card-title{color:#fbd59d}
+  [data-theme="sombre"] .syn-resume{color:var(--muted2)}
+  [data-theme="sombre"] table.recap-t td{color:var(--muted2)}
+  [data-theme="sombre"] .vl-line{color:var(--muted2)}
+  [data-theme="sombre"] .vl-elig div div{color:var(--muted2)}
+  [data-theme="sombre"] .cmp-label{color:var(--muted2)}
+  [data-theme="sombre"] .bareme-seg{color:var(--muted2)}
+  [data-theme="sombre"] .bascule-v{color:var(--muted2)}
+  [data-theme="sombre"] .lg{color:var(--muted2)}
+  [data-theme="sombre"] .rep-l{color:var(--muted2)}
+  [data-theme="sombre"] .levier-t{color:var(--muted2)}
+  [data-theme="sombre"] .compte-sync{color:#a6f2c2}
+  [data-theme="sombre"] .obj-partage.fait{color:#a6f2c2}
+  [data-theme="sombre"] .outil-ok{color:#a0f8cd}
+  [data-theme="sombre"] .tvo-aj-c,[data-theme="sombre"] .tvo-aj-n,
+  [data-theme="sombre"] .tvo-aj-m,[data-theme="sombre"] .dga-ok-t{color:#a3f5cc}
+  [data-theme="sombre"] .dg-micro-t{color:#f4dca4}
+  [data-theme="sombre"] .dg-micro-s{color:#ebd9ad}
+  [data-theme="sombre"] .lx-modal-def{color:var(--muted2)}
+  [data-theme="sombre"] .adm-stat.vert .adm-stat-v{color:#a0f8cd}
+  [data-theme="sombre"] .cote-r-k{color:#a6f2c2}
+  [data-theme="sombre"] .cote-r-v{color:#9dfbe1}
+  [data-theme="sombre"] .notif-etat{color:#a0f8db}
+
+  /* Médailles verrouillées : éteintes en sombre, teinte de famille conservée */
+  [data-theme="sombre"] .med.verrou .med-coin{border-color:#535d6f;
+    background:radial-gradient(circle at 32% 26%,#303640 0%,#24272e 55%,#1a1c21 100%)}
+  [data-theme="sombre"] .med.verrou.rang-bronze .med-coin{border-color:#806042;
+    background:radial-gradient(circle at 32% 26%,#493728 0%,#34281e 55%,#241d16 100%)}
+  [data-theme="sombre"] .med.verrou.rang-argent .med-coin{border-color:#555f6c;
+    background:radial-gradient(circle at 32% 26%,#32373e 0%,#25282d 55%,#1b1d20 100%)}
+  [data-theme="sombre"] .med.verrou.rang-or .med-coin{border-color:#86723c;
+    background:radial-gradient(circle at 32% 26%,#494027 0%,#342e1d 55%,#252116 100%)}
+  [data-theme="sombre"] .med.verrou.rang-royal .med-coin{border-color:#533e84;
+    background:radial-gradient(circle at 32% 26%,#312749 0%,#241d34 55%,#1a1625 100%)}
+  [data-theme="sombre"] .med.verrou.rang-bronze.fam-parcours .med-coin{border-color:#447e74;
+    background:radial-gradient(circle at 32% 26%,#294742 0%,#1f3330 55%,#172422 100%)}
+  [data-theme="sombre"] .med.verrou.rang-argent.fam-parcours .med-coin{border-color:#3c6d86;
+    background:radial-gradient(circle at 32% 26%,#273e49 0%,#1d2d34 55%,#162025 100%)}
+  [data-theme="sombre"] .med.verrou.rang-or.fam-parcours .med-coin{border-color:#3c4586;
+    background:radial-gradient(circle at 32% 26%,#272b49 0%,#1d2034 55%,#161825 100%)}
+  [data-theme="sombre"] .med.verrou.rang-royal.fam-parcours .med-coin{border-color:#3c7d86;
+    background:radial-gradient(circle at 32% 26%,#274549 0%,#1d3134 55%,#162325 100%)}
+  [data-theme="sombre"] .med.verrou .med-ico{opacity:.4}
+  [data-theme="sombre"] .med.verrou .med-n{color:#7f8aa0}
+  [data-theme="sombre"] .suc-tete{
+    background:linear-gradient(135deg,#2a1102 0%,#7a3c07 58%,#b8790a 135%)}
+  [data-theme="sombre"] .obj-tete{
+    background:linear-gradient(135deg,#0b1424 0%,#182c53 58%,#2350c4 135%)}
+
+  /* Fonds assombris : le texte suit */
+  [data-theme="sombre"] .moi-grade.rang-bronze{color:#f0cba8}
+  [data-theme="sombre"] .moi-grade.rang-argent{color:#c2cad6}
+  [data-theme="sombre"] .ch-mercis{color:#fad49e}
+  [data-theme="sombre"] .ch-alerte{color:#f1a7a7}
+  [data-theme="sombre"] .bf-indice{color:#c1c9d7}
+  [data-theme="sombre"] .et-ok .sc-astuce{color:#b7e1c9}
+  [data-theme="sombre"] .profil-saved{color:#a6f2c2}
+  [data-theme="sombre"] .import-info{color:#a6f2c2}
+  [data-theme="sombre"] .sync-bar.done{color:#a6f2c2}
+  [data-theme="sombre"] .pf-total.ok{color:#a6f2c2}
+  [data-theme="sombre"] .cal-m-nb{color:#f3a3c5}
+  [data-theme="sombre"] .dem-type.partenaire{color:#9efae0}
+  [data-theme="sombre"] .dem-ok.on{color:#a6f2c2}
+  [data-theme="sombre"] .tvo-alerte{color:#dfb2b2}
+  [data-theme="sombre"] .dg-dans{color:#a3f5cc}
+  [data-theme="sombre"] .dgf-dans{color:#a3f5cc}
+  [data-theme="sombre"] .adm-msg{color:#a3f5cc}
+  [data-theme="sombre"] .detail-ech{color:#fac59c}
+  [data-theme="sombre"] .obj-fini{color:#a6f2c2}
+  [data-theme="sombre"] .obj-done{color:#a6f2c2}
+
+  /* ------------------------------------------------------------------ */
+  /* Thème sombre - champs de formulaire sans fond déclaré               */
+  /* (sinon le navigateur les laisse en blanc)                           */
+  /* ------------------------------------------------------------------ */
+  [data-theme="sombre"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  [data-theme="sombre"] textarea,
+  [data-theme="sombre"] select{
+    background:var(--surface-2);color:var(--ink);border-color:var(--border)}
+  [data-theme="sombre"] select option{background:var(--surface-2);color:var(--ink)}
+  [data-theme="sombre"] input::placeholder,
+  [data-theme="sombre"] textarea::placeholder{color:var(--muted)}
+  [data-theme="sombre"] input[type="date"]::-webkit-calendar-picker-indicator,
+  [data-theme="sombre"] input[type="month"]::-webkit-calendar-picker-indicator{
+    filter:invert(1) opacity(.6)}

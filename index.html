@@ -174,7 +174,10 @@
   .nav-burger{display:none;flex-direction:column;justify-content:center;gap:4.5px;
     width:40px;height:40px;padding:0 10px;border:none;border-radius:12px;background:transparent;
     cursor:pointer;transition:background .2s}
-  .nav-burger:hover{background:#f0f4fb}
+  /* :active et :focus héritaient du fond clair par défaut : en thème sombre,
+     le burger virait au blanc dès qu'on le touchait. */
+  .nav-burger:hover,.nav-burger:active,.nav-burger:focus,.nav-burger:focus-visible{
+    background:var(--pale);outline:none;-webkit-tap-highlight-color:transparent}
   .nav-burger span{display:block;height:2px;border-radius:2px;background:var(--encre);
     transition:transform .3s cubic-bezier(.3,.7,.3,1),opacity .2s}
   .nav-burger.ouvert span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
@@ -462,8 +465,12 @@
 
   /* FAQ - des accordéons, ouverts d'un clic                            */
   .faq{max-width:820px;margin:44px auto 0;display:flex;flex-direction:column;gap:12px}
-  .faq-q{background:var(--carte);border:1px solid var(--trait);border-radius:18px;
-    overflow:hidden;transition:border-color .25s,box-shadow .25s}
+  /* Une ombre douce en plus de la bordure : sur fond blanc, un simple trait à
+     10 % ne se voyait pas. */
+  .faq-q{background:var(--carte);border:1px solid rgba(15,27,51,.14);border-radius:18px;
+    overflow:hidden;box-shadow:0 3px 12px -6px rgba(15,27,51,.22);
+    transition:border-color .25s,box-shadow .25s}
+  :root[data-theme="sombre"] .faq-q{border-color:var(--trait);box-shadow:none}
   .faq-q[open]{border-color:rgba(47,107,255,.3);box-shadow:0 18px 40px -30px rgba(47,107,255,.6)}
   .faq-q summary{display:flex;align-items:center;gap:14px;padding:19px 22px;cursor:pointer;
     list-style:none;font-size:16.5px;font-weight:800;letter-spacing:-.015em}

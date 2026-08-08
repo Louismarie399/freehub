@@ -18,7 +18,10 @@ function route_sav(): void
     $u = utilisateur_courant();
     $c = corps();
     $message = trim((string) ($c['message'] ?? ''));
-    $email = strtolower(trim((string) ($c['email'] ?? ($u['email'] ?? ''))));
+    // Un membre connecté ne saisit rien : on retombe sur l'e-mail de son compte,
+    // sinon l'admin n'a aucun moyen de lui répondre.
+    $email = strtolower(trim((string) ($c['email'] ?? '')));
+    if ($email === '') $email = strtolower(trim((string) ($u['email'] ?? '')));
     if ($message === '') erreur('Dis-nous au moins quelques mots.');
     if (mb_strlen($message) > SAV_LONGUEUR_MAX) erreur('Message trop long.');
     if ($email !== '' && !preg_match(EMAIL_RE, $email)) erreur('Adresse e-mail invalide.');
@@ -62,15 +65,19 @@ function route_admin_demandes(): void
     }
     $libelles = ['suggestion' => '💡 Suggestion', 'bug' => '🐛 Bug', 'question' => '❓ Question'];
     foreach ($pdo->query(
-        'SELECT s.id, s.email, s.type, s.message, s.created, s.traite, u.prenom, u.nom
+        'SELECT s.id, s.email, s.type, s.message, s.created, s.traite,
+                u.prenom, u.nom, u.email AS email_compte
            FROM sav_requests s LEFT JOIN users u ON u.id = s.user_id
           ORDER BY s.id DESC LIMIT 200') as $r) {
         $nom = trim((string) ($r['prenom'] ?? ''));
         if ($nom !== '' && ($r['nom'] ?? '') !== '') $nom .= ' ' . mb_substr($r['nom'], 0, 1) . '.';
+        // Les retours envoyés avant la correction n'ont pas d'e-mail stocké :
+        // on retombe sur celui du compte pour rester joignable.
+        $mail = $r['email'] ?: ($r['email_compte'] ?? '');
         $out[] = [
             'type' => 'sav', 'id' => (int) $r['id'],
-            'titre' => $nom !== '' ? $nom : ($r['email'] ?: 'Anonyme'),
-            'email' => $r['email'], 'detail' => $libelles[$r['type']] ?? '',
+            'titre' => $nom !== '' ? $nom : ($mail ?: 'Anonyme'),
+            'email' => $mail, 'detail' => $libelles[$r['type']] ?? '',
             'message' => $r['message'], 'created' => $r['created'],
             'traite' => (bool) $r['traite'],
         ];

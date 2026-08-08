@@ -485,7 +485,7 @@
         + '<div class="bf-haut">'
           + '<div class="bf-ico'+(acquis?'':' verrou')+'">'+(acquis ? b.ico : '🔒')+'</div>'
           + '<div class="bf-l">'+(acquis ? 'Débloqué' : 'À débloquer')+'</div>'
-          + '<div class="bf-t">'+(acquis ? esc(b.t) : '???')+'</div>'
+          + '<div class="bf-t">'+esc(b.t)+'</div>'
         + '</div>'
         + '<div class="bf-corps">'
           + (acquis
@@ -2351,6 +2351,7 @@
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
+    simIntro: null,         // simulateur dont on montre l'explication d'accueil
     // Préférences de rappels : chargées à l'ouverture du profil.
     notif: { charge:false, genres:[], choix:{}, confirme:false, email:'', envoi:false, sauve:0 },
     // Score de sérénité : le ressenti déclaré à l'onboarding, et le détail
@@ -3195,8 +3196,10 @@
     }).concat(l.parts.map(function(i){
       var pa = PARTENAIRES[i];
       if(!pa) return '';
+      // Partenaire encore secret : la pastille reste anonyme.
       return '<span class="tui-lien part" style="--p:'+pa.color+'"'
-        + ' data-action="goto-part" data-i="'+i+'">🤝 '+esc(pa.nom)+'</span>';
+        + ' data-action="goto-part" data-i="'+i+'">🤝 '
+        + (pa.tease ? 'Prochainement' : esc(pa.nom))+'</span>';
     }));
     return chips.length ? '<span class="tui-liens">'+chips.join('')+'</span>' : '';
   }
@@ -7633,15 +7636,22 @@
   function simPartenaireHtml(index, texte){
     var p = PARTENAIRES[index];
     if(!p) return '';
+    // Un partenaire encore secret garde son mystère partout, pas seulement sur
+    // sa fiche : ni logo, ni nom tant qu'il n'est pas dévoilé.
+    var logo = p.tease
+      ? '<div class="sim-part-logo part-logo tease">?</div>'
+      : '<div class="sim-part-logo"><img src="'+esc(p.img)+'" alt="Logo '+esc(p.nom)+'"></div>';
     return '<div class="sim-part" style="--c:'+p.color+';--s:'+p.soft+'" '
       + 'data-action="part-open" data-i="'+index+'">'
-      + '<div class="sim-part-logo"><img src="'+esc(p.img)+'" alt="Logo '+esc(p.nom)+'"></div>'
+      + logo
       + '<div class="sim-part-txt">'
-        + '<div class="sim-part-h">Recommandé pour aller plus loin'
-          + (p.promo ? '<span class="sim-part-promo">🎁 code promo</span>' : '') + '</div>'
+        + '<div class="sim-part-h">'
+          + (p.tease ? 'Un partenaire arrive pour ça' : 'Recommandé pour aller plus loin')
+          + (p.promo && !p.tease ? '<span class="sim-part-promo">🎁 code promo</span>' : '') + '</div>'
         + '<div class="sim-part-b">'+esc(texte)+'</div>'
       + '</div>'
-      + '<span class="sim-part-cta">'+esc(p.nom)+' →</span>'
+      + '<span class="sim-part-cta">'
+        + (p.tease ? 'Prochainement' : esc(p.nom)+' →')+'</span>'
       + '</div>';
   }
 
@@ -8304,7 +8314,9 @@
       + (b.rang ? ' rang-'+b.rang+fam : '')+(porte ? ' porte' : '')+'"'
       + ' data-action="badge-fiche" data-id="'+id+'">'
       + '<span class="med-coin"><span class="med-ico">'+(on ? b.ico : '🔒')+'</span></span>'
-      + '<span class="med-n">'+(on ? esc(b.t) : '???')+'</span>'
+      // Le nom reste lisible même verrouillé : c'est déjà un indice sur la
+      // manière de l'obtenir, et ça donne envie de cliquer pour en savoir plus.
+      + '<span class="med-n">'+esc(b.t)+'</span>'
       + (pr ? '<span class="med-prog">'+pr.n+' / '+pr.sur+'</span>' : '')
       + (porte ? '<span class="med-porte">porté</span>' : '')
     + '</button>';
@@ -8433,6 +8445,70 @@
       d:'Une question, un mot, ce que tu veux' },
   ];
 
+  // ---------------------------------------------------------------------------
+  // Première ouverture d'un simulateur : à quoi il sert, en trois lignes
+  // ---------------------------------------------------------------------------
+  // Montré une seule fois par simulateur (mémorisé dans les faits), pour que la
+  // personne sache quelle question l'outil répond avant de saisir quoi que ce soit.
+  var SIM_INTRO = {
+    cote: { ico:'🏦', t:'Combien mettre de côté ?',
+      p:'Tu viens d’encaisser une somme et tu ne sais pas ce que tu peux réellement dépenser.',
+      q:'On retire ce qui n’est pas à toi - TVA, cotisations, impôt - et on te dit ce qui reste.',
+      f:'Utile chaque fois que tu es payé.' },
+    depenses: { ico:'🧾', t:'Le guide des dépenses',
+      p:'« Est-ce que je peux passer ça ? » Cette question revient à chaque achat.',
+      q:'49 dépenses passées en revue, avec un verdict clair pour chacune selon ton régime.',
+      f:'Un doute sur un achat ? Cherche-le ici avant de payer.' },
+    vl: { ico:'⚖️', t:'Versement libératoire ou pas',
+      p:'Payer ton impôt au fil de l’eau ou au barème : le mauvais choix coûte cher chaque année.',
+      q:'On calcule les deux sur tes chiffres et on te dit lequel te laisse le plus.',
+      f:'À revoir chaque année, avant le 30 septembre.' },
+    tva: { ico:'🧮', t:'Passer à la TVA',
+      p:'La franchise a des seuils, et parfois l’option volontaire est gagnante.',
+      q:'On estime ce que tu récupérerais sur tes achats et ce que ça change pour tes clients.',
+      f:'À regarder avant d’approcher les seuils.' },
+    statut: { ico:'🏛', t:'Quand passer en société',
+      p:'En micro, les charges ne se déduisent pas. À un moment, la société rapporte plus.',
+      q:'On compare micro, EURL et SASU sur ton chiffre d’affaires et on trouve le point de bascule.',
+      f:'À refaire dès que ton activité change d’échelle.' },
+    optim: { ico:'🎛', t:'Optimiser ta société',
+      p:'Rémunération, dividendes, trésorerie : chaque curseur change ce qu’il te reste.',
+      q:'Tu bouges les réglages, tu vois l’effet en direct sur ton net.',
+      f:'À ouvrir avant de fixer ta rémunération de l’année.' },
+  };
+
+  function simIntroHtml(){
+    var k = state.simIntro;
+    var d = k && SIM_INTRO[k];
+    if(!d) return '';
+    return '<div class="overlay" data-action="sim-intro-ok">'
+      + '<div class="modal sim-intro" data-action="stop">'
+        + '<div class="sim-intro-h"><span class="sim-intro-i">'+d.ico+'</span>'
+          + '<div><div class="sim-intro-k">À quoi ça sert</div>'
+          + '<div class="sim-intro-t">'+esc(d.t)+'</div></div></div>'
+        + '<div class="sim-intro-b">'
+          + '<div class="sim-intro-l"><span class="sim-intro-p">Le problème</span>'
+            + '<span>'+esc(d.p)+'</span></div>'
+          + '<div class="sim-intro-l"><span class="sim-intro-p">Ce que fait l’outil</span>'
+            + '<span>'+esc(d.q)+'</span></div>'
+          + '<div class="sim-intro-l"><span class="sim-intro-p">Quand l’ouvrir</span>'
+            + '<span>'+esc(d.f)+'</span></div>'
+        + '</div>'
+        + '<button class="sim-intro-ok" data-action="sim-intro-ok">C’est clair, j’y vais →</button>'
+      + '</div></div>';
+  }
+
+  function majSimIntro(){
+    var r = document.getElementById('simintro-root');
+    if(r) r.innerHTML = simIntroHtml();
+  }
+
+  // Rafraîchit la seule bulle d'aide : la page derrière ne bouge pas.
+  function majSavBulle(){
+    var r = document.getElementById('sav-root');
+    if(r) r.innerHTML = savBulleHtml();
+  }
+
   function savBulleHtml(){
     if(state.tab === 'chat') return '';   // le salon a déjà sa conversation
     var o = state.sav;
@@ -8449,8 +8525,14 @@
     var type = SAV_TYPES.filter(function(t){ return t.v === o.type; })[0] || null;
     var corps;
     if(o.envoye){
-      corps = '<div class="bulle-merci">🙌 Bien reçu - merci ! On te répond '
-        + (state.compte ? 'sur l’e-mail de ton compte' : 'sur l’adresse laissée')+'.'
+      // Une suggestion n'appelle pas de réponse : promettre un e-mail créerait
+      // une attente qu'on ne tiendrait pas. Un bug ou une question, si.
+      var merci = o.type === 'suggestion'
+        ? '💡 Merci, c’est noté ! Ton idée part directement dans nos réflexions. '
+          + 'Si on la retient, tu la verras arriver dans une prochaine mise à jour.'
+        : '🙌 Bien reçu - merci ! On te répond '
+          + (state.compte ? 'sur l’e-mail de ton compte' : 'sur l’adresse laissée')+'.';
+      corps = '<div class="bulle-merci">'+merci
         + '<button class="btn-link" data-action="sav-encore">En envoyer un autre</button></div>';
     } else if(!type){
       // D'abord dire de quoi il s'agit : la réponse arrive mieux rangée.
@@ -8984,9 +9066,54 @@
         if(nouveaux) c.nonLus = (state.chat.nonLus || 0) + nouveaux;
       }
       var enBas = chatEnBas();
-      setState({ chat: c });
+      // Sur l'écran Entraide, on ne repasse pas par un rendu complet : on
+      // remplace uniquement le fil et les compteurs. Sinon toute la page
+      // clignote à chaque message envoyé ou reçu.
+      var filDom = state.tab === 'chat' && document.querySelector('[data-chat-fil]');
+      if(filDom){
+        state.chat = c;
+        majFilChat();
+      } else {
+        setState({ chat: c });
+      }
       if(state.tab === 'chat' && (enBas || !dernierAvant)) chatDefiler();
     });
+  }
+
+  // Rafraîchissement ciblé de l'Entraide : le fil, l'aparté, le sondage et les
+  // compteurs. Ni la saisie ni le reste de la page ne sont touchés.
+  function majFilChat(){
+    var fil = document.querySelector('[data-chat-fil]');
+    if(fil) fil.innerHTML = chatMessagesHtml();
+
+    var sond = document.querySelector('.sond');
+    var neufSond = chatSondageHtml();
+    if(sond && neufSond) sond.outerHTML = neufSond;
+
+    var ap = document.querySelector('.ch-aparte');
+    var neufAp = chatAparteHtml();
+    if(ap && neufAp){
+      // On ne remplace que le contenu : remplacer le panneau ferait perdre le
+      // focus de la zone de réponse.
+      var tmp = document.createElement('div');
+      tmp.innerHTML = neufAp;
+      var filAp = ap.querySelector('.ch-ap-fil');
+      var filAp2 = tmp.querySelector('.ch-ap-fil');
+      if(filAp && filAp2) filAp.innerHTML = filAp2.innerHTML;
+    } else if(ap && !neufAp){
+      ap.remove();
+    }
+
+    var stats = document.querySelector('.ptitre-stats');
+    if(stats){
+      stats.innerHTML = '<span class="ch-stat"><span class="ch-stat-pt"></span>'
+        + (state.chat.enLigne || 0)+' en ligne</span>'
+        + '<span class="ch-stat-sep">·</span>'
+        + '<span class="ch-stat">'+(state.chat.total || 0)+' membre'
+        + ((state.chat.total||0) > 1 ? 's' : '')+'</span>';
+    }
+    var modN = document.querySelector('.ch-mod .ch-mod-n');
+    if(modN) modN.textContent = state.chat.nbSignales || '';
   }
 
   function chatEnBas(){
@@ -9618,7 +9745,8 @@
       + '<div id="onb-root"></div>'
       + '<div id="tvo-root"></div>'
       + '<div id="dgo-root"></div>'
-      + '<div id="vlo-root"></div>';
+      + '<div id="vlo-root"></div>'
+      + '<div id="simintro-root"></div>';
   }
 
   // Si assets/freehub-logo.png est absent, on bascule sur le wordmark CSS.
@@ -9747,6 +9875,7 @@
     majLexTous();
     var savRoot = document.getElementById('sav-root');
     if(savRoot) savRoot.innerHTML = savBulleHtml();
+    majSimIntro();
     majOnboarding();
     majTvaOnb();
     majDepOnb();
@@ -9802,14 +9931,18 @@
       var texte = (sf.querySelector('[data-sav-texte]') || {}).value || '';
       var mail = (sf.querySelector('[data-sav-email]') || {}).value || '';
       if(!texte.trim()) return;
-      setState({ sav: Object.assign({}, state.sav, { envoi:true, erreur:null }) });
+      // La bulle vit dans son propre root : on la rafraîchit seule, sans
+      // repasser par un rendu complet de la page.
+      state.sav = Object.assign({}, state.sav, { envoi:true, erreur:null });
+      majSavBulle();
       apiJson('POST', '/api/sav', { message:texte, email:mail,
         type: state.sav.type || 'question' }).then(function(r){
-        setState({ sav: Object.assign({}, state.sav, {
+        state.sav = Object.assign({}, state.sav, {
           envoi:false,
           envoye:r.ok,
           erreur:r.ok ? null : ((r.data && r.data.error) || 'Envoi impossible.'),
-        }) });
+        });
+        majSavBulle();
       });
       return;
     }
@@ -10512,6 +10645,10 @@
         try { localStorage.setItem('freehub_theme', sombre ? 'sombre' : 'clair'); } catch(err){}
         break;
       }
+      case 'sim-intro-ok':
+        state.simIntro = null;
+        majSimIntro();
+        break;
       case 'cote-montant':
         state.sim.coteMontant = el.getAttribute('data-v');
         render();
@@ -10631,6 +10768,11 @@
       }
       case 'sim-open': {
         var quel = el.getAttribute('data-sim') || 'depenses';
+        // Première visite de ce simulateur : on explique d'abord à quoi il sert.
+        if(SIM_INTRO[quel] && !state.faits['sim-intro:'+quel]){
+          state.simIntro = quel;
+          marquerFait('sim-intro:'+quel);
+        }
         state.sim.open = quel;
         state.sim.step = 'form';
         appliquerProfil();   // le simulateur part toujours des données du profil
