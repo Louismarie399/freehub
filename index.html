@@ -63,7 +63,10 @@
   /* ------------------------------------------------------------------ */
   /* Nav flottante en pilule - halo bleu, se réduit au défilement        */
   /* ------------------------------------------------------------------ */
-  .navwrap{position:sticky;top:14px;z-index:50;padding:0 16px}
+  /* height:0 : la nav flotte au-dessus de la page sans occuper de flux. Le
+     hero n'a ainsi AUCUNE marge à compenser - son sommet est le haut de page,
+     et min-height:100vh tombe juste, quelle que soit la hauteur de la nav. */
+  .navwrap{position:sticky;top:14px;z-index:50;padding:0 16px;height:0}
   /* Repère pour le tiroir mobile, qui se pose SOUS la pilule sans occuper
      de place dans le flux (sinon il repousserait tout le hero). */
   .navwrap{isolation:isolate}
@@ -195,9 +198,7 @@
   /* Hero - épuré, quadrillage discret + jeux de lumière bleus           */
   /* ------------------------------------------------------------------ */
   .hero{position:relative;padding:clamp(56px,9vw,110px) clamp(18px,4.5vw,48px) clamp(48px,7vw,88px);
-    background:linear-gradient(180deg,#f6f9ff 0%,#fff 82%);overflow:hidden;margin-top:-76px;
-    /* La nav flottante mange le haut : on redescend le contenu d'autant pour
-       qu'il soit optiquement centré dans l'espace réellement libre. */
+    background:linear-gradient(180deg,#f6f9ff 0%,#fff 82%);overflow:hidden;
     padding-top:clamp(150px,16.5vw,214px)}
   .hero::before{content:'';position:absolute;inset:0;pointer-events:none;
     background-image:linear-gradient(rgba(47,107,255,.06) 1px,transparent 1px),
@@ -210,6 +211,13 @@
                radial-gradient(560px 320px at 74% 30%,rgba(124,58,237,.09),transparent 65%),
                radial-gradient(420px 260px at 50% 78%,rgba(34,163,85,.05),transparent 70%)}
   .hero-inner{max-width:860px;margin:0 auto;text-align:center;position:relative;z-index:2}
+  /* Sur écran de bureau, le hero occupe exactement la hauteur de la fenêtre,
+     contenu centré : la section suivante attend sous le pli, quel que soit
+     l'écran. Le padding haut garde la zone de la nav flottante dégagée. */
+  @media (min-width:821px) and (min-height:640px){
+    .hero{display:flex;align-items:center;min-height:100vh;
+      padding-top:110px;padding-bottom:64px}
+  }
   .hero-badge{display:inline-flex;align-items:center;gap:9px;background:var(--carte);border:1px solid rgba(47,107,255,.22);
     color:#2f6bff;font-weight:700;font-size:13px;padding:8px 16px;border-radius:100px;margin-bottom:28px;
     box-shadow:0 8px 24px -14px rgba(47,107,255,.6), 0 0 20px -8px rgba(47,107,255,.4)}
