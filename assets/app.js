@@ -169,6 +169,14 @@
     return sectionsProfil().every(function(x){ return x.ok; });
   }
 
+  // Easter egg : le faux partenariat URSSAF (fiche au premier degré, code promo
+  // crédible, lien vers le clip de Rick Astley). Passer ce drapeau à false le
+  // retire partout d'un coup - la carte, la fiche et le badge - sans toucher au
+  // reste. À basculer avant l'ouverture publique si le gag ne doit pas survivre
+  // à l'alpha : afficher un partenariat avec un organisme public qui n'en est
+  // pas un se défend mal une fois sorti d'un cercle d'invités.
+  var GAG_URSSAF = true;
+
   var BADGES = [
     { id:'cap', ico:'🧭', t:'Le cap est fixé', d:'Ta première étape d’objectif cochée.',
       check:function(){ return catalog.some(function(o){ return pctOf(o.id).done > 0; }); } },
@@ -238,6 +246,10 @@
     { id:'secret', ico:'🕵️', t:'Là où personne ne regarde',
       d:'Trouvé sans indice : sept clics au bon endroit.',
       check:function(){ return !!state.faits['secret:logo']; } },
+    // Tombe quand on clique sur l'offre URSSAF, qui mène au clip de Rick Astley.
+    { id:'enfume', ico:'🎣', t:'Franchise en base de crédulité',
+      d:'Aucun seuil, aucun plafond : tu as tout gobé.',
+      check:function(){ return !!state.faits['part:urssaf']; } },
 
     // --- La collection elle-même : des médailles pour les médailles ---
     { id:'serie-5', ico:'🥉', t:'Première salve', d:'Cinq récompenses débloquées.',
@@ -261,6 +273,12 @@
         });
       } },
   ];
+
+  // Gag désactivé : le badge n'a plus aucun moyen d'être obtenu, on le sort de
+  // la collection plutôt que de laisser une case définitivement verrouillée.
+  if(!GAG_URSSAF){
+    BADGES = BADGES.filter(function(b){ return b.id !== 'enfume'; });
+  }
 
   // Introuvables hors de leur fenêtre : jamais requis pour « Sans faute ».
   var BADGES_EXCLUSIFS = ['pionnier'];
@@ -1186,7 +1204,34 @@
         'Des réponses en français, pas en jargon fiscal',
       ],
     },
-  ];
+    // Celui-ci n'est pas un partenaire. C'est l'easter egg : fiche au premier
+    // degré, code promo crédible, et un lien qui mène au clip de Rick Astley.
+    // Le badge « Franchise en base de crédulité » tombe au clic.
+    // Volontairement en dernier : les bandeaux contextuels des simulateurs
+    // désignent les partenaires par leur index, l'insérer plus haut les
+    // ferait tous pointer un cran à côté.
+    {
+      gag:true,
+      nom:'URSSAF', kind:'Cotisations & protection sociale',
+      img:'assets/partenaires/urssaf.png',
+      color:'#1257a8', grad:'#25c3d4', soft:'#eef6fc',
+      url:'https://www.youtube.com/watch?v=Aq5WXmQQooo', fait:'part:urssaf',
+      promo:'FREEHUB10', promoDetail:'−10 % sur ta prochaine déclaration URSSAF',
+      pitch:'Déclarer, payer, récupérer ses attestations : le guichet de tes cotisations, et un accompagnement dédié aux créateurs.',
+      desc:'L’URSSAF nous fait confiance dans le développement de cet outil : un partenariat rare pour une '
+        + 'plateforme indépendante, et une reconnaissance de ce qu’on essaie de faire ici - rendre '
+        + 'l’administratif <b>compréhensible aux jeunes indépendants</b>, plutôt que subi. Concrètement, tu '
+        + 'retrouves le même interlocuteur que pour tes déclarations, avec un accès direct à tes démarches '
+        + 'et aux dispositifs auxquels tu as droit sans le savoir.',
+      points:[
+        'Déclaration et paiement de tes cotisations au même endroit',
+        'Attestation de vigilance téléchargeable en un clic',
+        'Simulateur officiel de cotisations sociales',
+        'Un conseiller dédié pendant ta première année d’activité',
+        'Délais de paiement accordés en cas de baisse d’activité',
+      ],
+    },
+  ].filter(function(p){ return !p.gag || GAG_URSSAF; });
 
   var titles = {
     accueil:    ['Accueil',         '🏠', '#2f6bff'],
@@ -9638,7 +9683,8 @@
     var lien = p.tease
       ? '<span class="part-link soon">Bientôt dévoilé</span>'
       : (p.url
-          ? '<a class="part-link" href="'+esc(p.url)+'" target="_blank" rel="noopener sponsored">'
+          ? '<a class="part-link" href="'+esc(p.url)+'" target="_blank" rel="noopener sponsored"'
+            + (p.fait ? ' data-action="part-lien" data-fait="'+esc(p.fait)+'"' : '') + '>'
             + 'Découvrir '+esc(p.nom)+' →</a>'
           : '<span class="part-link soon">Lien bientôt disponible</span>');
 
@@ -10707,6 +10753,12 @@
         break;
       case 'lex-filtre-modal':
         setState({ lexFiltreModal: el.getAttribute('data-dom') || null });
+        break;
+      // Pas de preventDefault : le lien doit s'ouvrir normalement. On se
+      // contente de noter le passage, le badge tombe au rendu suivant.
+      case 'part-lien':
+        marquerFait(el.getAttribute('data-fait'));
+        setState({});
         break;
       case 'part-copy': {
         var box = el, code = el.getAttribute('data-code');
