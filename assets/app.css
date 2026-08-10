@@ -781,6 +781,17 @@
   .rang-argent{--rg:#64748b;--rgs:#f1f5f9}
   .rang-or{--rg:#ca8a04;--rgs:#fefce8}
   .rang-royal{--rg:#7c3aed;--rgs:#f5f0ff}
+  /* --rgs est l'aplat pâle du rang : en thème sombre il servait de fond à des
+     textes devenus clairs (en-tête de la fiche récompense, encart d'indice).
+     On le rabat plutôt que de reprendre chaque usage un par un. */
+  [data-theme="sombre"] .rang-bronze{--rgs:#33281c}
+  [data-theme="sombre"] .rang-argent{--rgs:#232a33}
+  [data-theme="sombre"] .rang-or{--rgs:#322e18}
+  [data-theme="sombre"] .rang-royal{--rgs:#2a2140}
+  [data-theme="sombre"] .bf-modal.fam-parcours{--rgs:#172e33}
+  [data-theme="sombre"] .bf-haut{background:linear-gradient(160deg,var(--rgs,#1b2333) 0%,var(--surface) 100%)}
+  [data-theme="sombre"] .bf-modal.rang-royal .bf-haut{
+    background:linear-gradient(160deg,#2a2140 0%,var(--surface) 100%)}
 
   .bf-modal{width:400px;overflow:hidden;position:relative}
   .bf-x{position:absolute;top:14px;right:14px}
@@ -3492,6 +3503,14 @@
   /* ------------------------------------------------------------------ */
   /* Thème sombre - textes saturés foncés rendus lisibles                */
   /* ------------------------------------------------------------------ */
+  /* La carte de fête gardait son dégradé vert/jaune pastel en thème sombre :
+     le texte clair ci-dessous devenait illisible dessus, au repos comme au
+     survol. Même esprit, teintes rabattues. */
+  [data-theme="sombre"] .ch-msg.celebration{
+    background:linear-gradient(120deg,#16301f 0%,#2e2a14 100%);
+    border-color:rgba(34,197,94,.32)}
+  [data-theme="sombre"] .ch-msg.celebration:hover{
+    background:linear-gradient(120deg,#1d3d28 0%,#3b351a 100%)}
   [data-theme="sombre"] .ch-msg.celebration .ch-txt{color:#aaeec4}
   [data-theme="sombre"] .ch-auteur.rang-argent{color:#c2cad6}
   [data-theme="sombre"] .med.on.rang-bronze.fam-parcours .med-n{color:#a3f5ef}

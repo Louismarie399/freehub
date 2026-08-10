@@ -2416,7 +2416,7 @@
     // reconstruite à chaque rendu, un brouillon laissé dans le champ était
     // effacé au premier clic ailleurs (retour de testeur du 10/08).
     sav: { ouvert:false, envoi:false, envoye:false, erreur:null, type:null,
-           texte:'', email:'', grand:false },
+           texte:'', email:'', grand:false, touche:0 },
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
@@ -8669,8 +8669,21 @@
     if(r) r.innerHTML = savBulleHtml();
   }
 
+  // Un brouillon laissé de côté finit par ne plus rien vouloir dire : au-delà
+  // d'une demi-heure sans y toucher, on repart de la page blanche plutôt que
+  // de ressortir un début de phrase dont l'auteur ne se souvient plus.
+  var SAV_PEREMPTION = 30 * 60 * 1000;
+  function savPerimer(){
+    var o = state.sav;
+    if(!o.touche || !(o.texte || o.email)) return;
+    if(Date.now() - o.touche < SAV_PEREMPTION) return;
+    state.sav = Object.assign({}, o,
+      { texte:'', email:'', type:null, grand:false, touche:0 });
+  }
+
   function savBulleHtml(){
     if(state.tab === 'chat') return '';   // le salon a déjà sa conversation
+    savPerimer();
     var o = state.sav;
     // Une icône dessinée, dans le trait de l'app - pas un emoji.
     var icone = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
@@ -10307,8 +10320,10 @@
             || e.target.closest('.bulle-aide')))){
       // On referme, mais sans rien effacer : le type choisi et le brouillon
       // sont conservés. Aller copier un bout de texte ailleurs dans l'app ne
-      // doit pas coûter le message qu'on était en train d'écrire.
-      state.sav = Object.assign({}, state.sav, { ouvert:false });
+      // doit pas coûter le message qu'on était en train d'écrire. Le grand
+      // format, lui, ne survit pas : il a été demandé pour écrire, pas pour
+      // rouvrir la bulle en plein écran la fois d'après.
+      state.sav = Object.assign({}, state.sav, { ouvert:false, grand:false });
       var sr = document.getElementById('sav-root');
       if(sr) sr.innerHTML = savBulleHtml();
     }
@@ -10438,7 +10453,7 @@
       case 'sav-close':
         // Le brouillon survit à la fermeture : on ne perd pas un texte écrit
         // parce qu'on a voulu vérifier quelque chose ailleurs dans l'app.
-        setState({ sav: Object.assign({}, state.sav, { ouvert:false }) });
+        setState({ sav: Object.assign({}, state.sav, { ouvert:false, grand:false }) });
         break;
       case 'annonce-voir':
         state.annonces.deplie = true;
@@ -12040,6 +12055,8 @@
     if(!t || !t.getAttribute) return;
     if(t.hasAttribute('data-sav-texte')) state.sav.texte = t.value;
     else if(t.hasAttribute('data-sav-email')) state.sav.email = t.value;
+    else return;
+    state.sav.touche = Date.now();   // point de départ de la péremption
   });
 
   // Exposé pour vérifier le moteur fiscal (tests, débogage).
