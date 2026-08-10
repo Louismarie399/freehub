@@ -2554,7 +2554,51 @@
     },
   };
 
-  function setState(patch){ Object.assign(state, patch); render(); majHistorique(); chatSondage(); }
+  function setState(patch){
+    Object.assign(state, patch); render(); majHistorique(); chatSondage();
+  }
+
+  // ---------------------------------------------------------------------------
+  // L'écran courant, dans l'URL
+  // ---------------------------------------------------------------------------
+  // Tout l'état de navigation vivait en mémoire : un rafraîchissement renvoyait
+  // à l'accueil, en perdant le parcours ou le simulateur ouvert. On l'écrit
+  // donc dans le hash. `replaceState` et non `pushState` : aucune entrée
+  // d'historique n'est ajoutée, la flèche « retour » reste réservée à la
+  // fermeture d'un objectif (voir majHistorique juste au-dessus).
+  // Les onglets d'administration sont volontairement absents : ils dépendent
+  // d'un rôle connu seulement après la vérification de session.
+  var ONGLETS_URL = ['accueil', 'objectifs', 'calendrier', 'simulateur', 'lexique',
+                     'partenaires', 'chat', 'succes', 'profil'];
+
+  function ecrireHash(){
+    // Pendant l'onboarding, il n'y a pas d'écran à retrouver.
+    if(state.onboarding && state.onboarding.actif) return;
+    if(ONGLETS_URL.indexOf(state.tab) < 0) return;
+    var h = state.tab;
+    if(state.tab === 'objectifs' && state.objectifOuvert) h += '/' + state.objectifOuvert;
+    if(state.tab === 'simulateur' && state.sim.open)      h += '/' + state.sim.open;
+    if(location.hash === '#' + h) return;
+    try { history.replaceState(history.state, '', '#' + h); } catch(e){}
+  }
+
+  // Le hash vient de l'utilisateur : chaque valeur est vérifiée contre le
+  // catalogue avant d'être posée dans l'état.
+  function lireHash(){
+    var brut = (location.hash || '').replace(/^#/, '');
+    if(!brut) return;
+    var bouts = brut.split('/');
+    var onglet = bouts[0], detail = bouts[1] || null;
+    if(ONGLETS_URL.indexOf(onglet) < 0) return;
+    state.tab = onglet;
+    if(onglet === 'objectifs' && detail && obj(detail)){
+      state.objectifOuvert = detail;
+    }
+    if(onglet === 'simulateur' && detail && SIM_INTRO[detail]){
+      state.sim.open = detail;
+      state.sim.step = 'form';
+    }
+  }
 
   // Historique du navigateur : on n'y pousse qu'une chose, l'ouverture d'un
   // objectif. C'est le seul endroit où l'utilisateur s'attend à ce que la
@@ -9971,6 +10015,11 @@
                              + ' #onb-root .tvo-overlay,'
                              + ' #tvo-root .tvo-overlay, #dgo-root .tvo-overlay,'
                              + ' #vlo-root .tvo-overlay'));
+
+    // En dernier, et ici plutôt que dans setState : beaucoup d'actions
+    // (ouvrir un simulateur, fermer un outil…) appellent render() directement.
+    // L'URL suivrait sinon un écran sur deux.
+    ecrireHash();
   }
 
   // ---------------------------------------------------------------------------
@@ -11891,7 +11940,14 @@
   var usageLocalInitial = localStorageOk('freehub_onboarded')
     || CLES_SAUVEGARDE.some(function(k){ return localStorageOk(k); });
 
+  // L'écran d'où l'on vient, avant le premier rendu : l'onboarding, s'il doit
+  // se jouer, reprend la main juste après (il teste state.onboarding.actif).
+  lireHash();
+
   render();
+  // Un objectif rouvert depuis l'URL n'a pas d'entrée d'historique à lui :
+  // sans ça, la flèche « retour » sortirait de l'app au lieu de le refermer.
+  majHistorique();
   // Après le 1er rendu, les badges déjà mérités sont marqués sans célébration ;
   // seuls les déblocages suivants déclenchent l'animation.
   state.badgesInitialises = true;
