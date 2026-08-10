@@ -387,6 +387,20 @@ function route_chat_signaler(): void
     json_reponse(['ok' => true]);
 }
 
+/**
+ * POST /api/chat/blanchir — le signalement ne tenait pas : on le lève et le
+ * message reprend sa place, sans sanction pour son auteur. Sans ça, un
+ * acharnement sur quelqu'un laissait sa trace dans la file indéfiniment.
+ */
+function route_chat_blanchir(): void
+{
+    exige_admin();
+    $id = (int) (corps()['id'] ?? 0);
+    if (!$id) erreur('Message introuvable.');
+    db()->prepare('UPDATE chat_messages SET signale = 0 WHERE id = ?')->execute([$id]);
+    json_reponse(['ok' => true]);
+}
+
 /** POST /api/chat/supprimer — réservé aux administrateurs. */
 function route_chat_supprimer(): void
 {

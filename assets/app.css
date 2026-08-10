@@ -424,6 +424,9 @@
     font-weight:700;color:var(--muted);cursor:pointer}
   .ch-act:hover{color:var(--ink);text-decoration:underline}
   .ch-act.sup:hover{color:#b91c1c}
+  /* L'issue qui ne sanctionne personne : en vert, pour la distinguer d'un
+     coup d'œil des deux actions qui, elles, ont des conséquences. */
+  .ch-act.ok:hover{color:#0f9d6e}
   .ch-modmsg .ch-act{opacity:1}
 
   /* L'aparté : un fil parallèle, ancré à droite */
@@ -1205,6 +1208,12 @@
      carte trop haute entraîne aussi l'arrière-plan flouté. */
   body.pop-ouverte{overflow:hidden}
   .overlay{position:fixed;inset:0;z-index:100;overflow-y:auto;overscroll-behavior:contain;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(15,27,51,.55);backdrop-filter:blur(6px);animation:fhfade .25s ease}
+  /* Une fiche ouverte depuis une liste doit passer AU-DESSUS de cette liste.
+     Les deux couches partageaient z-index:100, et à égalité c'est l'ordre du
+     DOM qui tranche : #lex-root vient après #modal-root, la fiche d'un terme
+     restait donc cachée derrière le dictionnaire complet jusqu'à ce qu'on
+     ferme celui-ci. */
+  #modal-root .overlay{z-index:110}
   .modal{width:620px;max-width:100%;max-height:88vh;display:flex;flex-direction:column;background:var(--surface);border-radius:22px;box-shadow:0 50px 100px -30px rgba(15,27,51,.6);animation:fhpop .3s cubic-bezier(.2,.8,.2,1);overflow:hidden}
   .modal-head{padding:26px 30px 18px}
   .modal-title{font-size:22px;font-weight:800;letter-spacing:-.012em}

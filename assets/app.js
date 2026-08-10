@@ -485,6 +485,10 @@
                       + (x.supprime ? '<span class="ch-tag">déjà retiré</span>' : '')+'</div>'
                     + '<div class="ch-txt">'+esc(x.contenu)+'</div>'
                     + '<div class="ch-actions">'
+                      // Sortie « rien à signaler » en premier : c'est l'issue
+                      // la plus fréquente, et la seule qui ne sanctionne pas.
+                      + '<button class="ch-act ok" data-action="chat-blanchir" data-id="'+x.id+'">'
+                        + 'Signalement infondé</button>'
                       + (x.supprime ? ''
                           : '<button class="ch-act sup" data-action="chat-supprimer" data-id="'+x.id+'">Retirer</button>')
                       + '<button class="ch-act sup" data-action="chat-muet" data-id="'+x.userId+'">'
@@ -2415,8 +2419,24 @@
     // `texte` et `email` vivent dans l'état et non dans le DOM : la bulle est
     // reconstruite à chaque rendu, un brouillon laissé dans le champ était
     // effacé au premier clic ailleurs (retour de testeur du 10/08).
-    sav: { ouvert:false, envoi:false, envoye:false, erreur:null, type:null,
-           texte:'', email:'', grand:false, touche:0 },
+    // Le brouillon est relu du stockage local : fermer l'onglet par mégarde ou
+    // rafraîchir la page ne doit pas coûter un message à moitié écrit. La
+    // péremption est vérifiée à la relecture, pas seulement en session.
+    sav: (function(){
+      var vide = { ouvert:false, envoi:false, envoye:false, erreur:null, type:null,
+                   texte:'', email:'', grand:false, touche:0 };
+      try {
+        var brut = localStorage.getItem('freehub_sav_brouillon');
+        if(!brut) return vide;
+        var d = JSON.parse(brut);
+        if(!d || !d.touche || Date.now() - d.touche >= 30 * 60 * 1000) return vide;
+        vide.texte = typeof d.texte === 'string' ? d.texte : '';
+        vide.email = typeof d.email === 'string' ? d.email : '';
+        vide.type  = typeof d.type  === 'string' ? d.type  : null;
+        vide.touche = d.touche;
+      } catch(e){}
+      return vide;
+    })(),
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
@@ -8679,6 +8699,18 @@
     if(Date.now() - o.touche < SAV_PEREMPTION) return;
     state.sav = Object.assign({}, o,
       { texte:'', email:'', type:null, grand:false, touche:0 });
+    savBrouillonEcrire();
+  }
+
+  // Seul le contenu est gardé : ni l'ouverture de la bulle, ni son format,
+  // qui n'ont pas à être restitués au chargement suivant.
+  function savBrouillonEcrire(){
+    try {
+      var o = state.sav;
+      if(!o.texte && !o.email){ localStorage.removeItem('freehub_sav_brouillon'); return; }
+      localStorage.setItem('freehub_sav_brouillon', JSON.stringify(
+        { texte:o.texte, email:o.email, type:o.type, touche:o.touche }));
+    } catch(e){}
   }
 
   function savBulleHtml(){
@@ -10113,7 +10145,10 @@
     if(e.key !== 'Escape') return;
     if(state.partOpen !== null) setState({ partOpen: null });
     else if(state.depOuvert !== null) setState({ depOuvert: null });
+    // La fiche d'abord, le dictionnaire ensuite : on remonte les couches dans
+    // l'ordre où elles se sont empilées.
     else if(state.lexOuvert !== null) setState({ lexOuvert: null });
+    else if(state.lexTousOuvert) setState({ lexTousOuvert: false });
   });
 
   // Entrée valide l'étape courante de l'onboarding (déclenche le bouton principal).
@@ -10161,7 +10196,9 @@
           // garde, sinon l'utilisateur perdrait son texte sur une coupure.
           texte: r.ok ? '' : state.sav.texte,
           grand: r.ok ? false : state.sav.grand,
+          touche: r.ok ? 0 : state.sav.touche,
         });
+        savBrouillonEcrire();   // envoyé : le brouillon stocké n'a plus lieu d'être
         majSavBulle();
       });
       return;
@@ -10480,6 +10517,7 @@
       case 'sav-type':
         setState({ sav: Object.assign({}, state.sav,
           { type: el.getAttribute('data-t') || null, erreur:null }) });
+        savBrouillonEcrire();
         break;
       case 'sav-encore':
         setState({ sav: Object.assign({}, state.sav,
@@ -10582,6 +10620,19 @@
         var did = parseInt(el.getAttribute('data-id'), 10);
         apiJson('POST', '/api/chat/supprimer', { id: did }).then(function(r){
           if(r.ok) chatCharger(true);
+        });
+        break;
+      }
+      case 'chat-blanchir': {
+        var bid = parseInt(el.getAttribute('data-id'), 10);
+        apiJson('POST', '/api/chat/blanchir', { id: bid }).then(function(r){
+          if(!r.ok) return;
+          // Le message quitte la file : on la rafraîchit sans la refermer,
+          // pour pouvoir enchaîner les signalements.
+          var reste = (state.chat.moderation || []).filter(function(x){ return x.id !== bid; });
+          state.chat = Object.assign({}, state.chat, { moderation: reste });
+          chatCharger(true);
+          render();
         });
         break;
       }
@@ -12057,6 +12108,7 @@
     else if(t.hasAttribute('data-sav-email')) state.sav.email = t.value;
     else return;
     state.sav.touche = Date.now();   // point de départ de la péremption
+    savBrouillonEcrire();
   });
 
   // Exposé pour vérifier le moteur fiscal (tests, débogage).

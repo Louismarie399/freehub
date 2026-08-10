@@ -48,6 +48,7 @@ $routes = [
     'POST /chat'                 => 'route_chat_envoyer',
     'POST /chat/reagir'          => 'route_chat_reagir',
     'POST /chat/signaler'        => 'route_chat_signaler',
+    'POST /chat/blanchir'        => 'route_chat_blanchir',
     'POST /chat/supprimer'       => 'route_chat_supprimer',
     'POST /chat/muet'            => 'route_chat_muet',
     'GET /chat/moderation'       => 'route_chat_moderation',
