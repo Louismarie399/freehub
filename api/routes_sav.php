@@ -94,8 +94,52 @@ function route_admin_demandes_traiter(): void
     $table = ($c['type'] ?? '') === 'partenaire' ? 'partner_requests' : 'sav_requests';
     $id = (int) ($c['id'] ?? 0);
     if (!$id) erreur('Demande introuvable.');
-    db()->prepare("UPDATE $table SET traite = ? WHERE id = ?")
-        ->execute([empty($c['traite']) ? 0 : 1, $id]);
+    $traite = empty($c['traite']) ? 0 : 1;
+    db()->prepare("UPDATE $table SET traite = ? WHERE id = ?")->execute([$traite, $id]);
+    // Repasser une suggestion en « à traiter » rouvre le droit à l'annonce :
+    // sinon une erreur de clic priverait définitivement l'auteur du message.
+    if ($table === 'sav_requests' && !$traite) {
+        db()->prepare('UPDATE sav_requests SET annonce = 0 WHERE id = ?')->execute([$id]);
+    }
+    json_reponse(['ok' => true]);
+}
+
+/**
+ * GET /api/sav/annonces — les suggestions de l'utilisateur qui ont été
+ * retenues depuis sa dernière visite. Rien pour les anonymes : sans compte,
+ * on n'a personne à qui annoncer quoi que ce soit.
+ */
+function route_sav_annonces(): void
+{
+    $u = utilisateur_courant();
+    if (!$u) { json_reponse(['annonces' => []]); return; }
+
+    $st = db()->prepare(
+        "SELECT id, message, created FROM sav_requests
+          WHERE user_id = ? AND type = 'suggestion' AND traite = 1 AND annonce = 0
+          ORDER BY id ASC LIMIT 5");
+    $st->execute([$u['id']]);
+    $out = [];
+    foreach ($st as $r) {
+        $out[] = ['id' => (int) $r['id'], 'message' => $r['message'], 'created' => $r['created']];
+    }
+    json_reponse(['annonces' => $out]);
+}
+
+/** POST /api/sav/annonces/vu — l'auteur a vu le message, on ne le rejoue pas. */
+function route_sav_annonces_vu(): void
+{
+    $u = exige_connexion();
+    $ids = corps()['ids'] ?? [];
+    if (!is_array($ids) || !$ids) { json_reponse(['ok' => true]); return; }
+
+    // Les identifiants viennent du client : on les force en entiers et on
+    // borne la mise à jour aux lignes de cet utilisateur.
+    $ids = array_slice(array_map('intval', $ids), 0, 20);
+    $trous = implode(',', array_fill(0, count($ids), '?'));
+    $st = db()->prepare(
+        "UPDATE sav_requests SET annonce = 1 WHERE user_id = ? AND id IN ($trous)");
+    $st->execute(array_merge([$u['id']], $ids));
     json_reponse(['ok' => true]);
 }
 

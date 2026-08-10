@@ -62,6 +62,8 @@ $routes = [
 
     // Retours, réclamations
     'POST /sav'                  => 'route_sav',
+    'GET /sav/annonces'          => 'route_sav_annonces',
+    'POST /sav/annonces/vu'      => 'route_sav_annonces_vu',
     'GET /admin/demandes'        => 'route_admin_demandes',
     'POST /admin/demandes/traiter' => 'route_admin_demandes_traiter',
 

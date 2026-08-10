@@ -2406,11 +2406,17 @@
             enLigne:0, total:0,
             fil:null, filMessages:[], filCharge:false, filClos:false, filErreur:null },
     chatCharte: false,      // charte d'accueil de l'Entraide (première visite)
-    sav: { ouvert:false, envoi:false, envoye:false, erreur:null, type:null },
+    // `texte` et `email` vivent dans l'état et non dans le DOM : la bulle est
+    // reconstruite à chaque rendu, un brouillon laissé dans le champ était
+    // effacé au premier clic ailleurs (retour de testeur du 10/08).
+    sav: { ouvert:false, envoi:false, envoye:false, erreur:null, type:null,
+           texte:'', email:'', grand:false },
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
     simIntro: null,         // simulateur dont on montre l'explication d'accueil
+    // Suggestions de l'utilisateur retenues par la modération, à lui annoncer.
+    annonces: { liste: [], deplie: false },
     // Préférences de rappels : chargées à l'ouverture du profil.
     notif: { charge:false, genres:[], choix:{}, confirme:false, email:'', envoi:false, sauve:0 },
     // Score de sérénité : le ressenti déclaré à l'onboarding, et le détail
@@ -2717,6 +2723,7 @@
       state.compte = { email: res.data.email, prenom: res.data.prenom, nom: res.data.nom,
                        isAdmin: !!res.data.isAdmin, beta: !!res.data.beta };
       identiteDepuisCompte(state.compte);
+      annoncesCharger();   // « ta suggestion a été retenue », s'il y en a
       apiJson('GET', 'api/data').then(function(d){
         // Marqueur de remise à zéro posé côté serveur : on efface TOUT le
         // stockage local (sinon il ré-ensemencerait le compte aussitôt) et on
@@ -8607,6 +8614,49 @@
     if(r) r.innerHTML = simIntroHtml();
   }
 
+  // ---------------------------------------------------------------------------
+  // « Ta suggestion a été retenue »
+  // ---------------------------------------------------------------------------
+  // Quand un retour marqué « suggestion » passe en traité côté admin, son
+  // auteur l'apprend à sa visite suivante. Le texte d'origine est replié
+  // derrière un bouton : plusieurs semaines après, on ne se souvient plus de
+  // ce qu'on avait écrit.
+  function annonceHtml(){
+    var a = state.annonces && state.annonces.liste[0];
+    if(!a) return '';
+    var n = state.annonces.liste.length;
+    return '<div class="overlay" data-action="annonce-ok">'
+      + '<div class="modal annonce" data-action="stop">'
+        + '<div class="annonce-ico">💡</div>'
+        + '<div class="annonce-k">Ta suggestion a été retenue</div>'
+        + '<div class="annonce-t">Merci, c’est en place&nbsp;!</div>'
+        + '<div class="annonce-p">Tu nous avais signalé quelque chose à améliorer : '
+          + 'on s’en est occupé. C’est exactement comme ça que FreeHub avance.</div>'
+        + (state.annonces.deplie
+            ? '<div class="annonce-msg">'+esc(a.message)+'</div>'
+            : '<button class="annonce-voir" data-action="annonce-voir">'
+              + 'Revoir ce que j’avais écrit</button>')
+        + (n > 1 ? '<div class="annonce-reste">'+(n - 1)+' autre'+(n > 2 ? 's' : '')
+                   + ' suggestion'+(n > 2 ? 's' : '')+' aussi retenue'+(n > 2 ? 's' : '')
+                   + '</div>' : '')
+        + '<button class="annonce-ok" data-action="annonce-ok">Super, merci&nbsp;!</button>'
+      + '</div></div>';
+  }
+  function majAnnonce(){
+    var r = document.getElementById('annonce-root');
+    if(r) r.innerHTML = annonceHtml();
+  }
+  // Relevé une seule fois par chargement, après la vérification de session :
+  // sans compte, il n'y a personne à prévenir.
+  function annoncesCharger(){
+    if(!state.compte) return;
+    apiJson('GET', '/api/sav/annonces').then(function(r){
+      if(!r.ok || !r.data || !r.data.annonces || !r.data.annonces.length) return;
+      state.annonces.liste = r.data.annonces;
+      majAnnonce();
+    });
+  }
+
   // Rafraîchit la seule bulle d'aide : la page derrière ne bouge pas.
   function majSavBulle(){
     var r = document.getElementById('sav-root');
@@ -8654,19 +8704,31 @@
         + '<button type="button" class="bulle-retour" data-action="sav-type" data-t="">'
           + '← '+type.ico+' '+esc(type.l)+'</button>'
         + (state.compte ? ''
-            : '<input type="email" data-sav-email placeholder="Ton e-mail pour la réponse" required>')
-        + '<textarea data-sav-texte rows="4" maxlength="2000" required placeholder="'
+            : '<input type="email" data-sav-email placeholder="Ton e-mail pour la réponse"'
+              + ' value="'+esc(o.email || '')+'" required>')
+        + '<textarea data-sav-texte rows="'+(o.grand ? 12 : 4)+'" maxlength="2000" required'
+          + ' placeholder="'
           + (o.type === 'bug' ? 'Qu’est-ce qui coince, et à quel endroit ?'
-             : o.type === 'suggestion' ? 'Raconte ton idée…' : 'Dis-nous tout…')+'"></textarea>'
+             : o.type === 'suggestion' ? 'Raconte ton idée…' : 'Dis-nous tout…')+'">'
+          + esc(o.texte || '') + '</textarea>'
         + (o.erreur ? '<div class="bulle-erreur">'+esc(o.erreur)+'</div>' : '')
         + '<button type="submit" class="ch-envoi bulle-envoi"'
           + (o.envoi ? ' disabled' : '')+'>'+(o.envoi ? 'Envoi…' : 'Envoyer')+'</button>'
       + '</form>';
     }
-    return '<div class="bulle-panneau">'
+    // Agrandir n'a de sens que devant le formulaire : ni sur le choix du type,
+    // ni sur le remerciement.
+    var agrandir = (type && !o.envoye)
+      ? '<button class="bulle-agrandir" data-action="sav-grand"'
+        + ' title="'+(o.grand ? 'Réduire' : 'Agrandir')+'"'
+        + ' aria-label="'+(o.grand ? 'Réduire' : 'Agrandir')+'">'
+        + (o.grand ? '⤡' : '⤢') + '</button>'
+      : '';
+    return '<div class="bulle-panneau'+(o.grand ? ' grand' : '')+'">'
       + '<div class="bulle-tete">'
         + '<div class="bulle-t">Un pépin, une idée&nbsp;?</div>'
         + '<div class="bulle-s">Retour sur l’alpha, question, bug : ça arrive direct chez Louis</div>'
+        + agrandir
         + '<button class="cat-x" data-action="sav-close" aria-label="Fermer">✕</button>'
       + '</div>'
       + corps
@@ -9859,7 +9921,8 @@
       + '<div id="tvo-root"></div>'
       + '<div id="dgo-root"></div>'
       + '<div id="vlo-root"></div>'
-      + '<div id="simintro-root"></div>';
+      + '<div id="simintro-root"></div>'
+      + '<div id="annonce-root"></div>';
   }
 
   // Si assets/freehub-logo.png est absent, on bascule sur le wordmark CSS.
@@ -10004,6 +10067,7 @@
     var savRoot = document.getElementById('sav-root');
     if(savRoot) savRoot.innerHTML = savBulleHtml();
     majSimIntro();
+    majAnnonce();
     majOnboarding();
     majTvaOnb();
     majDepOnb();
@@ -10074,6 +10138,10 @@
           envoi:false,
           envoye:r.ok,
           erreur:r.ok ? null : ((r.data && r.data.error) || 'Envoi impossible.'),
+          // Envoyé : le brouillon a fait son office. En cas d'échec on le
+          // garde, sinon l'utilisateur perdrait son texte sur une coupure.
+          texte: r.ok ? '' : state.sav.texte,
+          grand: r.ok ? false : state.sav.grand,
         });
         majSavBulle();
       });
@@ -10231,7 +10299,10 @@
     if(state.sav.ouvert
        && !(e.target.closest && (e.target.closest('.bulle-panneau')
             || e.target.closest('.bulle-aide')))){
-      state.sav = Object.assign({}, state.sav, { ouvert:false, type:null });
+      // On referme, mais sans rien effacer : le type choisi et le brouillon
+      // sont conservés. Aller copier un bout de texte ailleurs dans l'app ne
+      // doit pas coûter le message qu'on était en train d'écrire.
+      state.sav = Object.assign({}, state.sav, { ouvert:false });
       var sr = document.getElementById('sav-root');
       if(sr) sr.innerHTML = savBulleHtml();
     }
@@ -10359,8 +10430,32 @@
         setState({ sav: Object.assign({}, state.sav, { ouvert:true, envoye:false, erreur:null }) });
         break;
       case 'sav-close':
-        setState({ sav: Object.assign({}, state.sav, { ouvert:false, type:null }) });
+        // Le brouillon survit à la fermeture : on ne perd pas un texte écrit
+        // parce qu'on a voulu vérifier quelque chose ailleurs dans l'app.
+        setState({ sav: Object.assign({}, state.sav, { ouvert:false }) });
         break;
+      case 'annonce-voir':
+        state.annonces.deplie = true;
+        majAnnonce();
+        break;
+      case 'annonce-ok': {
+        // On acquitte tout le lot d'un coup : les autres suggestions retenues
+        // sont résumées dans le même message, les rejouer serait pénible.
+        var ids = state.annonces.liste.map(function(x){ return x.id; });
+        state.annonces = { liste: [], deplie: false };
+        majAnnonce();
+        if(ids.length) apiJson('POST', '/api/sav/annonces/vu', { ids: ids });
+        break;
+      }
+      case 'sav-grand': {
+        var g = !state.sav.grand;
+        setState({ sav: Object.assign({}, state.sav, { grand:g }) });
+        // Le champ vient d'être recréé : on rend la main à l'écriture, curseur
+        // en fin de texte plutôt qu'au début.
+        var ta = document.querySelector('[data-sav-texte]');
+        if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+        break;
+      }
       case 'sav-type':
         setState({ sav: Object.assign({}, state.sav,
           { type: el.getAttribute('data-t') || null, erreur:null }) });
@@ -11930,6 +12025,16 @@
   }
   document.getElementById('app').addEventListener('input', onSimField);
   document.getElementById('app').addEventListener('change', onSimField);
+
+  // Le brouillon de la bulle d'aide est recopié dans l'état à la frappe, sans
+  // rendu : la bulle est reconstruite à chaque render(), et sans ça le texte
+  // repartait à zéro dès qu'on cliquait ailleurs dans l'app.
+  document.addEventListener('input', function(e){
+    var t = e.target;
+    if(!t || !t.getAttribute) return;
+    if(t.hasAttribute('data-sav-texte')) state.sav.texte = t.value;
+    else if(t.hasAttribute('data-sav-email')) state.sav.email = t.value;
+  });
 
   // Exposé pour vérifier le moteur fiscal (tests, débogage).
   window.FreeHub = { comparerVL: comparerVL, impotBareme: impotBareme, FISCAL: FISCAL,

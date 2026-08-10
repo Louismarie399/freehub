@@ -212,6 +212,11 @@ function init_db(PDO $pdo): void
     if (!in_array('type', $colsSav, true)) {
         $pdo->exec("ALTER TABLE sav_requests ADD COLUMN type TEXT DEFAULT ''");
     }
+    // Une suggestion traitée est annoncée à son auteur, une seule fois : cette
+    // colonne retient si le message lui a déjà été montré.
+    if (!in_array('annonce', $colsSav, true)) {
+        $pdo->exec('ALTER TABLE sav_requests ADD COLUMN annonce INTEGER DEFAULT 0');
+    }
 }
 
 // --------------------------------------------------------------------------- //
