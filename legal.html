@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mentions légales, CGU et confidentialité · Freehub</title>
+<meta name="description" content="Mentions légales, conditions générales d'utilisation et politique de confidentialité de Freehub.">
+<meta name="robots" content="index, follow">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --page:#fff; --encre:#0f1b33; --encre-2:#5b6b85;
+    --trait:rgba(15,27,51,.12); --doux:#f6f9ff; --bleu:#2f6bff;
+  }
+  :root[data-theme="sombre"]{
+    --page:#0b1220; --encre:#e8edf7; --encre-2:#a8b4ca;
+    --trait:rgba(255,255,255,.14); --doux:#141c2e; --bleu:#6d99ff;
+    color-scheme:dark;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="clair"]){
+      --page:#0b1220; --encre:#e8edf7; --encre-2:#a8b4ca;
+      --trait:rgba(255,255,255,.14); --doux:#141c2e; --bleu:#6d99ff;
+      color-scheme:dark;
+    }
+  }
+  body{margin:0;background:var(--page);color:var(--encre);
+    font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+    line-height:1.65}
+  a{color:var(--bleu)}
+  .wrap{max-width:760px;margin:0 auto;padding:32px clamp(18px,5vw,32px) 80px}
+
+  .haut{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding-bottom:22px;margin-bottom:34px;border-bottom:1px solid var(--trait);flex-wrap:wrap}
+  .retour{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:700;
+    text-decoration:none}
+  .retour:hover{text-decoration:underline}
+
+  h1{font-size:clamp(26px,4.6vw,34px);letter-spacing:-.02em;line-height:1.2;margin:0 0 8px}
+  .sous{color:var(--encre-2);font-size:15px;margin:0 0 30px}
+
+  /* Sommaire : trois documents sur une page, il faut pouvoir sauter au bon. */
+  .somm{background:var(--doux);border:1px solid var(--trait);border-radius:14px;
+    padding:16px 20px;margin-bottom:40px}
+  .somm-t{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--encre-2);margin-bottom:9px}
+  .somm ol{margin:0;padding-left:20px}
+  .somm li{margin:4px 0;font-weight:600}
+
+  h2{font-size:21px;letter-spacing:-.01em;margin:44px 0 4px;scroll-margin-top:22px;
+    padding-top:26px;border-top:1px solid var(--trait)}
+  h2:first-of-type{border-top:none;padding-top:0}
+  h3{font-size:16px;margin:26px 0 6px}
+  p,li{font-size:15px;color:var(--encre-2)}
+  p{margin:10px 0}
+  ul{padding-left:22px}
+  li{margin:5px 0}
+  strong{color:var(--encre);font-weight:700}
+
+  /* Ce qui reste à compléter doit sauter aux yeux, y compris en ligne. */
+  .todo{display:inline-block;background:#fef3c7;color:#92400e;border:1px dashed #d97706;
+    border-radius:6px;padding:1px 7px;font-size:13.5px;font-weight:700;font-family:inherit}
+  :root[data-theme="sombre"] .todo{background:#3a2f18;color:#fbd59d;border-color:#a97a1f}
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="clair"]) .todo{background:#3a2f18;color:#fbd59d;border-color:#a97a1f}
+  }
+  .avis{background:var(--doux);border:1px solid var(--trait);border-left:3px solid var(--bleu);
+    border-radius:0 12px 12px 0;padding:14px 18px;margin:20px 0}
+  .avis p{margin:0}
+  .maj{margin-top:56px;padding-top:20px;border-top:1px solid var(--trait);
+    font-size:13.5px;color:var(--encre-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="haut">
+    <a class="retour" href="/">← Retour à l'accueil</a>
+    <span style="font-size:13px;color:var(--encre-2)">Freehub</span>
+  </div>
+
+  <h1>Mentions légales, conditions d'utilisation et confidentialité</h1>
+  <p class="sous">Trois documents, une seule page. Dernière mise à jour : 10 août 2026.</p>
+
+  <div class="somm">
+    <div class="somm-t">Sur cette page</div>
+    <ol>
+      <li><a href="#mentions">Mentions légales</a></li>
+      <li><a href="#cgu">Conditions générales d'utilisation</a></li>
+      <li><a href="#donnees">Politique de confidentialité</a></li>
+    </ol>
+  </div>
+
+  <!-- ================= MENTIONS LÉGALES ================= -->
+  <h2 id="mentions">1. Mentions légales</h2>
+
+  <h3>Éditeur du site</h3>
+  <p>
+    Le site <strong>free-hub.fr</strong> est édité par <span class="todo">[RAISON SOCIALE]</span>,
+    <span class="todo">[FORME JURIDIQUE]</span> au capital de <span class="todo">[MONTANT]</span> €,
+    immatriculée au RCS de <span class="todo">[VILLE]</span> sous le numéro
+    <span class="todo">[SIREN]</span>, dont le siège social est situé
+    <span class="todo">[ADRESSE COMPLÈTE DU SIÈGE]</span>.
+  </p>
+  <p>
+    Numéro de TVA intracommunautaire : <span class="todo">[N° TVA, ou « non assujetti »]</span>.<br>
+    Directeur de la publication : <span class="todo">[PRÉNOM NOM]</span>.<br>
+    Contact : <a href="mailto:contact@free-hub.fr">contact@free-hub.fr</a>
+  </p>
+
+  <h3>Hébergeur</h3>
+  <p>
+    Le site est hébergé par <strong>o2switch</strong>, SAS au capital de 100 000 €,
+    immatriculée au RCS de Clermont-Ferrand sous le numéro 510 909 807,
+    dont le siège est situé Chemin des Pardiaux, 63000 Clermont-Ferrand, France.
+    Téléphone : 04 44 44 60 40.
+  </p>
+
+  <h3>Propriété intellectuelle</h3>
+  <p>
+    Les contenus de Freehub — textes explicatifs, parcours, schémas, interface — sont
+    la propriété de l'éditeur, à l'exception des marques et logos de nos partenaires,
+    qui restent la propriété de leurs titulaires respectifs. Toute reproduction ou
+    réutilisation à des fins commerciales est soumise à autorisation préalable.
+  </p>
+  <p>
+    Les références à des organismes publics (URSSAF, impots.gouv.fr, INPI, service-public.fr)
+    et les liens vers leurs sites sont faits à titre informatif, pour t'orienter vers la
+    source officielle. Ils n'impliquent <strong>aucun partenariat ni affiliation</strong>
+    entre ces organismes et Freehub.
+  </p>
+
+  <h3>Liens d'affiliation</h3>
+  <p>
+    Certains liens vers nos partenaires sont des <strong>liens d'affiliation</strong> :
+    Freehub peut percevoir une commission si tu souscris à leur offre. Cela ne change
+    rien au prix que tu paies, et les codes promo négociés le font au contraire baisser.
+    Ces liens sont signalés comme tels sur la page Partenaires. Ils n'influencent pas
+    le contenu pédagogique du site.
+  </p>
+
+  <!-- ================= CGU ================= -->
+  <h2 id="cgu">2. Conditions générales d'utilisation</h2>
+
+  <h3>Objet et acceptation</h3>
+  <p>
+    Freehub est un service d'information en ligne destiné aux travailleurs indépendants,
+    qui explique le fonctionnement administratif et fiscal de leur activité. Utiliser le
+    service vaut acceptation des présentes conditions.
+  </p>
+
+  <h3>Un service gratuit, en cours de développement</h3>
+  <p>
+    L'accès à Freehub est <strong>gratuit et sans engagement</strong>. Aucune donnée
+    bancaire n'est demandée. Le service est actuellement en phase alpha : des
+    fonctionnalités peuvent évoluer, être ajoutées ou retirées, et des interruptions
+    de service peuvent survenir. L'éditeur ne garantit ni la disponibilité continue
+    du service, ni l'absence d'erreur.
+  </p>
+
+  <h3>Nature de l'information : ce n'est pas du conseil</h3>
+  <div class="avis">
+    <p>
+      <strong>Freehub fournit de l'information générale, pas du conseil personnalisé.</strong>
+      Les contenus, simulateurs et estimations proposés ont une valeur pédagogique et
+      indicative. Ils ne constituent ni un conseil juridique, ni un conseil fiscal, ni un
+      conseil comptable ou financier au sens réglementaire, et ne remplacent pas
+      l'avis d'un professionnel (expert-comptable, avocat, conseiller URSSAF).
+    </p>
+  </div>
+  <p>
+    Les montants, seuils et taux affichés sont donnés à titre indicatif et peuvent évoluer
+    avec la réglementation. <strong>Les dates et montants qui font foi sont ceux de tes
+    espaces officiels</strong> (urssaf.fr, impots.gouv.fr). Il t'appartient de vérifier ta
+    situation auprès des organismes compétents avant toute décision. La responsabilité de
+    l'éditeur ne saurait être engagée à raison d'une décision prise sur la seule base des
+    informations du site.
+  </p>
+
+  <h3>Ton compte</h3>
+  <p>
+    La création d'un compte suppose des informations exactes et une adresse e-mail valide.
+    Tu es responsable de la confidentialité de ton mot de passe et des actions effectuées
+    depuis ton compte. Tu peux demander la suppression de ton compte à tout moment en
+    écrivant à <a href="mailto:contact@free-hub.fr">contact@free-hub.fr</a>.
+  </p>
+
+  <h3>Espace d'entraide</h3>
+  <p>
+    L'espace d'entraide permet aux membres d'échanger entre eux. En y publiant, tu
+    t'engages à rester courtois et à ne pas diffuser de contenu illicite, diffamatoire,
+    trompeur, ni de données personnelles ou sensibles — les tiennes comme celles d'autrui
+    (coordonnées, SIRET, revenus précis). Les messages y sont publics et visibles par
+    tous les membres.
+  </p>
+  <p>
+    L'éditeur peut retirer un message ou suspendre l'accès à l'écriture d'un compte qui
+    ne respecterait pas ces règles. Les propos tenus par les membres n'engagent qu'eux :
+    ce sont des retours d'expérience entre pairs, pas des conseils validés par l'éditeur.
+  </p>
+
+  <h3>Évolution des conditions</h3>
+  <p>
+    Ces conditions peuvent être modifiées pour suivre l'évolution du service ou de la
+    réglementation. La date de dernière mise à jour figure en bas de page.
+  </p>
+
+  <!-- ================= DONNÉES ================= -->
+  <h2 id="donnees">3. Politique de confidentialité</h2>
+
+  <p>
+    Le responsable de traitement est <span class="todo">[RAISON SOCIALE]</span>
+    (voir les mentions légales ci-dessus). Pour toute question ou demande relative à
+    tes données : <a href="mailto:contact@free-hub.fr">contact@free-hub.fr</a>.
+  </p>
+
+  <h3>Ce qu'on collecte, et pourquoi</h3>
+  <ul>
+    <li>
+      <strong>Compte</strong> — prénom, nom, adresse e-mail, mot de passe (jamais stocké
+      en clair : il est haché). Finalité : créer et sécuriser ton accès.
+      Base légale : exécution du service.
+    </li>
+    <li>
+      <strong>Profil d'activité</strong> — forme juridique, catégorie fiscale, chiffre
+      d'affaires, situation TVA, périodicité de déclaration, parts fiscales, photo de
+      profil si tu en ajoutes une. Finalité : adapter les explications, les échéances et
+      les simulateurs à ta situation. Base légale : exécution du service.
+      Ces informations sont facultatives — le service fonctionne sans, avec des
+      estimations moins précises.
+    </li>
+    <li>
+      <strong>Progression</strong> — objectifs suivis, étapes franchies, récompenses,
+      score de sérénité, termes épinglés. Finalité : te permettre de reprendre où tu
+      en étais.
+    </li>
+    <li>
+      <strong>Contributions</strong> — messages publiés dans l'espace d'entraide,
+      retours et réclamations envoyés. Finalité : faire fonctionner l'entraide et
+      te répondre.
+    </li>
+    <li>
+      <strong>Préférences de notification</strong> — adresse de destination et types de
+      rappels choisis. Finalité : t'envoyer les rappels d'échéances que tu as demandés.
+      Base légale : ton consentement, retirable à tout moment.
+    </li>
+  </ul>
+  <p>
+    Il n'y a <strong>ni cookie publicitaire, ni traceur tiers, ni revente de données</strong>.
+    Le seul cookie déposé est un cookie de session, strictement nécessaire pour te garder
+    connecté ; il ne requiert pas de consentement préalable.
+  </p>
+
+  <h3>Qui d'autre y a accès</h3>
+  <p>
+    Nous faisons appel aux prestataires suivants, uniquement pour faire fonctionner le
+    service :
+  </p>
+  <ul>
+    <li>
+      <strong>o2switch</strong> (France) — hébergement du site et de la base de données.
+      Tes données sont stockées en France.
+    </li>
+    <li>
+      <strong>Anthropic</strong> (États-Unis) — uniquement pour la fonctionnalité
+      d'analyse de dépenses. Quand tu l'utilises, les informations que tu as saisies dans
+      ce simulateur (intitulé de la dépense, montant, motif, et les éléments de profil
+      utiles à l'analyse) sont transmises à l'API Claude pour produire l'analyse.
+      <strong>Ce transfert a lieu hors Union européenne</strong>, encadré par les clauses
+      contractuelles types de la Commission européenne. Cette fonctionnalité est
+      facultative : elle ne se déclenche que si tu lances une analyse.
+    </li>
+    <li>
+      <strong>Google</strong> (États-Unis) — uniquement si tu choisis de te connecter avec
+      ton compte Google. Google nous transmet alors ton adresse e-mail, ton prénom et ton
+      nom. Tu peux à la place utiliser une adresse e-mail et un mot de passe.
+    </li>
+  </ul>
+
+  <h3>Combien de temps</h3>
+  <p>
+    Tes données sont conservées tant que ton compte est actif. À sa suppression, elles
+    sont effacées sous 30 jours, à l'exception des messages publiés dans l'espace
+    d'entraide, qui peuvent être conservés de façon anonymisée pour ne pas rendre les
+    conversations incompréhensibles, et des éléments que la loi impose de garder plus
+    longtemps.
+  </p>
+
+  <h3>Tes droits</h3>
+  <p>
+    Tu disposes d'un droit d'accès, de rectification, d'effacement, de limitation,
+    d'opposition et de portabilité de tes données. Tu peux les exercer en écrivant à
+    <a href="mailto:contact@free-hub.fr">contact@free-hub.fr</a> — une réponse te sera
+    apportée sous un mois. Les rappels par e-mail se désactivent d'un clic depuis le lien
+    présent dans chaque message, ou depuis ton profil.
+  </p>
+  <p>
+    Si tu estimes que tes droits ne sont pas respectés, tu peux introduire une réclamation
+    auprès de la CNIL — <a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>.
+  </p>
+
+  <div class="maj">
+    Document mis à jour le 10 août 2026 · Freehub ·
+    <a href="mailto:contact@free-hub.fr">contact@free-hub.fr</a>
+  </div>
+
+</div>
+</body>
+</html>

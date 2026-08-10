@@ -20,7 +20,7 @@
      bleus de marque restent les mêmes dans les deux. */
   :root{
     --page:#fff; --carte:#fff; --encre:#0f1b33; --encre-2:#5b6b85;
-    --trait:var(--trait); --doux:#f6f9ff; --pale:#f0f4fb;
+    --trait:rgba(15,27,51,.12); --doux:#f6f9ff; --pale:#f0f4fb;
   }
   :root[data-theme="sombre"]{
     --page:#0b1220; --carte:#141c2e; --encre:#e8edf7; --encre-2:#a8b4ca;
@@ -529,6 +529,11 @@
 
   .footer{max-width:1120px;margin:0 auto;padding:30px clamp(18px,4.5vw,48px);border-top:1px solid rgba(15,27,51,.07);
     display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .footer-liens{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .footer-liens a{font-size:13px;font-weight:600;color:#8a97ad;text-decoration:none}
+  .footer-liens a:hover{color:#2f6bff}
+  :root[data-theme="sombre"] .footer-liens a{color:var(--encre-2)}
+  @media (max-width:600px){ .footer-liens{gap:14px;order:3;width:100%} }
 
   /* ------------------------------------------------------------------ */
   /* Responsive                                                          */
@@ -1047,6 +1052,12 @@
   <!-- ============ FOOTER ============ -->
   <footer class="footer">
     <img src="assets/freehub-logo.png" alt="Freehub" style="height:22px;display:block">
+    <div class="footer-liens">
+      <a href="legal.html#mentions">Mentions légales</a>
+      <a href="legal.html#cgu">CGU</a>
+      <a href="legal.html#donnees">Confidentialité</a>
+      <a href="mailto:contact@free-hub.fr">Contact</a>
+    </div>
     <span style="font-size:13px;color:#8a97ad;font-weight:500">© 2026 Freehub · Le hub des indépendants</span>
   </footer>
 </div>

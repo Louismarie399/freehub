@@ -4,7 +4,7 @@
     {
       "name": "freehub",
       "runtimeExecutable": "/opt/homebrew/bin/php",
-      "runtimeArgs": ["-S", "127.0.0.1:8123", "/Users/louisltddstudio/free-hub/dev.php"],
+      "runtimeArgs": ["-S", "127.0.0.1:8123", "-t", ".", "dev.php"],
       "port": 8123
     }
   ]
