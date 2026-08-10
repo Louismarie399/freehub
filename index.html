@@ -627,6 +627,8 @@
   /* Champ « code d'accès » : mis en avant, saisie en majuscules */
   .code-box{background:#f4f8ff;border:1.5px dashed #b9cdf6;border-radius:12px;padding:13px 14px}
   .code-box .fld{background:var(--carte);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  /* La saisie reste en capitales, l'invite non : en majuscules elle criait. */
+  .code-box .fld::placeholder{text-transform:none;letter-spacing:normal;font-weight:500}
   .code-aide{font-size:11.5px;color:var(--encre-2);font-weight:500;margin-top:7px;line-height:1.45}
 
   /* Bouton Google */
@@ -1095,7 +1097,9 @@
                y compris l'inscription via Google. -->
           <div class="code-box" data-code-zone style="margin-bottom:16px">
             <label class="fld-label">Code d'accès <span style="color:#2f6bff">*</span></label>
-            <input class="fld" name="code" placeholder="Ex : ALPHA2026" autocomplete="off" spellcheck="false">
+            <!-- Pas d'exemple de code en repère : le vrai code lui ressemblerait
+                 trop, et on ne saurait plus si le champ est prérempli ou non. -->
+            <input class="fld" name="code" placeholder="Renseigne ton code d'accès" autocomplete="off" spellcheck="false">
             <div class="code-aide">🔒 Alpha privée jusqu'en septembre 2026. Le code t'est remis
               directement par l'équipe FreeHub.</div>
           </div>
