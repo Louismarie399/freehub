@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#ffffff">
 <title>Freehub - L'administratif, enfin compris</title>
 <meta name="description" content="Le premier espace qui rassemble tout pour comprendre l'administratif et la fiscalité de ton activité d'indépendant. Expliqué simplement, adapté à ton profil, gratuit.">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -91,7 +90,9 @@
   .nav-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px}
   .nav-login{background:none;border:none;font-size:14px;font-weight:700;color:var(--encre);cursor:pointer;
     padding:10px 14px;border-radius:100px;transition:background .2s;white-space:nowrap}
-  .nav-login:hover{background:#f0f4fb}
+  /* --pale suit le thème (#f0f4fb en clair) : en dur, le texte clair du mode
+     sombre se retrouvait blanc sur gris très clair. */
+  .nav-login:hover{background:var(--pale)}
   .nav-cta{font-size:14px;font-weight:700;color:#fff;background:#0f1b33;padding:11px 20px;border:none;
     border-radius:100px;cursor:pointer;transition:box-shadow .3s,transform .3s,padding .35s;white-space:nowrap;
     box-shadow:0 0 20px -6px rgba(47,107,255,.55)}
@@ -191,7 +192,7 @@
   .nav-tiroir.ouvert{opacity:1;transform:none}
   .nav-tiroir a{display:block;padding:13px 16px;border-radius:14px;
     font-size:15.5px;font-weight:700;color:var(--encre)}
-  .nav-tiroir a:hover{background:#f4f7fd}
+  .nav-tiroir a:hover{background:var(--pale)}
   .nav-tiroir-cta{width:100%;margin-top:6px;padding:13px;border:1.5px solid rgba(15,27,51,.12);
     border-radius:100px;background:var(--carte);font-size:15px;font-weight:700;color:var(--encre);cursor:pointer}
   .nav-tiroir-cta.primaire{margin-top:8px;border-color:transparent;background:#0f1b33;color:#fff;
@@ -635,7 +636,7 @@
   .btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:11px;
     padding:13px;border:1.5px solid rgba(15,27,51,.14);border-radius:12px;background:var(--carte);
     font-weight:700;font-size:15px;color:var(--encre);cursor:pointer;transition:background .15s}
-  .btn-google:hover{background:#f7f9fc}
+  .btn-google:hover{background:var(--pale)}
   .g-mark{width:19px;height:19px;flex:none}
   .ou-sep{display:flex;align-items:center;gap:14px;margin:20px 0;color:#a9b3c6;font-size:12.5px;font-weight:600}
   .ou-sep > div{flex:1;height:1px;background:var(--trait)}
