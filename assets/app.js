@@ -2443,6 +2443,7 @@
     simIntro: null,         // simulateur dont on montre l'explication d'accueil
     // Suggestions de l'utilisateur retenues par la modération, à lui annoncer.
     annonces: { liste: [], deplie: false },
+    savFils: [],            // ses réclamations qui ont reçu une réponse
     // Préférences de rappels : chargées à l'ouverture du profil.
     notif: { charge:false, genres:[], choix:{}, confirme:false, email:'', envoi:false, sauve:0 },
     // Score de sérénité : le ressenti déclaré à l'onboarding, et le détail
@@ -2750,6 +2751,7 @@
                        isAdmin: !!res.data.isAdmin, beta: !!res.data.beta };
       identiteDepuisCompte(state.compte);
       annoncesCharger();   // « ta suggestion a été retenue », s'il y en a
+      savFilsCharger();    // et les échanges qui attendent une lecture
       apiJson('GET', 'api/data').then(function(d){
         // Marqueur de remise à zéro posé côté serveur : on efface TOUT le
         // stockage local (sinon il ré-ensemencerait le compte aussitôt) et on
@@ -8516,6 +8518,14 @@
   // ---------------------------------------------------------------------------
   // Réclamations - la file des demandes, côté admin
   // ---------------------------------------------------------------------------
+  // Relit la file : au premier affichage, puis après chaque réponse envoyée.
+  function demandesRecharger(){
+    return apiJson('GET', '/api/admin/demandes').then(function(r){
+      setState({ demandes: Object.assign({}, state.demandes,
+        { chargees:true, enCours:false, liste:(r.ok && r.data.demandes) || [] }) });
+    });
+  }
+
   function savAdminHtml(){
     if(!(state.compte && state.compte.isAdmin)){
       return '<div class="view"><div class="obj-vide">Réservé aux administrateurs.</div></div>';
@@ -8523,10 +8533,7 @@
     var d = state.demandes;
     if(!d.chargees && !d.enCours){
       d.enCours = true;
-      apiJson('GET', '/api/admin/demandes').then(function(r){
-        setState({ demandes: Object.assign({}, state.demandes,
-          { chargees:true, enCours:false, liste:(r.ok && r.data.demandes) || [] }) });
-      });
+      demandesRecharger();
     }
     var liste = (d.liste || []).filter(function(x){
       if(d.filtre === 'partenaire') return x.type === 'partenaire';
@@ -8542,6 +8549,35 @@
         + ' data-action="dem-filtre" data-f="'+(v || '')+'">'+l
         + '<span class="fpill-n">'+n+'</span></button>';
     };
+    // L'échange vit dans la carte de la réclamation, pas ailleurs : on garde
+    // sous les yeux ce à quoi on répond.
+    function demFilHtml(x){
+      if(x.type !== 'sav') return '';
+      var rep = x.reponses || [];
+      var fil = rep.map(function(r){
+        return '<div class="dem-r'+(r.admin ? ' nous' : '')+'">'
+          + '<span class="dem-r-qui">'+(r.admin ? 'Nous' : esc(x.titre))+'</span>'
+          + '<span class="dem-r-m">'+esc(r.message)+'</span>'
+        + '</div>';
+      }).join('');
+      // Traité = clos : le serveur refuse les nouvelles réponses, l'interface
+      // ne doit pas laisser croire le contraire.
+      if(x.traite){
+        return fil ? '<div class="dem-fil">'+fil
+          + '<div class="dem-clos">Échange clos</div></div>' : '';
+      }
+      if(!x.repondable){
+        return fil ? '<div class="dem-fil">'+fil+'</div>' : '';
+      }
+      return '<div class="dem-fil">'+fil
+        + '<form class="dem-form" data-dem-form data-id="'+x.id+'">'
+          + '<textarea data-dem-texte rows="2" maxlength="2000" required'
+            + ' placeholder="Répondre à '+esc(x.titre)+'…"></textarea>'
+          + '<button type="submit" class="dem-envoi">Envoyer</button>'
+        + '</form>'
+      + '</div>';
+    }
+
     var cartes = liste.map(function(x){
       return '<div class="dem'+(x.traite ? ' fait' : '')+'">'
         + '<div class="dem-h">'
@@ -8555,6 +8591,7 @@
         + (x.detail ? '<div class="dem-d">'+esc(x.detail)+'</div>' : '')
         + '<div class="dem-m">'+esc(x.message || '')+'</div>'
         + (x.email ? '<a class="dem-mail" href="mailto:'+esc(x.email)+'">✉ '+esc(x.email)+'</a>' : '')
+        + demFilHtml(x)
       + '</div>';
     }).join('');
 
@@ -8713,6 +8750,75 @@
     } catch(e){}
   }
 
+  // Combien de réponses de l'équipe l'utilisateur n'a pas encore ouvertes.
+  function savFilsNonLus(){
+    return (state.savFils || []).reduce(function(n, f){
+      return n + f.reponses.filter(function(r){ return r.admin && !r.lu; }).length;
+    }, 0);
+  }
+  function savFilsCharger(){
+    if(!state.compte) return;
+    apiJson('GET', '/api/sav/fils').then(function(r){
+      if(!r.ok || !r.data) return;
+      state.savFils = r.data.fils || [];
+      majSavBulle();
+    });
+  }
+  // Ouvrir un fil vaut lecture : la pastille s'éteint sans geste supplémentaire.
+  function savFilMarquerLu(id){
+    var f = (state.savFils || []).filter(function(x){ return x.id === id; })[0];
+    if(!f || !f.reponses.some(function(r){ return r.admin && !r.lu; })) return;
+    f.reponses.forEach(function(r){ if(r.admin) r.lu = true; });
+    apiJson('POST', '/api/sav/fil/vu', { id: id });
+  }
+
+  var SAV_LIB = { suggestion:'💡 Suggestion', bug:'🐛 Bug', question:'❓ Question' };
+
+  function savFilsListeHtml(){
+    return '<div class="bulle-choix">'
+      + '<button type="button" class="bulle-retour" data-action="sav-fils-retour">'
+        + '← Retour</button>'
+      + (state.savFils || []).map(function(f){
+          var nb = f.reponses.filter(function(r){ return r.admin && !r.lu; }).length;
+          return '<button class="bulle-type" data-action="sav-fil-open" data-id="'+f.id+'">'
+            + '<span class="bulle-type-i">'+(SAV_LIB[f.type] || '💬').slice(0, 2)+'</span>'
+            + '<span><span class="bulle-type-l">'+esc(f.message.slice(0, 40))
+              + (f.message.length > 40 ? '…' : '')
+              + (nb ? ' <b class="bulle-nb">'+nb+'</b>' : '')+'</span>'
+            + '<span class="bulle-type-d">'
+              + (f.clos ? 'Échange clos' : f.reponses.length+' message'
+                 + (f.reponses.length > 1 ? 's' : ''))+'</span></span>'
+            + '<span class="bulle-type-f">→</span></button>';
+        }).join('')
+    + '</div>';
+  }
+
+  // Le fil vu par son auteur : son message, les réponses, et de quoi relancer
+  // tant que l'équipe n'a pas clos l'échange.
+  function savFilHtml(id){
+    var f = (state.savFils || []).filter(function(x){ return x.id === id; })[0];
+    if(!f) return '';
+    var lignes = '<div class="bulle-fil-l moi"><span class="bulle-fil-qui">Toi</span>'
+      + '<span class="bulle-fil-m">'+esc(f.message)+'</span></div>'
+      + f.reponses.map(function(r){
+          return '<div class="bulle-fil-l'+(r.admin ? ' eux' : ' moi')+'">'
+            + '<span class="bulle-fil-qui">'+(r.admin ? 'FreeHub' : 'Toi')+'</span>'
+            + '<span class="bulle-fil-m">'+esc(r.message)+'</span></div>';
+        }).join('');
+    return '<div class="bulle-fil">'
+      + '<button type="button" class="bulle-retour" data-action="sav-fils-retour">'
+        + '← Mes échanges</button>'
+      + '<div class="bulle-fil-corps">'+lignes+'</div>'
+      + (f.clos
+          ? '<div class="bulle-fil-clos">Échange clos par l’équipe</div>'
+          : '<form class="bulle-form" data-fil-form data-id="'+f.id+'">'
+            + '<textarea data-fil-texte rows="3" maxlength="2000" required'
+              + ' placeholder="Ta réponse…"></textarea>'
+            + '<button type="submit" class="ch-envoi bulle-envoi">Répondre</button>'
+          + '</form>')
+    + '</div>';
+  }
+
   function savBulleHtml(){
     if(state.tab === 'chat') return '';   // le salon a déjà sa conversation
     savPerimer();
@@ -8723,9 +8829,14 @@
       + '<path d="M20.5 11.8c0 3.9-3.8 7-8.5 7a10 10 0 0 1-2.6-.34L4.6 20l1.2-3.4'
       + 'A6.7 6.7 0 0 1 3.5 11.8c0-3.9 3.8-7 8.5-7s8.5 3.1 8.5 7z"/>'
       + '<path d="M8.5 10.5h7M8.5 13.5h4"/></svg>';
+    // Réponses de l'équipe pas encore lues : la pastille est le seul signal
+    // qu'un échange attend, la bulle étant fermée la plupart du temps.
+    var nonLus = savFilsNonLus();
     if(!o.ouvert){
       return '<button class="bulle-aide" data-action="sav-open" title="Un pépin, une idée ?">'
-        + icone + '</button>';
+        + icone
+        + (nonLus ? '<span class="bulle-pastille">'+nonLus+'</span>' : '')
+        + '</button>';
     }
     var type = SAV_TYPES.filter(function(t){ return t.v === o.type; })[0] || null;
     var corps;
@@ -8739,7 +8850,12 @@
           + (state.compte ? 'sur l’e-mail de ton compte' : 'sur l’adresse laissée')+'.';
       corps = '<div class="bulle-merci">'+merci
         + '<button class="btn-link" data-action="sav-encore">En envoyer un autre</button></div>';
+    } else if(o.fil === 'liste'){
+      corps = savFilsListeHtml();
+    } else if(o.fil){
+      corps = savFilHtml(o.fil);
     } else if(!type){
+      var fils = (state.savFils || []);
       // D'abord dire de quoi il s'agit : la réponse arrive mieux rangée.
       corps = '<div class="bulle-choix">'
         + SAV_TYPES.map(function(t){
@@ -8749,6 +8865,17 @@
               + '<span class="bulle-type-d">'+t.d+'</span></span>'
               + '<span class="bulle-type-f">→</span></button>';
           }).join('')
+        // Les échanges en cours n'apparaissent que s'il y en a : pas d'entrée
+        // morte dans le menu pour ceux qui n'ont jamais écrit.
+        + (fils.length
+            ? '<button class="bulle-type fils" data-action="sav-fils">'
+              + '<span class="bulle-type-i">💬</span>'
+              + '<span><span class="bulle-type-l">Mes échanges'
+                + (nonLus ? ' <b class="bulle-nb">'+nonLus+'</b>' : '')+'</span>'
+              + '<span class="bulle-type-d">'+fils.length+' demande'
+                + (fils.length > 1 ? 's' : '')+' avec une réponse</span></span>'
+              + '<span class="bulle-type-f">→</span></button>'
+            : '')
       + '</div>';
     } else {
       corps = '<form class="bulle-form" data-sav-form>'
@@ -10176,6 +10303,43 @@
       });
       return;
     }
+    // Relance de l'auteur dans son propre fil, depuis la bulle d'aide.
+    var ff2 = e.target.closest && e.target.closest('[data-fil-form]');
+    if(ff2){
+      e.preventDefault();
+      var fTexte = (ff2.querySelector('[data-fil-texte]') || {}).value || '';
+      if(!fTexte.trim()) return;
+      var fId = parseInt(ff2.getAttribute('data-id'), 10);
+      var fBtn = ff2.querySelector('.bulle-envoi');
+      if(fBtn){ fBtn.disabled = true; fBtn.textContent = 'Envoi…'; }
+      apiJson('POST', '/api/sav/repondre', { id: fId, message: fTexte }).then(function(r){
+        if(!r.ok){
+          if(fBtn){ fBtn.disabled = false; fBtn.textContent = 'Répondre'; }
+          return;
+        }
+        savFilsCharger();   // relit le fil, réponse comprise
+      });
+      return;
+    }
+    // Réponse de l'équipe à une réclamation, depuis la file admin.
+    var df = e.target.closest && e.target.closest('[data-dem-form]');
+    if(df){
+      e.preventDefault();
+      var dChamp = df.querySelector('[data-dem-texte]');
+      var dTexte = (dChamp || {}).value || '';
+      if(!dTexte.trim()) return;
+      var dId = parseInt(df.getAttribute('data-id'), 10);
+      var dBtn = df.querySelector('.dem-envoi');
+      if(dBtn){ dBtn.disabled = true; dBtn.textContent = 'Envoi…'; }
+      apiJson('POST', '/api/sav/repondre', { id: dId, message: dTexte }).then(function(r){
+        if(!r.ok){
+          if(dBtn){ dBtn.disabled = false; dBtn.textContent = 'Envoyer'; }
+          return;
+        }
+        demandesRecharger();   // le fil se redessine avec sa nouvelle réponse
+      });
+      return;
+    }
     var sf = e.target.closest && e.target.closest('[data-sav-form]');
     if(sf){
       e.preventDefault();
@@ -10503,6 +10667,29 @@
         state.annonces = { liste: [], deplie: false };
         majAnnonce();
         if(ids.length) apiJson('POST', '/api/sav/annonces/vu', { ids: ids });
+        break;
+      }
+      case 'sav-fils': {
+        // Un seul échange : on l'ouvre directement, la liste n'apprendrait rien.
+        var fs = state.savFils || [];
+        var cible = fs.length === 1 ? fs[0].id : 'liste';
+        state.sav = Object.assign({}, state.sav, { fil: cible });
+        if(cible !== 'liste') savFilMarquerLu(cible);
+        majSavBulle();
+        break;
+      }
+      case 'sav-fil-open': {
+        var fid = parseInt(el.getAttribute('data-id'), 10);
+        state.sav = Object.assign({}, state.sav, { fil: fid });
+        savFilMarquerLu(fid);
+        majSavBulle();
+        break;
+      }
+      case 'sav-fils-retour': {
+        // Depuis un fil on remonte à la liste, depuis la liste au menu.
+        var versListe = state.sav.fil !== 'liste' && (state.savFils || []).length > 1;
+        state.sav = Object.assign({}, state.sav, { fil: versListe ? 'liste' : null });
+        majSavBulle();
         break;
       }
       case 'sav-grand': {

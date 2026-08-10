@@ -217,6 +217,18 @@ function init_db(PDO $pdo): void
     if (!in_array('annonce', $colsSav, true)) {
         $pdo->exec('ALTER TABLE sav_requests ADD COLUMN annonce INTEGER DEFAULT 0');
     }
+    // Un retour appelle souvent un aller-retour : « tu as regardé au bon
+    // endroit ? ». Chaque réclamation porte donc son fil, clos quand elle
+    // passe en traité. `lu` ne concerne que le destinataire de la réponse.
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS sav_reponses(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            demande_id INTEGER NOT NULL,
+            admin INTEGER DEFAULT 0,
+            message TEXT NOT NULL,
+            created TEXT NOT NULL,
+            lu INTEGER DEFAULT 0)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_sav_reponses ON sav_reponses(demande_id)');
 }
 
 // --------------------------------------------------------------------------- //

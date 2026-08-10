@@ -65,7 +65,7 @@ function route_admin_demandes(): void
     }
     $libelles = ['suggestion' => '💡 Suggestion', 'bug' => '🐛 Bug', 'question' => '❓ Question'];
     foreach ($pdo->query(
-        'SELECT s.id, s.email, s.type, s.message, s.created, s.traite,
+        'SELECT s.id, s.user_id, s.email, s.type, s.message, s.created, s.traite,
                 u.prenom, u.nom, u.email AS email_compte
            FROM sav_requests s LEFT JOIN users u ON u.id = s.user_id
           ORDER BY s.id DESC LIMIT 200') as $r) {
@@ -80,8 +80,19 @@ function route_admin_demandes(): void
             'email' => $mail, 'detail' => $libelles[$r['type']] ?? '',
             'message' => $r['message'], 'created' => $r['created'],
             'traite' => (bool) $r['traite'],
+            // Un retour anonyme n'a pas de fil : sans compte, l'auteur n'a
+            // aucun endroit où lire la réponse. Il reste l'e-mail.
+            'repondable' => (int) ($r['user_id'] ?? 0) > 0,
+            'sav_id' => (int) $r['id'],
         ];
     }
+    // Les fils, en une requête pour tout le lot.
+    $fils = sav_fils(array_map(fn($o) => $o['id'],
+        array_values(array_filter($out, fn($o) => $o['type'] === 'sav'))));
+    foreach ($out as &$o) {
+        if ($o['type'] === 'sav') $o['reponses'] = $fils[$o['id']] ?? [];
+    }
+    unset($o);
     usort($out, fn($a, $b) => strcmp($b['created'], $a['created']));
     json_reponse(['demandes' => $out]);
 }
@@ -101,6 +112,110 @@ function route_admin_demandes_traiter(): void
     if ($table === 'sav_requests' && !$traite) {
         db()->prepare('UPDATE sav_requests SET annonce = 0 WHERE id = ?')->execute([$id]);
     }
+    json_reponse(['ok' => true]);
+}
+
+/** Les réponses d'un lot de réclamations, rangées par demande. */
+function sav_fils(array $ids): array
+{
+    if (!$ids) return [];
+    $trous = implode(',', array_fill(0, count($ids), '?'));
+    $st = db()->prepare(
+        "SELECT id, demande_id, admin, message, created, lu FROM sav_reponses
+          WHERE demande_id IN ($trous) ORDER BY id ASC");
+    $st->execute($ids);
+    $out = [];
+    foreach ($st as $r) {
+        $out[(int) $r['demande_id']][] = [
+            'id'      => (int) $r['id'],
+            'admin'   => (bool) $r['admin'],
+            'message' => $r['message'],
+            'created' => $r['created'],
+            'lu'      => (bool) $r['lu'],
+        ];
+    }
+    return $out;
+}
+
+/**
+ * POST /api/sav/repondre — l'équipe répond à une réclamation, ou son auteur
+ * relance. Un fil clos (demande traitée) n'accepte plus rien : c'est le sens
+ * du bouton « traité » côté admin.
+ */
+function route_sav_repondre(): void
+{
+    $u = exige_connexion();
+    $c = corps();
+    $id = (int) ($c['id'] ?? 0);
+    $message = trim((string) ($c['message'] ?? ''));
+    if (!$id) erreur('Demande introuvable.');
+    if ($message === '') erreur('Message vide.');
+    if (mb_strlen($message) > SAV_LONGUEUR_MAX) erreur('Message trop long.');
+
+    $st = db()->prepare('SELECT user_id, traite FROM sav_requests WHERE id = ?');
+    $st->execute([$id]);
+    $d = $st->fetch();
+    if (!$d) erreur('Demande introuvable.');
+
+    // Seuls l'équipe et l'auteur du retour ont accès à ce fil.
+    $estAdmin = (bool) $u['is_admin'];
+    if (!$estAdmin && (int) $d['user_id'] !== (int) $u['id']) {
+        erreur('Accès refusé.', 403);
+    }
+    if ((int) $d['traite']) erreur('Cet échange est clos.', 410);
+
+    db()->prepare(
+        'INSERT INTO sav_reponses(demande_id, admin, message, created, lu)
+         VALUES (?,?,?,?,0)')
+        ->execute([$id, $estAdmin ? 1 : 0, $message, maintenant()]);
+    json_reponse(['ok' => true]);
+}
+
+/**
+ * GET /api/sav/fils — les réclamations de l'utilisateur qui portent un
+ * échange : ce qu'il a écrit, ce qu'on lui a répondu, et si le fil est clos.
+ */
+function route_sav_fils(): void
+{
+    $u = utilisateur_courant();
+    if (!$u) { json_reponse(['fils' => []]); return; }
+
+    $st = db()->prepare(
+        'SELECT id, type, message, created, traite FROM sav_requests
+          WHERE user_id = ? ORDER BY id DESC LIMIT 20');
+    $st->execute([$u['id']]);
+    $lignes = $st->fetchAll();
+    $reponses = sav_fils(array_map(fn($l) => (int) $l['id'], $lignes));
+
+    $out = [];
+    foreach ($lignes as $l) {
+        $id = (int) $l['id'];
+        // Un retour sans échange n'a pas à encombrer la liste de l'utilisateur.
+        if (empty($reponses[$id])) continue;
+        $out[] = [
+            'id'       => $id,
+            'type'     => $l['type'],
+            'message'  => $l['message'],
+            'created'  => $l['created'],
+            'clos'     => (bool) $l['traite'],
+            'reponses' => $reponses[$id],
+        ];
+    }
+    json_reponse(['fils' => $out]);
+}
+
+/** POST /api/sav/fil/vu — l'auteur a lu les réponses de l'équipe. */
+function route_sav_fil_vu(): void
+{
+    $u = exige_connexion();
+    $id = (int) (corps()['id'] ?? 0);
+    if (!$id) { json_reponse(['ok' => true]); return; }
+    // La jointure borne la mise à jour aux fils de cet utilisateur.
+    db()->prepare(
+        'UPDATE sav_reponses SET lu = 1
+          WHERE demande_id = ? AND admin = 1
+            AND demande_id IN (SELECT id FROM sav_requests WHERE user_id = ?)')
+        ->execute([$id, $u['id']]);
     json_reponse(['ok' => true]);
 }
 

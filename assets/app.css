@@ -2019,6 +2019,50 @@
      hériter du rond de la chatbox, sinon il devient une ellipse. */
   .bulle-envoi{width:100%;height:auto;padding:13px 20px;border-radius:13px;font-size:14px}
   .bulle-erreur{font-size:12px;font-weight:700;color:#b91c1c}
+
+  /* ---------- Échanges : le fil vu par son auteur ---------- */
+  .bulle-pastille{position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;
+    padding:0 5px;border-radius:999px;background:#e11d48;color:#fff;font-size:11px;
+    font-weight:800;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 0 2px var(--surface)}
+  .bulle-nb{display:inline-flex;align-items:center;justify-content:center;min-width:17px;
+    height:17px;padding:0 5px;margin-left:5px;border-radius:999px;background:#e11d48;
+    color:#fff;font-size:10.5px;font-weight:800}
+  .bulle-fil{display:flex;flex-direction:column;gap:10px;padding:14px 16px 16px}
+  .bulle-fil-corps{display:flex;flex-direction:column;gap:9px;max-height:42vh;overflow-y:auto}
+  .bulle-fil-l{display:flex;flex-direction:column;gap:3px;padding:9px 12px;border-radius:12px;
+    font-size:13px;line-height:1.5}
+  .bulle-fil-l.moi{background:var(--soft);align-self:flex-end;max-width:88%;
+    border-radius:12px 12px 4px 12px}
+  .bulle-fil-l.eux{background:color-mix(in srgb,var(--blue) 12%,transparent);
+    align-self:flex-start;max-width:88%;border-radius:12px 12px 12px 4px}
+  .bulle-fil-qui{font-size:10.5px;font-weight:800;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--muted)}
+  .bulle-fil-m{color:var(--ink);white-space:pre-wrap}
+  .bulle-fil-clos{padding:10px;border-radius:11px;background:var(--soft);text-align:center;
+    font-size:12.5px;font-weight:700;color:var(--muted)}
+  .bulle-panneau.grand .bulle-fil-corps{max-height:none;flex:1}
+
+  /* ---------- Échanges : le fil vu par l'équipe ---------- */
+  .dem-fil{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);
+    display:flex;flex-direction:column;gap:8px}
+  .dem-r{display:flex;flex-direction:column;gap:2px;padding:9px 12px;border-radius:11px;
+    background:var(--soft);font-size:13px;line-height:1.5;max-width:82%}
+  .dem-r.nous{align-self:flex-end;background:color-mix(in srgb,var(--blue) 13%,transparent)}
+  .dem-r-qui{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--muted)}
+  .dem-r-m{color:var(--ink);white-space:pre-wrap}
+  .dem-form{display:flex;gap:8px;align-items:flex-end;margin-top:2px}
+  .dem-form textarea{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--border);
+    border-radius:11px;font-family:inherit;font-size:13px;resize:vertical;min-height:38px;
+    background:var(--surface);color:var(--ink)}
+  .dem-form textarea:focus{outline:none;border-color:var(--blue)}
+  .dem-envoi{flex:none;padding:10px 16px;border:none;border-radius:11px;background:var(--blue);
+    color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;
+    transition:.16s var(--ease)}
+  .dem-envoi:hover{filter:brightness(1.08)}
+  .dem-envoi:disabled{opacity:.6;cursor:default}
+  .dem-clos{font-size:12px;font-weight:700;color:var(--muted);text-align:center;padding:4px}
   .bulle-merci{padding:20px 18px;font-size:13.5px;line-height:1.55;color:var(--ink);
     font-weight:600}
   .bulle-merci .btn-link{display:block;margin-top:8px;padding:0}
