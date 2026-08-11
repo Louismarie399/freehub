@@ -2828,6 +2828,10 @@
       identiteDepuisCompte(state.compte);
       annoncesCharger();   // « ta suggestion a été retenue », s'il y en a
       savFilsCharger();    // et les échanges qui attendent une lecture
+      // Un premier relevé du salon : il alimente le compteur de non-lus et
+      // met le sondage en mémoire, pour qu'il soit déjà là en arrivant.
+      if(state.tab !== 'chat') chatCharger(true);
+      chatVeille();
       apiJson('GET', 'api/data').then(function(d){
         // Marqueur de remise à zéro posé côté serveur : on efface TOUT le
         // stockage local (sinon il ré-ensemencerait le compte aussitôt) et on
@@ -9651,9 +9655,17 @@
         mesMercis: r.data.mesMercis || 0,
         nbSignales: neufs.filter(function(m){ return m.signale && !m.supprime; }).length,
       });
-      if(state.tab !== 'chat' && dernierAvant){
-        var nouveaux = neufs.filter(function(m){ return m.id > dernierAvant; }).length;
-        if(nouveaux) c.nonLus = (state.chat.nonLus || 0) + nouveaux;
+      // Le compteur se recalcule depuis le dernier message lu, mémorisé entre
+      // les sessions : il tient donc dès le premier chargement, sans attendre
+      // qu'on soit passé une fois sur l'onglet. Ses propres messages ne
+      // comptent pas — on ne se notifie pas soi-même.
+      if(state.tab !== 'chat'){
+        var lu = chatDernierLu();
+        c.nonLus = lu
+          ? neufs.filter(function(m){
+              return m.id > lu && !m.moi && !m.supprime;
+            }).length
+          : 0;
       }
       var enBas = chatEnBas();
       // Sur l'écran Entraide, on ne repasse pas par un rendu complet : on
@@ -9667,6 +9679,8 @@
         setState({ chat: c });
       }
       if(state.tab === 'chat' && (enBas || !dernierAvant)) chatDefiler();
+      // Lu sur place : tant qu'on est sur l'Entraide, ce qui arrive est vu.
+      if(state.tab === 'chat') chatMarquerLu();
     });
   }
 
@@ -9722,6 +9736,30 @@
     if(chatTimer){ clearInterval(chatTimer); chatTimer = null; }
     if(state.tab !== 'chat') return;
     chatTimer = setInterval(function(){ chatCharger(true); }, CHAT_INTERVALLE);
+  }
+
+  // Veille hors de l'Entraide : sans elle, le chat n'était jamais chargé tant
+  // qu'on n'ouvrait pas l'onglet — donc pas de compteur de messages non lus, et
+  // un sondage qui n'apparaissait qu'après coup en arrivant sur la page.
+  // Rythme volontairement lent : on cherche à signaler, pas à suivre en direct.
+  var CHAT_VEILLE = 90000;
+  var chatVeilleTimer = null;
+  function chatVeille(){
+    if(chatVeilleTimer) return;
+    chatVeilleTimer = setInterval(function(){
+      if(state.tab !== 'chat' && document.visibilityState === 'visible') chatCharger(true);
+    }, CHAT_VEILLE);
+  }
+
+  // Le dernier message lu survit au rechargement : sans ça, le compteur
+  // repartait de zéro à chaque visite et ne signalait plus rien.
+  function chatDernierLu(){
+    try { return parseInt(localStorage.getItem('freehub_chat_lu'), 10) || 0; } catch(e){ return 0; }
+  }
+  function chatMarquerLu(){
+    var m = state.chat.messages || [];
+    if(!m.length) return;
+    try { localStorage.setItem('freehub_chat_lu', String(m[m.length - 1].id)); } catch(e){}
   }
 
   function chatEnvoyer(texte, fil){
@@ -10402,6 +10440,24 @@
         pastille.remove();
       }
     });
+    // Même chose pour le compteur de messages non lus : la nav n'étant bâtie
+    // qu'une fois, il restait figé sur sa valeur du premier rendu — visible
+    // même une fois qu'on avait ouvert l'Entraide.
+    var ligneChat = app.querySelector('.nav-row[data-tab="chat"]');
+    if(ligneChat){
+      var past = ligneChat.querySelector('.nav-pastille');
+      var nb = state.chat.nonLus || 0;
+      if(nb && !past){
+        var sp = document.createElement('span');
+        sp.className = 'nav-pastille';
+        sp.textContent = nb;
+        ligneChat.appendChild(sp);
+      } else if(nb && past){
+        past.textContent = nb;
+      } else if(!nb && past){
+        past.remove();
+      }
+    }
     // Le bloc utilisateur est reconstruit par titreOutilsHtml() à chaque rendu :
     // rien à mettre à jour ici depuis que la barre latérale ne le porte plus.
 
@@ -10837,6 +10893,9 @@
            })) break;
         if(target === 'chat'){
           state.chat.nonLus = 0;
+          // Ce qui est déjà chargé est vu : on note le repère tout de suite,
+          // sans attendre le rafraîchissement qui suit.
+          chatMarquerLu();
           // Première visite : la charte d'accueil, une seule fois.
           var vuCharte = null;
           try { vuCharte = localStorage.getItem('freehub_chat_onb'); } catch(err){}
