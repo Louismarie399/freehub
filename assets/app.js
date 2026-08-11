@@ -1226,6 +1226,9 @@
       img:'assets/partenaires/urssaf.png',
       color:'#1257a8', grad:'#25c3d4', soft:'#eef6fc',
       url:'https://www.youtube.com/watch?v=Aq5WXmQQooo', fait:'part:urssaf',
+      // Tout le monde connaît l'URSSAF : « Découvrir » ne donne aucune raison
+      // de cliquer. Le bouton promet donc ce qu'on vient chercher.
+      cta:'Activer ma réduction',
       promo:'FREEHUB10', promoDetail:'−10 % sur ta prochaine déclaration URSSAF',
       pitch:'Déclarer, payer, récupérer ses attestations : le guichet de tes cotisations, et un accompagnement dédié aux créateurs.',
       desc:'L’URSSAF nous fait confiance dans le développement de cet outil : un partenariat rare pour une '
@@ -9990,9 +9993,11 @@
     var lien = p.tease
       ? '<span class="part-link soon">Bientôt dévoilé</span>'
       : (p.url
+          // `cta` prime quand le partenaire en définit un : « Découvrir X »
+          // ne donne aucune raison de cliquer à qui connaît déjà la maison.
           ? '<a class="part-link" href="'+esc(p.url)+'" target="_blank" rel="noopener sponsored"'
             + (p.fait ? ' data-action="part-lien" data-fait="'+esc(p.fait)+'"' : '') + '>'
-            + 'Découvrir '+esc(p.nom)+' →</a>'
+            + esc(p.cta || ('Découvrir ' + p.nom)) + ' →</a>'
           : '<span class="part-link soon">Lien bientôt disponible</span>');
 
     // L'avantage occupe tout le pied : code, ce qu'il donne, clic pour copier.
