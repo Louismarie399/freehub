@@ -11844,7 +11844,12 @@
       // ----- Profil -----
       case 'open-profil':
         if(state.tab !== 'profil') state.profilReturn = state.tab;
-        profilTouche();
+        // Ouvrir le profil n'est pas le modifier : on retire seulement le
+        // bandeau « ✓ Enregistré » d'une visite précédente. Marquer l'écran
+        // comme modifié ici déclenchait la question de sauvegarde en sortant,
+        // sans que rien n'ait été touché.
+        state.profilSaved = false;
+        state.profilDirty = false;
         state.tab = 'profil';
         notifCharger(false);
         render();
