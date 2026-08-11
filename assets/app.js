@@ -2200,7 +2200,11 @@
   // ce qui la fait précisément sortir du régime micro).
   var REGIME_IS = 'Impôt sur les sociétés';
   var REGIME_IR = 'Impôt sur le revenu';
-  function estMicro(forme){ return forme === 'Micro-entreprise'; }
+  // Volontairement plus stricte que estMicro(profil), qui range aussi l'EI
+  // avec la micro : depuis 2022 une entreprise individuelle peut opter pour
+  // l'IS, ce qui la fait sortir du régime micro. Interdire l'IS à une EI
+  // serait donc faux. Ici, seule la micro proprement dite est visée.
+  function formeExclutIS(forme){ return forme === 'Micro-entreprise'; }
 
   var SIM_OPTIONS = {
     forme: ['Micro-entreprise','Entreprise individuelle','EURL','SASU','SARL','SAS','Autre société','Je ne sais pas'],
@@ -2388,7 +2392,7 @@
   function migrerProfilChamps(p){
     // Micro + IS : combinaison que l'interface laissait passer avant le
     // 11/08. Elle n'existe pas fiscalement et faussait les simulateurs.
-    if(estMicro(p.forme) && p.regime === REGIME_IS) p.regime = REGIME_IR;
+    if(formeExclutIS(p.forme) && p.regime === REGIME_IS) p.regime = REGIME_IR;
     if(p.clientParticuliers !== undefined && p.clientParticuliers !== ''){
       p.clientProNon = String((parseFloat(p.clientProNon) || 0)
                             + (parseFloat(p.clientParticuliers) || 0));
@@ -5901,7 +5905,7 @@
     if(c.options){
       // En micro, l'IS est grisé : mieux vaut montrer que l'option existe mais
       // ne s'applique pas ici, plutôt que de la faire disparaître sans un mot.
-      var bloqueIS = c.k === 'regime' && estMicro(p.forme);
+      var bloqueIS = c.k === 'regime' && formeExclutIS(p.forme);
       inner = '<select data-profil-field="'+c.k+'">' + c.options.map(function(o){
         var off = bloqueIS && o.v === REGIME_IS;
         return '<option value="'+esc(o.v)+'"'+(String(v)===String(o.v)?' selected':'')
@@ -8127,7 +8131,7 @@
       // Le profil de départ est en SASU, donc à l'IS : sans ça, quelqu'un qui
       // déclare une micro à l'onboarding se retrouvait micro + IS, ce qui
       // n'existe pas et fausse tous les simulateurs.
-      if(estMicro(p.forme) && p.regime === REGIME_IS) p.regime = REGIME_IR;
+      if(formeExclutIS(p.forme) && p.regime === REGIME_IS) p.regime = REGIME_IR;
     }
     if((r.ca||'').toString().trim()){ p.ca = r.ca; p.periodeCa = r.periodeCa || 'annuel'; }
     if(r.categorieFiscale) p.categorieFiscale = r.categorieFiscale;
@@ -12218,7 +12222,7 @@
       var kp = pl.getAttribute('data-profil-field');
       // L'IS n'existe pas en micro-entreprise : on refuse la combinaison au
       // lieu de la laisser fausser tous les simulateurs en silence.
-      if(kp === 'regime' && estMicro(state.profil.forme) && pl.value === REGIME_IS){
+      if(kp === 'regime' && formeExclutIS(state.profil.forme) && pl.value === REGIME_IS){
         state.profil.regime = REGIME_IR;
         state.pfAlerte = 'micro-is';
         state.profilSaved = false;
@@ -12232,7 +12236,7 @@
       if(kp === 'forme'){
         // Passer en micro rend l'IS impossible : on remet le seul régime
         // valable plutôt que de laisser une incohérence à l'écran.
-        if(estMicro(pl.value) && state.profil.regime === REGIME_IS){
+        if(formeExclutIS(pl.value) && state.profil.regime === REGIME_IS){
           state.profil.regime = REGIME_IR;
         }
         render();
