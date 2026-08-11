@@ -36,7 +36,9 @@ TROIS INDICES QUI FONT BASCULER UNE ACTIVITÉ INTELLECTUELLE VERS LES BIC :
 1. l'importance des capitaux investis, de la main-d'œuvre employée et des moyens matériels ;
 2. le fait que le résultat procède plus de la spéculation sur les éléments mis en œuvre que de l'exercice d'un art ou d'une science ;
 3. la revente de biens achetés, quand elle devient l'essentiel du chiffre d'affaires.
-Exemples classiques de bascule : un laboratoire d'analyses, un photographe exploité commercialement, un formateur qui vend surtout des supports produits en série.
+Exemples classiques de bascule : un laboratoire d'analyses, un studio de photographie exploité avec des moyens matériels et du personnel, un formateur qui vend surtout des supports produits en série.
+
+ATTENTION AUX FAUX POSITIFS. Ces exemples ne basculent que si les indices ci-dessus sont réellement présents dans la description. Une prestation artistique ou intellectuelle facturée sur mesure reste en BNC même quand le métier figure parmi les exemples : un photographe qui réalise des reportages, des portraits ou des mariages vend une prestation artistique, donc BNC — ce n'est que la production et la vente de tirages en volume, ou l'exploitation d'un studio à moyens lourds, qui font basculer en BIC. Ne bascule jamais sur le seul nom du métier.
 
 ACTIVITÉS MIXTES. Quand une activité non commerciale reste prépondérante et que les opérations commerciales n'en sont que le prolongement, l'ensemble suit le régime BNC. Quand les deux activités sont indépendantes l'une de l'autre, chacune garde son régime : dis-le clairement plutôt que de trancher arbitrairement.
 
