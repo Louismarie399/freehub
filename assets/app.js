@@ -2346,14 +2346,24 @@
     },
     {
       id:'remuneration', titre:'Rémunération', ico:'💶', color:'#4d7c0f', soft:'#f5fbe8',
-      resume:function(p){ return valeurProfil('remuneration') + ' · ' + valeurProfil('dividendes') + ' en dividendes'; },
+      resume:function(p){
+        // Parler de dividendes à un micro-entrepreneur n'a pas de sens.
+        return estMicro(p)
+          ? valeurProfil('remuneration') + ' · prélèvement libre'
+          : valeurProfil('remuneration') + ' · ' + valeurProfil('dividendes') + ' en dividendes';
+      },
       note:'Ce que tu te verses - ou ce que tu te verserais si tu passais en société.',
       champs:[
-        { k:'remMensuelle', l:'Rémunération nette voulue', type:'number', ph:'3 000', suffixe:'€ / mois' },
+        { k:'remMensuelle', l:'Rémunération nette voulue', type:'number', ph:'3 000', suffixe:'€ / mois',
+          aide:function(p){ return estMicro(p)
+            ? 'En micro, tu prélèves librement : sers-t’en pour viser un montant, '
+              + 'une fois cotisations et impôt mis de côté.' : ''; } },
+        // Sans société, il n'y a ni dividende à distribuer ni trésorerie à y
+        // laisser : ces deux questions ne veulent rien dire en micro.
         { k:'dividendes', l:'Bénéfices distribués en dividendes', lex:'dividendes', type:'number', ph:'100', suffixe:'%',
-          aide:'0 % = tout reste dans la société.' },
+          si:estSociete, aide:'0 % = tout reste dans la société.' },
         { k:'tresorerie', l:'À laisser dans la société', lex:'tresorerie', type:'number', ph:'10 000', suffixe:'€ / an',
-          aide:'Ce matelas n’est pas distribué.' },
+          si:estSociete, aide:'Ce matelas n’est pas distribué.' },
         { k:'cfe', l:'Ta CFE', lex:'cfe', type:'number', ph:'500', suffixe:'€ / an',
           aide:'Sur ton avis de CFE, dans ton espace impots.gouv. Très variable selon la commune.' },
       ],
@@ -2362,6 +2372,30 @@
   // Petit utilitaire sûr : la valeur existe-t-elle en localStorage ?
   function localStorageOk(cle){
     try { return localStorage.getItem(cle) !== null; } catch(e){ return true; }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Modifications du profil : ne rien perdre en partant
+  // ---------------------------------------------------------------------------
+  // `profilSaved` sert au bandeau « ✓ Enregistré » et vaut false au démarrage :
+  // il ne dit donc pas si quelque chose a réellement changé. D'où ce drapeau
+  // distinct, seul à déclencher la question avant de quitter.
+  function profilTouche(){
+    state.profilSaved = false;
+    state.profilDirty = true;
+  }
+  function profilEnregistrer(){
+    saveProfil(state.profil);
+    state.profilSaved = true;
+    state.profilDirty = false;
+    appliquerProfil();
+  }
+  // L'action demandée est mise en attente le temps de poser la question.
+  function profilGarde(action){
+    if(state.tab !== 'profil' || !state.profilDirty) return false;
+    state.profilQuitter = action;
+    render();
+    return true;
   }
 
   function loadProfil(){
@@ -2465,6 +2499,8 @@
     annonces: { liste: [], deplie: false },
     savFils: [],            // ses réclamations qui ont reçu une réponse
     pfAlerte: null,         // combinaison fiscale refusée, à expliquer
+    profilDirty: false,     // des champs modifiés sans enregistrement
+    profilQuitter: null,    // action mise en attente pendant la question
     // Préférences de rappels : chargées à l'ouverture du profil.
     notif: { charge:false, genres:[], choix:{}, confirme:false, email:'', envoi:false, sauve:0 },
     // Score de sérénité : le ressenti déclaré à l'onboarding, et le détail
@@ -5924,7 +5960,12 @@
       if(c.suffixe) inner = '<div class="pf-suffixe">'+inner+'<span>'+esc(c.suffixe)+'</span></div>';
     }
     return '<div class="pf'+(c.large?' large':'')+'"><label>'+esc(c.l)+(c.lex?lexQ(c.lex):'')+'</label>'+inner
-      + (c.aide ? '<div class="pf-aide">'+esc(c.aide)+'</div>' : '') + '</div>';
+      // `aide` peut dépendre du profil : le texte utile en micro n'est pas
+      // celui d'une société.
+      + (function(){
+          var a = typeof c.aide === 'function' ? c.aide(p) : c.aide;
+          return a ? '<div class="pf-aide">'+esc(a)+'</div>' : '';
+        })() + '</div>';
   }
 
   function profilChargeHtml(c, i){
@@ -6204,8 +6245,10 @@
     ],
     remuneration: [
       { k:'remMensuelle', l:'Rémunération', ok:function(p){ return parseFloat(p.remMensuelle) > 0; } },
-      { k:'dividendes', l:'Dividendes', opt:true },
-      { k:'tresorerie', l:'Trésorerie gardée', opt:true },
+      // Masqués en micro : ils ne doivent pas non plus peser dans le compte
+      // des informations à fournir, sinon le profil paraît incomplet à vie.
+      { k:'dividendes', l:'Dividendes', opt:true, si:estSociete },
+      { k:'tresorerie', l:'Trésorerie gardée', opt:true, si:estSociete },
       { k:'cfe', l:'Montant de ta CFE', opt:true },
     ],
     charges: [
@@ -6217,7 +6260,9 @@
   // { faits, total, pct, manquants[] } pour une section.
   function etatSection(id){
     var p = state.profil;
-    var champs = REQUIS[id] || [];
+    // Même filtre que l'affichage : un champ qui ne s'applique pas au statut
+    // ne peut pas être « manquant ».
+    var champs = (REQUIS[id] || []).filter(function(c){ return !c.si || c.si(p); });
     var manquants = champs.filter(function(c){
       return !(c.ok ? c.ok(p) : rempli(p[c.k]));
     });
@@ -8767,6 +8812,24 @@
         + 'ou impôt classique » compare les deux sur tes chiffres.',
     },
   };
+  // Trois issues explicites plutôt qu'un « êtes-vous sûr ? » : enregistrer et
+  // continuer, partir sans garder, ou rester.
+  function profilQuitterHtml(){
+    if(!state.profilQuitter) return '';
+    return '<div class="overlay" data-action="pq-rester">'
+      + '<div class="modal annonce" data-action="stop">'
+        + '<div class="annonce-ico">💾</div>'
+        + '<div class="annonce-k">Modifications non enregistrées</div>'
+        + '<div class="annonce-t">Tu veux les garder&nbsp;?</div>'
+        + '<div class="annonce-p">Tu as changé des informations de ton profil sans les '
+          + 'enregistrer. Elles servent à tes simulateurs : sans elles, les calculs '
+          + 'repartiront sur les anciennes valeurs.</div>'
+        + '<button class="annonce-ok" data-action="pq-enregistrer">Enregistrer et continuer</button>'
+        + '<button class="annonce-voir" data-action="pq-jeter">Continuer sans enregistrer</button>'
+        + '<button class="annonce-voir" data-action="pq-rester">Rester sur le profil</button>'
+      + '</div></div>';
+  }
+
   function pfAlerteHtml(){
     var a = PF_ALERTES[state.pfAlerte];
     if(!a) return '';
@@ -10308,7 +10371,7 @@
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
       + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml()
       + finisModalHtml() + suiteAjoutHtml() + chatCharteHtml() + chatModerationHtml() + badgeFicheHtml()
-      + badgeCelebreHtml() + pfAlerteHtml();
+      + badgeCelebreHtml() + pfAlerteHtml() + profilQuitterHtml();
 
     // L'onboarding et le catalogue vivent dans leur propre root persistant : on
     // ne remplace que le contenu de leur carte, sans recréer l'overlay ni
@@ -10339,6 +10402,16 @@
 
   // ---------------------------------------------------------------------------
   // Actions (délégation d'événements)
+  // Rafraîchir ou fermer l'onglet : seul le navigateur peut interrompre, et
+  // uniquement avec sa propre boîte de dialogue. Le texte n'est pas
+  // personnalisable, c'est une protection contre les abus.
+  window.addEventListener('beforeunload', function(e){
+    if(state.tab !== 'profil' || !state.profilDirty) return;
+    e.preventDefault();
+    e.returnValue = '';
+    return '';
+  });
+
   // ---------------------------------------------------------------------------
   // Échap referme la fiche ouverte (partenaire ou terme du lexique).
   document.addEventListener('keydown', function(e){
@@ -10621,6 +10694,11 @@
     switch(action){
       case 'tab': {
         var target = el.getAttribute('data-tab');
+        // Quitter le profil sans avoir enregistré : on demande d'abord.
+        if(target !== 'profil' && profilGarde(function(){
+             var b = document.querySelector('.nav-row[data-tab="'+target+'"]');
+             if(b) b.click();
+           })) break;
         if(target === 'chat'){
           state.chat.nonLus = 0;
           // Première visite : la charte d'accueil, une seule fois.
@@ -10722,6 +10800,10 @@
         break;
       }
       case 'sav-open':
+        if(profilGarde(function(){
+             var b = document.querySelector('[data-action="sav-open"]');
+             if(b) b.click();
+           })) break;
         setState({ sav: Object.assign({}, state.sav, { ouvert:true, envoye:false, erreur:null }) });
         break;
       case 'sav-close':
@@ -10731,6 +10813,29 @@
         break;
       case 'pf-alerte-ok':
         setState({ pfAlerte: null });
+        break;
+      case 'pq-enregistrer': {
+        profilEnregistrer();
+        var suiteE = state.profilQuitter;
+        state.profilQuitter = null;
+        render();
+        if(suiteE) suiteE();
+        break;
+      }
+      case 'pq-jeter': {
+        // On repart des valeurs enregistrées : ce qui n'a pas été gardé est
+        // vraiment abandonné, pas laissé en mémoire à l'insu de l'utilisateur.
+        state.profil = loadProfil();
+        state.profilDirty = false;
+        appliquerProfil();
+        var suiteJ = state.profilQuitter;
+        state.profilQuitter = null;
+        render();
+        if(suiteJ) suiteJ();
+        break;
+      }
+      case 'pq-rester':
+        setState({ profilQuitter: null });
         break;
       case 'annonce-voir':
         state.annonces.deplie = true;
@@ -11739,7 +11844,7 @@
       // ----- Profil -----
       case 'open-profil':
         if(state.tab !== 'profil') state.profilReturn = state.tab;
-        state.profilSaved = false;
+        profilTouche();
         state.tab = 'profil';
         notifCharger(false);
         render();
@@ -11750,14 +11855,15 @@
         notifEnregistrer();
         break;
       }
-      case 'profil-back':
-        state.tab = state.profilReturn || 'simulateur';
+      case 'profil-back': {
+        var retour = state.profilReturn || 'simulateur';
+        if(profilGarde(function(){ setState({ tab: retour }); })) break;
+        state.tab = retour;
         render();
         break;
+      }
       case 'profil-save':
-        saveProfil(state.profil);
-        state.profilSaved = true;
-        appliquerProfil();
+        profilEnregistrer();
         render();
         break;
       case 'profil-section': {
@@ -11790,19 +11896,19 @@
         break;
       case 'photo-remove':
         state.profil.photo = '';
-        state.profilSaved = false;
+        profilTouche();
         render();
         break;
       case 'pcharge-add':
         state.profil.charges = (state.profil.charges || []).concat([
           { nom:'', montant:'', frequence:'mensuelle', tauxTVA:'0.2',
             deductible:'100', categorie:'fonctionnement' } ]);
-        state.profilSaved = false;
+        profilTouche();
         render();
         break;
       case 'pcharge-remove':
         state.profil.charges.splice(parseInt(el.getAttribute('data-i'), 10), 1);
-        state.profilSaved = false;
+        profilTouche();
         render();
         break;
       case 'sim-analyze': {
@@ -12209,7 +12315,7 @@
           cv.getContext('2d').drawImage(img, (img.width - cote) / 2, (img.height - cote) / 2,
                                         cote, cote, 0, 0, 256, 256);
           state.profil.photo = cv.toDataURL('image/jpeg', 0.85);
-          state.profilSaved = false;
+          profilTouche();
           render();
         };
         img.src = ev.target.result;
@@ -12225,12 +12331,12 @@
       if(kp === 'regime' && formeExclutIS(state.profil.forme) && pl.value === REGIME_IS){
         state.profil.regime = REGIME_IR;
         state.pfAlerte = 'micro-is';
-        state.profilSaved = false;
+        profilTouche();
         render();
         return;
       }
       state.profil[kp] = pl.value;
-      state.profilSaved = false;
+      profilTouche();
       // La forme juridique ouvre/ferme des champs, et la répartition clientèle a
       // son total à recalculer. Les autres champs ne re-rendent pas : on garde le focus.
       if(kp === 'forme'){
@@ -12251,7 +12357,7 @@
       var ligne = state.profil.charges[ic];
       if(ligne){
         ligne[pc.getAttribute('data-pcharge-field')] = pc.value;
-        state.profilSaved = false;
+        profilTouche();
         majTotalCharges();
       }
       return;
