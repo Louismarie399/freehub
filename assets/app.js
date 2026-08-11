@@ -252,6 +252,15 @@
     { id:'secret', ico:'🕵️', t:'Là où personne ne regarde',
       d:'Trouvé sans indice : sept clics au bon endroit.',
       check:function(){ return !!state.faits['secret:logo']; } },
+    // Le marqueur est posé dès qu'on touche la première place : le badge reste
+    // acquis même quand quelqu'un repasse devant. On ne retire pas un trophée.
+    { id:'ambassadeur', ico:'📣', t:'Premier ambassadeur',
+      d:'Arrivé en tête du classement des parrainages, ne serait-ce qu’un instant.',
+      rang:'or',
+      check:function(){ return !!state.faits['parrain:top1']; } },
+    { id:'parrain', ico:'🤝', t:'Le bouche-à-oreille',
+      d:'Un premier membre arrivé grâce à toi, et allé au bout de son arrivée.',
+      check:function(){ return (state.parrainage.mes || 0) >= 1; } },
     // Tombe quand on clique sur l'offre URSSAF, qui mène au clip de Rick Astley.
     { id:'enfume', ico:'🎣', t:'Franchise en base de crédulité',
       d:'Aucun seuil, aucun plafond : tu as tout gobé.',
@@ -499,6 +508,118 @@
               : '<div class="obj-vide">Aucun signalement - c’est bon signe</div>')
         + '</div>'
       + '</div></div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parrainage — le lien perso, le podium, le rang
+  // ---------------------------------------------------------------------------
+  function parrainageLien(){
+    var c = state.parrainage.code;
+    return c ? 'https://free-hub.fr/?code=' + encodeURIComponent(c) : '';
+  }
+  // La validation est rejouable sans risque (clé primaire sur le filleul), mais
+  // si l'appel échoue au mauvais moment le parrainage serait perdu : on garde
+  // un témoin local pour pouvoir le reprendre à la session suivante.
+  function parrainageValider(){
+    return apiJson('POST', '/api/parrainage/valider', {}).then(function(r){
+      if(r.ok) try { localStorage.setItem('freehub_parrain_ok', '1'); } catch(e){}
+      return r;
+    });
+  }
+  function parrainageRattraper(){
+    var fini = false, fait = false;
+    try {
+      fini = localStorage.getItem('freehub_onboarded') === '1';
+      fait = localStorage.getItem('freehub_parrain_ok') === '1';
+    } catch(e){ return; }
+    if(fini && !fait) parrainageValider();
+  }
+
+  var parrEnVol = false;
+  function parrainageCharger(){
+    if(!state.compte || parrEnVol) return;
+    parrEnVol = true;
+    // `charge` passe à vrai tout de suite : un appel en échec ne doit pas
+    // relancer une requête à chaque rendu de la page.
+    state.parrainage.charge = true;
+    state.parrainage.quand = Date.now();
+    apiJson('GET', '/api/parrainage').then(function(r){
+      parrEnVol = false;
+      if(!r.ok || !r.data) return;
+      state.parrainage = Object.assign({}, state.parrainage, {
+        code: r.data.code, mes: r.data.mes || 0, rang: r.data.rang || 0,
+        classement: r.data.classement || [], charge: true, quand: Date.now(),
+      });
+      // Première place atteinte : le badge est acquis pour de bon, même si
+      // quelqu'un repasse devant ensuite.
+      if(state.parrainage.rang === 1 && state.parrainage.mes > 0){
+        marquerFait('parrain:top1');
+      }
+      render();
+    });
+  }
+
+  // Tant qu'on regarde le classement, il se rafraîchit tout seul : voir une
+  // place bouger sous ses yeux vaut mieux qu'un chiffre figé.
+  var parrVeilleTimer = null;
+  function parrainageVeille(){
+    if(parrVeilleTimer) return;
+    parrVeilleTimer = setInterval(function(){
+      if(state.tab === 'succes' && document.visibilityState === 'visible'){
+        parrainageCharger();
+      }
+    }, 45000);
+  }
+
+  var PARR_MEDAILLES = ['🥇', '🥈', '🥉'];
+
+  function parrainageHtml(){
+    var p = state.parrainage;
+    if(!state.compte) return '';
+
+    var podium = p.classement.slice(0, 3).map(function(x, i){
+      return '<div class="parr-p'+(x.moi ? ' moi' : '')+' r'+(i+1)+'">'
+        + '<div class="parr-p-m">'+PARR_MEDAILLES[i]+'</div>'
+        + '<div class="parr-p-n">'+esc(x.nom)+'</div>'
+        + '<div class="parr-p-c">'+x.n+' membre'+(x.n > 1 ? 's' : '')+'</div>'
+      + '</div>';
+    }).join('');
+
+    var suite = p.classement.slice(3).map(function(x){
+      return '<div class="parr-l'+(x.moi ? ' moi' : '')+'">'
+        + '<span class="parr-l-r">'+x.rang+'</span>'
+        + '<span class="parr-l-n">'+esc(x.nom)+'</span>'
+        + '<span class="parr-l-c">'+x.n+'</span>'
+      + '</div>';
+    }).join('');
+
+    // Sa propre situation, dite en clair : un classement sans repère personnel
+    // ne donne envie à personne.
+    var moi;
+    if(!p.mes){
+      moi = 'Personne n’est encore arrivé par toi. Le premier te place au classement.';
+    } else if(p.rang === 1){
+      moi = 'Tu es en tête avec ' + p.mes + ' membre' + (p.mes > 1 ? 's' : '') + '.';
+    } else {
+      moi = p.mes + ' membre' + (p.mes > 1 ? 's' : '') + ' grâce à toi'
+          + (p.rang ? ' · ' + p.rang + '<sup>e</sup> au classement' : '');
+    }
+
+    return '<div class="parr">'
+      + '<div class="parr-h">'
+        + '<div><div class="parr-t">Fais tourner FreeHub</div>'
+        + '<div class="parr-s">C’est gratuit, et ça le restera. Le seul moteur, '
+          + 'c’est le bouche-à-oreille.</div></div>'
+      + '</div>'
+      + '<div class="parr-lien">'
+        + '<input readonly value="'+esc(parrainageLien())+'" data-parr-lien>'
+        + '<button class="parr-copie" data-action="parr-copier">'
+          + (p.copie ? '✓ Copié' : 'Copier')+'</button>'
+      + '</div>'
+      + '<div class="parr-moi">'+moi+'</div>'
+      + (podium ? '<div class="parr-podium">'+podium+'</div>' : '')
+      + (suite ? '<div class="parr-liste">'+suite+'</div>' : '')
+    + '</div>';
   }
 
   function badgeFicheHtml(){
@@ -2507,6 +2628,8 @@
     // Suggestions de l'utilisateur retenues par la modération, à lui annoncer.
     annonces: { liste: [], deplie: false },
     savFils: [],            // ses réclamations qui ont reçu une réponse
+    // Parrainage : code personnel, compteur, rang et podium.
+    parrainage: { code:null, mes:0, rang:0, classement:[], charge:false, copie:false, quand:0 },
     pfAlerte: null,         // combinaison fiscale refusée, à expliquer
     // Orientation BIC/BNC. `null` sur activite/description = on n'a pas encore
     // touché aux champs, donc on affiche ceux du profil.
@@ -2832,6 +2955,8 @@
       // met le sondage en mémoire, pour qu'il soit déjà là en arrivant.
       if(state.tab !== 'chat') chatCharger(true);
       chatVeille();
+      parrainageVeille();
+      parrainageRattraper();
       apiJson('GET', 'api/data').then(function(d){
         // Marqueur de remise à zéro posé côté serveur : on efface TOUT le
         // stockage local (sinon il ré-ensemencerait le compte aussitôt) et on
@@ -8320,6 +8445,10 @@
       localStorage.removeItem('freehub_onb_cours');
     } catch(e){}
     state.onboarding.actif = false;
+    // Arrivée terminée : si ce membre est venu par le lien de quelqu'un, le
+    // parrainage se valide maintenant — pas à l'inscription, pour qu'un
+    // compte jetable ne suffise pas à grimper au classement.
+    if(state.compte) parrainageValider().then(function(){ parrainageCharger(); });
     // On atterrit sur le profil : c'est le moment où l'on est le plus enclin
     // à finir de le remplir, et il reste des champs utiles aux simulateurs.
     notifCharger(false);
@@ -8675,6 +8804,14 @@
       + '<text x="36" y="42" text-anchor="middle" font-size="17" font-weight="800" fill="#fff">'
         + n + '</text></svg>';
 
+    // Le classement se relit à l'ouverture de la page, puis toutes les
+    // 45 secondes tant qu'on la regarde : assez frais pour voir bouger les
+    // places, assez espacé pour ne pas marteler le serveur.
+    if(state.compte && (!state.parrainage.charge
+        || Date.now() - (state.parrainage.quand || 0) > 45000)){
+      parrainageCharger();
+    }
+
     var entete = '<div class="suc-tete">'
       + '<div class="obj-tete-r">'+anneau+'</div>'
       + '<div class="obj-tete-x">'
@@ -8699,6 +8836,7 @@
 
     return '<div class="view">'
       + entete
+      + parrainageHtml()
       + '<div class="suc-sec"><div class="suc-sec-t">Collection'
         + '<span class="suc-sec-h">plus tu débloques, plus tu montes</span></div>'
         + '<div class="suc-paliers">'
@@ -11009,6 +11147,26 @@
       case 'pf-alerte-ok':
         setState({ pfAlerte: null });
         break;
+      case 'parr-copier': {
+        var champ = document.querySelector('[data-parr-lien]');
+        if(!champ) break;
+        var fini = function(){
+          state.parrainage = Object.assign({}, state.parrainage, { copie:true });
+          render();
+          setTimeout(function(){
+            state.parrainage = Object.assign({}, state.parrainage, { copie:false });
+            render();
+          }, 1800);
+        };
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(champ.value).then(fini, function(){
+            champ.select(); document.execCommand('copy'); fini();
+          });
+        } else {
+          champ.select(); document.execCommand('copy'); fini();
+        }
+        break;
+      }
       case 'cat-refaire':
         // On garde ce qui a été saisi : on recommence rarement de zéro, on
         // vient plutôt préciser sa description.

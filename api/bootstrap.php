@@ -238,6 +238,22 @@ function init_db(PDO $pdo): void
             created TEXT NOT NULL)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_categorie_appels
                 ON categorie_appels(user_id, created)');
+    // Parrainage : un code personnel par membre. `parrain_id` relie le code à
+    // son propriétaire ; les codes d'ouverture (ALPHA-2026) restent sans
+    // parrain et ne comptent donc pour personne.
+    $colsCodes = array_column($pdo->query('PRAGMA table_info(invite_codes)')->fetchAll(), 'name');
+    if (!in_array('parrain_id', $colsCodes, true)) {
+        $pdo->exec('ALTER TABLE invite_codes ADD COLUMN parrain_id INTEGER DEFAULT NULL');
+    }
+    // Un filleul ne compte qu'une fois son arrivée terminée : la ligne est
+    // écrite à ce moment-là, pas à l'inscription. Sans quoi le classement se
+    // gagnerait avec des adresses jetables.
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS parrainages(
+            filleul_id INTEGER PRIMARY KEY,
+            parrain_id INTEGER NOT NULL,
+            created TEXT NOT NULL)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_parrainages ON parrainages(parrain_id)');
 }
 
 // --------------------------------------------------------------------------- //

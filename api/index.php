@@ -18,6 +18,7 @@ require_once __DIR__ . '/routes_chat.php';
 require_once __DIR__ . '/routes_notif.php';
 require_once __DIR__ . '/routes_categorie.php';
 require_once __DIR__ . '/routes_sav.php';
+require_once __DIR__ . '/routes_parrainage.php';
 
 // Chemin demandé, sans query string ni préfixe /api.
 $chemin = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -76,6 +77,10 @@ $routes = [
     'POST /partenaire'           => 'route_partenaire',
     'POST /analyze'              => 'route_analyze',
     'POST /categorie'            => 'route_categorie',
+
+    // Parrainage
+    'GET /parrainage'            => 'route_parrainage',
+    'POST /parrainage/valider'   => 'route_parrainage_valider',
 
     // Sonde de santé (sans secret : ne révèle rien de sensible).
     // `maj` = date de dernière mise à jour de ce fichier : permet de vérifier

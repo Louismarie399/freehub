@@ -22,12 +22,11 @@ function route_signup(): void
     $st->execute([$email]);
     if ($st->fetch()) erreur('Un compte existe déjà pour cet e-mail.', 409);
 
-    // Alpha privée : un code d'accès valide est exigé.
-    $code = null;
-    if (!config('open_signup')) {
-        $code = code_valide(champ('code'));
-        if (!$code) refus_code();
-    }
+    // Alpha privée : un code d'accès valide est exigé. Inscription ouverte : le
+    // code reste facultatif, mais on le retient s'il est bon — c'est lui qui
+    // porte le parrainage, et sans ça un lien de recommandation ne tracerait rien.
+    $code = code_valide(champ('code'));
+    if (!config('open_signup') && !$code) refus_code();
 
     $sel  = sel_aleatoire();
     $beta = config('open_signup') ? 0 : 1;   // insigne bêta, définitif

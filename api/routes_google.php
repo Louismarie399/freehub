@@ -113,12 +113,11 @@ function route_google_callback(): void
         $uid = (int) $user['id'];
     } else {
         // Nouveau compte : soumis au code d'accès, comme l'inscription classique.
-        $codeRow = null;
-        if (!config('open_signup')) {
-            $codeRow = code_valide((string) $etat['code']);
-            if (!$codeRow) {
-                retour_landing("Il faut un code d'accès valide pour créer un compte (alpha privée).");
-            }
+        // Inscription ouverte, le code reste retenu s'il est valide : c'est lui
+        // qui rattache le nouveau venu à celui qui l'a fait venir.
+        $codeRow = code_valide((string) $etat['code']);
+        if (!config('open_signup') && !$codeRow) {
+            retour_landing("Il faut un code d'accès valide pour créer un compte (alpha privée).");
         }
         // Pas de mot de passe utilisable : la connexion se fait via Google.
         $sel = sel_aleatoire();

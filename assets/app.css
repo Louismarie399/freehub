@@ -3129,6 +3129,52 @@
     cursor:pointer;transition:.18s var(--ease)}
   .annonce-ok:hover{filter:brightness(1.08);transform:translateY(-1px)}
 
+  /* ---------- Parrainage : le lien, le podium, le rang ---------- */
+  .parr{background:var(--surface);border:1px solid var(--border);border-radius:20px;
+    padding:24px;margin-bottom:22px}
+  .parr-t{font-size:18px;font-weight:800;letter-spacing:-.015em;color:var(--ink)}
+  .parr-s{font-size:13.5px;color:var(--muted2);line-height:1.55;margin-top:3px;max-width:560px}
+  .parr-lien{display:flex;gap:9px;margin-top:16px}
+  .parr-lien input{flex:1;min-width:0;padding:11px 14px;border:1.5px solid var(--border);
+    border-radius:12px;font-family:inherit;font-size:13.5px;font-weight:600;
+    color:var(--muted2);background:var(--soft);outline:none}
+  .parr-copie{flex:none;padding:11px 20px;border:none;border-radius:12px;background:var(--blue);
+    color:#fff;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;
+    transition:.16s var(--ease)}
+  .parr-copie:hover{filter:brightness(1.08)}
+  .parr-moi{margin-top:14px;font-size:14px;font-weight:700;color:var(--ink)}
+
+  /* Le podium : jusqu'à trois blocs, le premier surélevé. En flex centré plutôt
+     qu'en grille, sinon une seule ou deux places laissent une colonne vide. */
+  .parr-podium{display:flex;gap:10px;margin-top:18px;align-items:flex-end;
+    justify-content:center}
+  .parr-p{flex:1 1 0;min-width:0;max-width:230px;background:var(--soft);
+    border:1px solid var(--border);border-radius:16px;padding:14px 12px;text-align:center}
+  .parr-p.r1{padding-top:22px;padding-bottom:22px;
+    background:linear-gradient(160deg,rgba(234,179,8,.18),var(--soft));
+    border-color:rgba(234,179,8,.45)}
+  .parr-p.moi{box-shadow:0 0 0 2px var(--blue)}
+  .parr-p-m{font-size:26px;line-height:1}
+  .parr-p-n{font-size:13.5px;font-weight:800;color:var(--ink);margin-top:6px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .parr-p-c{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}
+
+  /* Même largeur que le podium : sinon le compteur part se perdre tout à
+     droite de la carte, à des kilomètres du nom qu'il concerne. */
+  .parr-liste{margin:12px auto 0;max-width:730px;display:flex;flex-direction:column;gap:2px}
+  .parr-l{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:10px;
+    font-size:13.5px}
+  .parr-l.moi{background:color-mix(in srgb,var(--blue) 12%,transparent);font-weight:800}
+  .parr-l-r{flex:none;width:22px;text-align:right;color:var(--muted);font-weight:800;
+    font-size:12.5px}
+  .parr-l-n{flex:1;min-width:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap}
+  .parr-l-c{flex:none;color:var(--muted2);font-weight:800}
+  @media (max-width:600px){
+    .parr-lien{flex-direction:column}
+    .parr-copie{width:100%}
+  }
+
   /* ---------- BIC ou BNC : l'orientation ---------- */
   .sim-hero.categorie{background:linear-gradient(135deg,#4a0d2e 0%,#9d174d 55%,#ec4899 135%)}
   /* Carte d'un simulateur fraîchement mis en ligne. Même doré et même

@@ -1401,11 +1401,15 @@
 
   // Configuration du serveur : Google actif ? code exigé ?
   var CODE_REQUIS = true;
+  var CODE_INVITE = false;   // le code vient d'un lien de parrainage
   fetch('api/auth/config', { credentials:'same-origin' })
     .then(function(r){ return r.json(); })
     .then(function(cfg){
       CODE_REQUIS = !!cfg.codeRequis;
-      if(!cfg.codeRequis){
+      // Arrivé par un lien de parrainage : le champ reste visible même quand
+      // l'inscription est ouverte, pour que le filleul voie que son invitation
+      // a bien été prise en compte.
+      if(!cfg.codeRequis && !CODE_INVITE){
         [].forEach.call(document.querySelectorAll('[data-code-zone]'), function(el){
           el.style.display = 'none';
         });
@@ -1425,6 +1429,22 @@
     if(!m) return;
     openAuth('signup');
     showErr('signup', decodeURIComponent(m[1].replace(/\+/g, ' ')));
+    history.replaceState(null, '', window.location.pathname);
+  })();
+
+  // Lien de parrainage (?code=…) : on ouvre l'inscription avec le code déjà
+  // rempli. Quelqu'un qui arrive par une recommandation ne doit pas avoir à
+  // recopier un code à la main.
+  (function(){
+    var m = /[?&]code=([A-Za-z0-9-]{2,40})/.exec(window.location.search);
+    if(!m) return;
+    var champ = document.querySelector('input[name="code"]');
+    if(champ) champ.value = decodeURIComponent(m[1]).toUpperCase();
+    CODE_INVITE = true;
+    var aide = document.querySelector('[data-code-zone] .code-aide');
+    if(aide) aide.innerHTML = '🤝 Tu arrives par l’invitation de quelqu’un : '
+      + 'son code est déjà rempli, laisse-le tel quel.';
+    openAuth('signup');
     history.replaceState(null, '', window.location.pathname);
   })();
 
