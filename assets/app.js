@@ -2195,9 +2195,18 @@
   };
 
   // Options des menus déroulants du formulaire (d'après le brief produit).
+  // La micro relève de l'impôt sur le revenu, sans exception possible : l'IS
+  // suppose une société (ou une EI qui a opté pour l'assimilation à une EURL,
+  // ce qui la fait précisément sortir du régime micro).
+  var REGIME_IS = 'Impôt sur les sociétés';
+  var REGIME_IR = 'Impôt sur le revenu';
+  function estMicro(forme){ return forme === 'Micro-entreprise'; }
+
   var SIM_OPTIONS = {
     forme: ['Micro-entreprise','Entreprise individuelle','EURL','SASU','SARL','SAS','Autre société','Je ne sais pas'],
-    regime: ['Impôt sur les sociétés','Impôt sur le revenu','Je ne sais pas'],
+    // L'IR d'abord : c'est le cas de loin le plus fréquent chez les
+    // indépendants qui arrivent ici, et le seul possible en micro.
+    regime: [REGIME_IR, REGIME_IS,'Je ne sais pas'],
     // Formulé du point de vue de l'utilisateur, pas du vocabulaire fiscal.
     tva: ['Je suis à la TVA','Je ne suis pas encore à la TVA','Je ne sais pas'],
     regimeTva: ['Régime réel simplifié','Régime réel normal','Franchise en base (pas de TVA)','Je ne sais pas'],
@@ -2364,11 +2373,12 @@
   // situation ont été reformulés du point de vue de l'utilisateur.
   var profilMigre = false;   // évite de réécrire le stockage à chaque lecture
   function migrerProfil(p){
-    var avant = p.tva + '|' + p.clientProNon + '|' + p.clientParticuliers;
+    var avant = p.tva + '|' + p.clientProNon + '|' + p.clientParticuliers + '|' + p.regime;
     p = migrerProfilChamps(p);
     // Une fois migré, on réécrit le stockage : sinon les anciennes clés
     // repartiraient vers le compte à la prochaine synchronisation.
-    if(!profilMigre && avant !== p.tva + '|' + p.clientProNon + '|' + p.clientParticuliers){
+    if(!profilMigre && avant !== p.tva + '|' + p.clientProNon + '|' + p.clientParticuliers
+                                 + '|' + p.regime){
       profilMigre = true;
       try { localStorage.setItem('freehub_profil', JSON.stringify(p)); } catch(e){}
     }
@@ -2376,6 +2386,9 @@
   }
 
   function migrerProfilChamps(p){
+    // Micro + IS : combinaison que l'interface laissait passer avant le
+    // 11/08. Elle n'existe pas fiscalement et faussait les simulateurs.
+    if(estMicro(p.forme) && p.regime === REGIME_IS) p.regime = REGIME_IR;
     if(p.clientParticuliers !== undefined && p.clientParticuliers !== ''){
       p.clientProNon = String((parseFloat(p.clientProNon) || 0)
                             + (parseFloat(p.clientParticuliers) || 0));
@@ -2447,6 +2460,7 @@
     // Suggestions de l'utilisateur retenues par la modération, à lui annoncer.
     annonces: { liste: [], deplie: false },
     savFils: [],            // ses réclamations qui ont reçu une réponse
+    pfAlerte: null,         // combinaison fiscale refusée, à expliquer
     // Préférences de rappels : chargées à l'ouverture du profil.
     notif: { charge:false, genres:[], choix:{}, confirme:false, email:'', envoi:false, sauve:0 },
     // Score de sérénité : le ressenti déclaré à l'onboarding, et le détail
@@ -2714,6 +2728,13 @@
       try { localStorage.setItem(k, donnees[k]); } catch(e){}
     });
     state.profil = loadProfil();
+    // Le paquet vient du compte et peut donc contenir un profil d'avant une
+    // migration. loadProfil() le normalise en mémoire mais ne réécrit qu'une
+    // fois par session : sans ça, la version périmée resterait en stockage et
+    // repartirait telle quelle à la synchronisation suivante.
+    try {
+      localStorage.setItem('freehub_profil', JSON.stringify(state.profil));
+    } catch(e){}
     var ob = loadObjectifs(); state.added = ob.added; state.checks = ob.checks;
     state.avant = ob.avant;
     state.historique = loadHistorique();
@@ -5878,9 +5899,19 @@
     var v = p[c.k];
     var inner;
     if(c.options){
+      // En micro, l'IS est grisé : mieux vaut montrer que l'option existe mais
+      // ne s'applique pas ici, plutôt que de la faire disparaître sans un mot.
+      var bloqueIS = c.k === 'regime' && estMicro(p.forme);
       inner = '<select data-profil-field="'+c.k+'">' + c.options.map(function(o){
-        return '<option value="'+esc(o.v)+'"'+(String(v)===String(o.v)?' selected':'')+'>'
-          + esc(o.l)+'</option>'; }).join('') + '</select>';
+        var off = bloqueIS && o.v === REGIME_IS;
+        return '<option value="'+esc(o.v)+'"'+(String(v)===String(o.v)?' selected':'')
+          + (off ? ' disabled' : '')+'>'
+          + esc(o.l) + (off ? ' — impossible en micro' : '')+'</option>'; }).join('')
+        + '</select>';
+      if(bloqueIS){
+        inner += '<div class="pf-aide">En micro-entreprise, c’est l’impôt sur le revenu, '
+          + 'avec ou sans versement libératoire.</div>';
+      }
     } else if(c.textarea){
       inner = '<textarea data-profil-field="'+c.k+'" placeholder="'+esc(c.ph||'')+'">'+esc(v||'')+'</textarea>';
     } else {
@@ -8091,7 +8122,13 @@
     var p = state.profil;
     // Le prénom/nom vient du compte : on ne le redemande pas dans l'onboarding.
     if((r.activite||'').trim()) p.activite = r.activite.trim();
-    if(r.forme && r.forme !== 'Je ne sais pas encore') p.forme = r.forme;
+    if(r.forme && r.forme !== 'Je ne sais pas encore'){
+      p.forme = r.forme;
+      // Le profil de départ est en SASU, donc à l'IS : sans ça, quelqu'un qui
+      // déclare une micro à l'onboarding se retrouvait micro + IS, ce qui
+      // n'existe pas et fausse tous les simulateurs.
+      if(estMicro(p.forme) && p.regime === REGIME_IS) p.regime = REGIME_IR;
+    }
     if((r.ca||'').toString().trim()){ p.ca = r.ca; p.periodeCa = r.periodeCa || 'annuel'; }
     if(r.categorieFiscale) p.categorieFiscale = r.categorieFiscale;
     if(r.tva && r.tva !== 'Je ne sais pas') p.tva = r.tva;
@@ -8711,6 +8748,33 @@
   function majAnnonce(){
     var r = document.getElementById('annonce-root');
     if(r) r.innerHTML = annonceHtml();
+  }
+
+  // Une combinaison fiscale impossible a été tentée : on explique pourquoi on
+  // n'a pas suivi, plutôt que de corriger en douce sans rien dire.
+  var PF_ALERTES = {
+    'micro-is': {
+      t:'La micro, c’est l’impôt sur le revenu',
+      p:'Une micro-entreprise ne peut pas être à l’impôt sur les sociétés : ce régime '
+        + 'suppose une société. Tes bénéfices sont imposés à ton nom, dans ta déclaration '
+        + 'de revenus.',
+      q:'Ce que tu peux choisir, c’est le versement libératoire : payer ton impôt en même '
+        + 'temps que tes cotisations, à un taux fixe. Le simulateur « Versement libératoire '
+        + 'ou impôt classique » compare les deux sur tes chiffres.',
+    },
+  };
+  function pfAlerteHtml(){
+    var a = PF_ALERTES[state.pfAlerte];
+    if(!a) return '';
+    return '<div class="overlay" data-action="pf-alerte-ok">'
+      + '<div class="modal annonce" data-action="stop">'
+        + '<div class="annonce-ico">⚖️</div>'
+        + '<div class="annonce-k">Impossible ensemble</div>'
+        + '<div class="annonce-t">'+esc(a.t)+'</div>'
+        + '<div class="annonce-p">'+esc(a.p)+'</div>'
+        + '<div class="annonce-msg">'+esc(a.q)+'</div>'
+        + '<button class="annonce-ok" data-action="pf-alerte-ok">J’ai compris</button>'
+      + '</div></div>';
   }
   // Relevé une seule fois par chargement, après la vérification de session :
   // sans compte, il n'y a personne à prévenir.
@@ -10240,7 +10304,7 @@
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
       + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml()
       + finisModalHtml() + suiteAjoutHtml() + chatCharteHtml() + chatModerationHtml() + badgeFicheHtml()
-      + badgeCelebreHtml();
+      + badgeCelebreHtml() + pfAlerteHtml();
 
     // L'onboarding et le catalogue vivent dans leur propre root persistant : on
     // ne remplace que le contenu de leur carte, sans recréer l'overlay ni
@@ -10660,6 +10724,9 @@
         // Le brouillon survit à la fermeture : on ne perd pas un texte écrit
         // parce qu'on a voulu vérifier quelque chose ailleurs dans l'app.
         setState({ sav: Object.assign({}, state.sav, { ouvert:false, grand:false }) });
+        break;
+      case 'pf-alerte-ok':
+        setState({ pfAlerte: null });
         break;
       case 'annonce-voir':
         state.annonces.deplie = true;
@@ -12149,11 +12216,27 @@
     var pl = e.target.closest('[data-profil-field]');
     if(pl){
       var kp = pl.getAttribute('data-profil-field');
+      // L'IS n'existe pas en micro-entreprise : on refuse la combinaison au
+      // lieu de la laisser fausser tous les simulateurs en silence.
+      if(kp === 'regime' && estMicro(state.profil.forme) && pl.value === REGIME_IS){
+        state.profil.regime = REGIME_IR;
+        state.pfAlerte = 'micro-is';
+        state.profilSaved = false;
+        render();
+        return;
+      }
       state.profil[kp] = pl.value;
       state.profilSaved = false;
       // La forme juridique ouvre/ferme des champs, et la répartition clientèle a
       // son total à recalculer. Les autres champs ne re-rendent pas : on garde le focus.
-      if(kp === 'forme') render();
+      if(kp === 'forme'){
+        // Passer en micro rend l'IS impossible : on remet le seul régime
+        // valable plutôt que de laisser une incohérence à l'écran.
+        if(estMicro(pl.value) && state.profil.regime === REGIME_IS){
+          state.profil.regime = REGIME_IR;
+        }
+        render();
+      }
       else if(/^client/.test(kp)) majTotalClientele();
       return;
     }
