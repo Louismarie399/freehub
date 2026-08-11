@@ -424,6 +424,23 @@
   }
   function badge(id){ return BADGES.filter(function(b){ return b.id === id; })[0]; }
 
+  // Pastille des Récompenses : combien de badges ont été débloqués sans qu'on
+  // soit allé les voir. Même principe que les messages non lus de l'Entraide —
+  // on retient le nombre vu à la dernière visite, et il survit au F5.
+  function badgesVus(){
+    try { return parseInt(localStorage.getItem('freehub_badges_vus'), 10) || 0; }
+    catch(e){ return 0; }
+  }
+  function badgesNonVus(){
+    // Tant que les badges du serveur ne sont pas arrivés, on ne montre rien :
+    // sinon la pastille clignoterait à chaque chargement.
+    if(!state.badgesInitialises) return 0;
+    return Math.max(0, state.badges.length - badgesVus());
+  }
+  function badgesMarquerVus(){
+    try { localStorage.setItem('freehub_badges_vus', String(state.badges.length)); } catch(e){}
+  }
+
   // Confirmation après l'ajout d'un objectif suggéré : on dit ce qui a été
   // ajouté, et on laisse le choix entre y aller et finir ce qu'on faisait.
   function suiteAjoutHtml(){
@@ -644,11 +661,22 @@
   function parrainageClassementHtml(){
     var p = state.parrainage;
 
-    var podium = p.classement.slice(0, 3).map(function(x, i){
-      return '<div class="parr-p'+(x.moi ? ' moi' : '')+' r'+(i+1)+'">'
+    // Les trois marches sont toujours dessinées, même vides : un podium qu'on
+    // voit est un podium qu'on a envie de monter. L'ordre visuel est 2·1·3,
+    // comme un vrai podium, la première place au centre et surélevée.
+    var ordre = [1, 0, 2];
+    var podium = ordre.map(function(i){
+      var x = p.classement[i];
+      var cls = 'parr-p r'+(i+1)+(x && x.moi ? ' moi' : '')+(x ? '' : ' libre');
+      var dedans = x
+        ? '<div class="parr-p-n">'+esc(x.nom)+'</div>'
+          + '<div class="parr-p-c">'+x.n+' membre'+(x.n > 1 ? 's' : '')+'</div>'
+        : '<div class="parr-p-n">Place à prendre</div>'
+          + '<div class="parr-p-c">personne ici pour l’instant</div>';
+      return '<div class="'+cls+'">'
         + '<div class="parr-p-m">'+PARR_MEDAILLES[i]+'</div>'
-        + '<div class="parr-p-n">'+esc(x.nom)+'</div>'
-        + '<div class="parr-p-c">'+x.n+' membre'+(x.n > 1 ? 's' : '')+'</div>'
+        + dedans
+        + '<div class="parr-p-socle"><span>'+(i + 1)+'</span></div>'
       + '</div>';
     }).join('');
 
@@ -660,22 +688,20 @@
       + '</div>';
     }).join('');
 
-    var corps;
     if(!p.charge){
-      corps = '<div class="parr-vide">Chargement du classement…</div>';
-    } else if(!p.classement.length){
-      // Personne n'a encore de filleul : c'est une invitation, pas un échec.
-      corps = '<div class="parr-vide">Le classement est encore vide. '
-            + 'Le premier à faire venir quelqu’un ouvre le podium.</div>';
-    } else {
-      corps = (podium ? '<div class="parr-podium">'+podium+'</div>' : '')
-            + (suite ? '<div class="parr-liste">'+suite+'</div>' : '');
+      return '<div class="parr-cl">'
+        + '<div class="parr-sect">Le classement</div>'
+        + '<div class="parr-vide">Chargement du classement…</div></div>';
     }
 
     return '<div class="parr-cl">'
       + '<div class="parr-sect">Le classement<span class="parr-sect-h">'
         + 'les vingt premiers, mis à jour en continu</span></div>'
-      + corps
+      + '<div class="parr-podium">'+podium+'</div>'
+      + (suite ? '<div class="parr-liste">'+suite+'</div>' : '')
+      + (!p.classement.length
+          ? '<div class="parr-amorce">Le podium est encore vierge : '
+            + 'le premier à faire venir quelqu’un prend la première place.</div>' : '')
     + '</div>';
   }
 
@@ -2706,6 +2732,7 @@
       return vide;
     })(),
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
+    demandesNb: 0,          // réclamations en attente, pour la pastille admin
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
     simIntro: null,         // simulateur dont on montre l'explication d'accueil
@@ -3037,10 +3064,14 @@
       savFilsCharger();    // et les échanges qui attendent une lecture
       // Un premier relevé du salon : il alimente le compteur de non-lus et
       // met le sondage en mémoire, pour qu'il soit déjà là en arrivant.
-      if(state.tab !== 'chat') chatCharger(true);
+      // Le relevé a lieu MÊME quand on est déjà sur l'Entraide : arriver
+      // directement sur #chat (un F5, un lien) ne passe pas par le clic
+      // d'onglet, et le fil restait bloqué sur son squelette.
+      chatCharger(state.tab !== 'chat');
       chatVeille();
       parrainageVeille();
       parrainageRattraper();
+      demandesVeille();      // sans effet hors compte administrateur
       apiJson('GET', 'api/data').then(function(d){
         // Marqueur de remise à zéro posé côté serveur : on efface TOUT le
         // stockage local (sinon il ré-ensemencerait le compte aussitôt) et on
@@ -3299,12 +3330,15 @@
            || (t.key === 'simulateur' && simulateurNeuf())
            || (t.key === 'parrainage' && parrainageNeuf())
             ? '<span class="nav-badge">New</span>' : '')
-        // « New » remplace « Alpha » le temps qu'on découvre l'onglet : deux
-        // pastilles côte à côte ne diraient plus rien.
-        + (t.alpha && !(t.key === 'parrainage' && parrainageNeuf())
-            ? '<span class="nav-badge alpha">Alpha</span>' : '')
+        // L'étiquette est toujours posée ; render() la masque sur les lignes
+        // qui portent déjà un « New » ou un compteur.
+        + (t.alpha ? '<span class="nav-badge alpha">Alpha</span>' : '')
         + (t.key === 'chat' && state.chat.nonLus
             ? '<span class="nav-pastille">'+state.chat.nonLus+'</span>' : '')
+        + (t.key === 'succes' && badgesNonVus()
+            ? '<span class="nav-pastille">'+badgesNonVus()+'</span>' : '')
+        + (t.key === 'sav' && state.demandesNb
+            ? '<span class="nav-pastille">'+state.demandesNb+'</span>' : '')
         + '</button>';
     }).join('');
   }
@@ -8945,6 +8979,28 @@
   // ---------------------------------------------------------------------------
   // Réclamations - la file des demandes, côté admin
   // ---------------------------------------------------------------------------
+  // Le compteur des demandes à traiter, pour la pastille de la barre latérale.
+  // Relevé en fond : une réclamation qui arrive doit se voir sans ouvrir l'onglet.
+  var SAV_VEILLE = 90000;
+  var savVeilleTimer = null;
+  function demandesNbCharger(){
+    if(!(state.compte && state.compte.isAdmin)) return;
+    apiJson('GET', '/api/admin/demandes/nb').then(function(r){
+      if(!r.ok || !r.data) return;
+      var n = r.data.n || 0;
+      if(n === state.demandesNb) return;
+      state.demandesNb = n;
+      render();
+    });
+  }
+  function demandesVeille(){
+    if(savVeilleTimer) return;
+    demandesNbCharger();
+    savVeilleTimer = setInterval(function(){
+      if(document.visibilityState === 'visible') demandesNbCharger();
+    }, SAV_VEILLE);
+  }
+
   // Relit la file : au premier affichage, puis après chaque réponse envoyée.
   function demandesRecharger(){
     return apiJson('GET', '/api/admin/demandes').then(function(r){
@@ -9904,7 +9960,10 @@
       } else {
         setState({ chat: c });
       }
-      if(state.tab === 'chat' && (enBas || !dernierAvant)) chatDefiler();
+      // chatDefilerFin plutôt qu'un simple chatDefiler : la hauteur du fil bouge
+      // encore après ce rendu (sondage, aparté, emojis), et un unique
+      // défilement laissait les derniers messages à moitié sous le bord.
+      if(state.tab === 'chat' && (enBas || !dernierAvant)) chatDefilerFin();
       // Lu sur place : tant qu'on est sur l'Entraide, ce qui arrive est vu.
       if(state.tab === 'chat') chatMarquerLu();
     });
@@ -9913,12 +9972,17 @@
   // Rafraîchissement ciblé de l'Entraide : le fil, l'aparté, le sondage et les
   // compteurs. Ni la saisie ni le reste de la page ne sont touchés.
   function majFilChat(){
+    // Le sondage vit AU-DESSUS du fil : quand il apparaît ou change de taille,
+    // il rogne la hauteur du fil et fait remonter les derniers messages hors
+    // de vue. On note donc où l'on était avant de toucher à quoi que ce soit.
+    var etaitEnBas = chatEnBas();
     var fil = document.querySelector('[data-chat-fil]');
     if(fil) fil.innerHTML = chatMessagesHtml();
 
     var sond = document.querySelector('.sond');
     var neufSond = chatSondageHtml();
     if(sond && neufSond) sond.outerHTML = neufSond;
+    if(etaitEnBas) chatDefilerFin();
 
     var ap = document.querySelector('.ch-aparte');
     var neufAp = chatAparteHtml();
@@ -9954,6 +10018,34 @@
   function chatDefiler(){
     var f = document.querySelector('[data-chat-fil]');
     if(f) f.scrollTop = f.scrollHeight;
+  }
+  // À l'arrivée sur l'Entraide, un seul défilement ne suffit pas. Le sondage
+  // s'insère AU-DESSUS du fil une fois chargé et lui prend une soixantaine de
+  // pixels de hauteur ; le fil, lui, garde son scrollTop, et les derniers
+  // messages passent sous le bord. Deviner le bon délai est un pari perdu : on
+  // observe la taille du fil et on le recolle en bas tant qu'elle bouge.
+  var chatColleJusqua = 0;
+  var chatObs = null;
+  function chatDefilerFin(){
+    chatColleJusqua = Date.now() + 1500;
+    chatDefiler();
+    var f = document.querySelector('[data-chat-fil]');
+    if(!f || typeof ResizeObserver === 'undefined'){
+      // Pas d'observateur disponible : on retombe sur quelques relances.
+      setTimeout(chatDefiler, 60);
+      setTimeout(chatDefiler, 300);
+      setTimeout(chatDefiler, 800);
+      return;
+    }
+    if(!chatObs){
+      chatObs = new ResizeObserver(function(){
+        if(Date.now() < chatColleJusqua) chatDefiler();
+      });
+    }
+    chatObs.disconnect();
+    chatObs.observe(f);
+    requestAnimationFrame(chatDefiler);
+    setTimeout(chatDefiler, 300);
   }
 
   // Le sondage ne tourne QUE sur l'onglet entraide : inutile de solliciter le
@@ -10667,38 +10759,38 @@
         pastille.remove();
       }
     });
-    // Sur le Classement, « New » prend la place de « Alpha » : la pastille
-    // d'origine revient une fois l'onglet découvert.
-    var ligneParr = app.querySelector('.nav-row[data-tab="parrainage"]');
-    if(ligneParr){
-      var alphaParr = ligneParr.querySelector('.nav-badge.alpha');
-      if(parrainageNeuf() && alphaParr){
-        alphaParr.remove();
-      } else if(!parrainageNeuf() && !alphaParr){
-        var a = document.createElement('span');
-        a.className = 'nav-badge alpha';
-        a.textContent = 'Alpha';
-        ligneParr.appendChild(a);
-      }
-    }
-    // Même chose pour le compteur de messages non lus : la nav n'étant bâtie
-    // qu'une fois, il restait figé sur sa valeur du premier rendu — visible
-    // même une fois qu'on avait ouvert l'Entraide.
-    var ligneChat = app.querySelector('.nav-row[data-tab="chat"]');
-    if(ligneChat){
-      var past = ligneChat.querySelector('.nav-pastille');
-      var nb = state.chat.nonLus || 0;
-      if(nb && !past){
+    // « Alpha » n'est qu'une étiquette : dès qu'une ligne porte une vraie
+    // information — « New », ou un compteur — l'étiquette s'efface. Les deux
+    // côte à côte se chevauchaient dans la largeur de la barre.
+    [].forEach.call(app.querySelectorAll('.nav-row'), function(row){
+      var alpha = row.querySelector('.nav-badge.alpha');
+      if(!alpha) return;
+      var occupe = row.querySelector('.nav-badge:not(.alpha)') || row.querySelector('.nav-pastille');
+      alpha.style.display = occupe ? 'none' : '';
+    });
+    // Même chose pour les compteurs : la nav n'étant bâtie qu'une fois, ils
+    // restaient figés sur leur valeur du premier rendu — un message non lu
+    // affiché même après avoir ouvert l'Entraide, une réclamation invisible
+    // jusqu'au rechargement suivant.
+    // Sur l'onglet Récompenses, la pastille n'a plus de sens : on est en train
+    // de regarder ce qu'elle annonce.
+    [['chat', state.chat.nonLus || 0],
+     ['succes', state.tab === 'succes' ? 0 : badgesNonVus()],
+     ['sav', state.tab === 'sav' ? 0 : (state.demandesNb || 0)]].forEach(function(n){
+      var ligne = app.querySelector('.nav-row[data-tab="'+n[0]+'"]');
+      if(!ligne) return;
+      var past = ligne.querySelector('.nav-pastille');
+      if(n[1] && !past){
         var sp = document.createElement('span');
         sp.className = 'nav-pastille';
-        sp.textContent = nb;
-        ligneChat.appendChild(sp);
-      } else if(nb && past){
-        past.textContent = nb;
-      } else if(!nb && past){
+        sp.textContent = n[1];
+        ligne.appendChild(sp);
+      } else if(n[1] && past){
+        past.textContent = n[1];
+      } else if(!n[1] && past){
         past.remove();
       }
-    }
+    });
     // Le bloc utilisateur est reconstruit par titreOutilsHtml() à chaque rendu :
     // rien à mettre à jour ici depuis que la barre latérale ne le porte plus.
 
@@ -10773,12 +10865,20 @@
       if(apAp) apAp.scrollTop = apScroll;
     }
 
+    // On arrive sur l'Entraide : le fil doit s'ouvrir sur les derniers messages,
+    // pas au début de l'histoire. Rien ne le faisait — le seul défilement
+    // existant venait du chargement réseau, et il ne se déclenchait pas quand
+    // les messages étaient déjà en mémoire.
+    if(state.tab === 'chat' && lastView !== 'chat') chatDefilerFin();
+
     // Plus d'animation d'entrée : le fondu donnait l'impression que la page
     // se rechargeait à chaque clic d'onglet. L'affichage est immédiat.
     lastView = state.tab;
 
     // Débloque les badges nouvellement mérités (ne relance pas render()).
     evaluerBadges();
+    // Un badge qui tombe pendant qu'on est sur la vitrine est vu sur-le-champ.
+    if(state.tab === 'succes' && state.badgesInitialises) badgesMarquerVus();
 
     document.getElementById('modal-root').innerHTML =
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
@@ -11146,6 +11246,14 @@
         }
         // Le Classement est découvert : la pastille « New » peut s'éteindre.
         if(target === 'parrainage') marquerFait('parrainage-vu');
+        // Les badges débloqués sont vus dès qu'on ouvre la vitrine.
+        if(target === 'succes') badgesMarquerVus();
+        // La file des réclamations est relue à l'ouverture : le compteur doit
+        // refléter ce qu'on est en train de regarder, pas l'état d'il y a 90 s.
+        if(target === 'sav'){
+          state.demandes.chargees = false;
+          demandesRecharger().then(demandesNbCharger);
+        }
         // Revenir sur l'onglet Simulateur ramène à la liste des simulateurs.
         if(target === 'simulateur') state.sim.open = null;
         if(target === 'objectifs') state.objectifOuvert = null;
@@ -11381,6 +11489,7 @@
                 ? Object.assign({}, x, { traite:dv }) : x;
             });
             setState({ demandes: Object.assign({}, state.demandes, { liste:liste }) });
+            demandesNbCharger();   // la pastille suit ce qui vient d'être coché
           });
         break;
       }
@@ -12998,6 +13107,12 @@
   // Après le 1er rendu, les badges déjà mérités sont marqués sans célébration ;
   // seuls les déblocages suivants déclenchent l'animation.
   state.badgesInitialises = true;
+  // Première visite depuis l'arrivée de la pastille : les badges déjà en
+  // vitrine ne sont pas des nouveautés. Sans ce calage, tout le monde verrait
+  // d'un coup une pastille annonçant huit « nouveaux » badges vieux d'un mois.
+  try {
+    if(localStorage.getItem('freehub_badges_vus') === null) badgesMarquerVus();
+  } catch(e){}
   // Session ouverte d'une visite précédente ? On la reprend et on synchronise.
   verifierSession();
 })();

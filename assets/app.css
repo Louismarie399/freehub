@@ -404,7 +404,10 @@
   .ch-tag.signale{background:#fef3c7;color:#b45309}
   /* Le texte vit dans sa propre bulle, dimensionnée par son contenu (façon
      messagerie) : l'avatar reste dehors, à gauche. */
-  .ch-txt{display:inline-block;max-width:min(100%,540px);margin-top:4px;padding:11px 15px;
+  /* Les bulles plafonnaient à 540px et n'occupaient qu'une moitié d'écran : le
+     texte partait en hauteur alors que la largeur restait vide. On les laisse
+     respirer sans aller jusqu'au bord, pour garder la forme d'une bulle. */
+  .ch-txt{display:inline-block;max-width:min(100%,860px);margin-top:4px;padding:11px 15px;
     background:var(--surface);border:1px solid #e4e9f2;border-radius:4px 16px 16px 16px;
     font-size:13.5px;line-height:1.5;color:var(--ink);overflow-wrap:break-word;
     box-shadow:0 6px 16px -10px rgba(15,27,51,.45)}
@@ -3134,6 +3137,13 @@
     padding:24px;margin-bottom:22px}
   .parr-t{font-size:18px;font-weight:800;letter-spacing:-.015em;color:var(--ink)}
   .parr-s{font-size:13.5px;color:var(--muted2);line-height:1.55;margin-top:3px;max-width:560px}
+  /* L'encadré personnel se détache sur un fond teinté : c'est l'action de la
+     page, elle ne doit pas se confondre avec le texte qui l'entoure. */
+  .parr-moi-c{margin:-6px -6px 0;padding:20px 20px 18px;border-radius:16px;
+    background:linear-gradient(135deg,rgba(13,148,136,.10),rgba(47,107,255,.08));
+    border:1px solid rgba(13,148,136,.20)}
+  .parr-moi-c .parr-lien input{background:var(--surface)}
+
   .parr-sect{font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
     color:var(--muted);margin-bottom:14px;display:flex;align-items:baseline;gap:10px}
   .parr-sect-h{font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;
@@ -3167,20 +3177,47 @@
   .parr-part:hover{border-color:var(--blue);color:var(--blue)}
   .parr-moi{margin-top:14px;font-size:14px;font-weight:700;color:var(--ink)}
 
-  /* Le podium : jusqu'à trois blocs, le premier surélevé. En flex centré plutôt
-     qu'en grille, sinon une seule ou deux places laissent une colonne vide. */
-  .parr-podium{display:flex;gap:10px;margin-top:18px;align-items:flex-end;
-    justify-content:center}
-  .parr-p{flex:1 1 0;min-width:0;max-width:230px;background:var(--soft);
-    border:1px solid var(--border);border-radius:16px;padding:14px 12px;text-align:center}
-  .parr-p.r1{padding-top:22px;padding-bottom:22px;
-    background:linear-gradient(160deg,rgba(234,179,8,.18),var(--soft));
-    border-color:rgba(234,179,8,.45)}
+  /* Le podium. Les trois marches sont toujours dessinées, même vides : on ne
+     monte pas sur un podium qu'on n'a jamais vu. L'ordre du DOM est 2·1·3 pour
+     que la première place tombe au centre, comme un vrai podium. */
+  .parr-podium{display:flex;gap:12px;margin:22px auto 0;align-items:flex-end;
+    justify-content:center;max-width:740px}
+  .parr-p{flex:1 1 0;min-width:0;max-width:236px;position:relative;overflow:hidden;
+    border-radius:18px 18px 14px 14px;padding:16px 12px 0;text-align:center;
+    border:1.5px solid var(--or-b);
+    background:linear-gradient(170deg,var(--or-h) 0%,var(--surface) 62%)}
+  /* Une teinte par marche : l'or, l'argent, le bronze. */
+  .parr-p.r1{--or-h:rgba(234,179,8,.26);--or-b:rgba(234,179,8,.5);--or-s:rgba(234,179,8,.3);
+    --or-t:#a16207}
+  .parr-p.r2{--or-h:rgba(148,163,184,.26);--or-b:rgba(148,163,184,.5);
+    --or-s:rgba(148,163,184,.3);--or-t:#64748b}
+  .parr-p.r3{--or-h:rgba(217,119,6,.2);--or-b:rgba(217,119,6,.42);--or-s:rgba(217,119,6,.26);
+    --or-t:#b45309}
+  /* La première place est plus haute : la hiérarchie se lit avant les chiffres. */
+  .parr-p.r1{padding-top:26px}
+  .parr-p.r1 .parr-p-socle{height:42px}
+  .parr-p.r2 .parr-p-socle{height:30px}
+  .parr-p.r3 .parr-p-socle{height:22px}
+  /* Halo doré discret derrière la première marche, pour qu'elle attire l'œil. */
+  .parr-p.r1::before{content:'';position:absolute;inset:-40% -20% auto;height:120px;
+    background:radial-gradient(circle,rgba(234,179,8,.28),transparent 70%);pointer-events:none}
   .parr-p.moi{box-shadow:0 0 0 2px var(--blue)}
-  .parr-p-m{font-size:26px;line-height:1}
-  .parr-p-n{font-size:13.5px;font-weight:800;color:var(--ink);margin-top:6px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .parr-p-c{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}
+  /* Place vacante : la couleur de la marche reste, en plus léger, et le contour
+     passe en pointillés. On garde une marche désirable, pas une case grisée. */
+  .parr-p.libre{border-style:dashed;
+    background:linear-gradient(170deg,var(--or-h) 0%,var(--surface) 44%)}
+  .parr-p.libre .parr-p-m{opacity:.55}
+  .parr-p.libre .parr-p-n{color:var(--muted2)}
+
+  .parr-p-m{font-size:30px;line-height:1;position:relative}
+  .parr-p-n{font-size:14px;font-weight:800;color:var(--ink);margin-top:7px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative}
+  .parr-p-c{font-size:12px;color:var(--muted);font-weight:600;margin-top:3px;
+    margin-bottom:14px;position:relative}
+  /* La marche elle-même, avec son numéro gravé. */
+  .parr-p-socle{margin:0 -12px;background:var(--or-s);display:flex;align-items:center;
+    justify-content:center}
+  .parr-p-socle span{font-size:15px;font-weight:900;color:var(--or-t);opacity:.75}
 
   /* Même largeur que le podium : sinon le compteur part se perdre tout à
      droite de la carte, à des kilomètres du nom qu'il concerne. */
@@ -3193,9 +3230,29 @@
   .parr-l-n{flex:1;min-width:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;
     white-space:nowrap}
   .parr-l-c{flex:none;color:var(--muted2);font-weight:800}
+  .parr-amorce{margin:16px auto 0;max-width:560px;text-align:center;font-size:13.5px;
+    color:var(--muted2);line-height:1.55}
+  /* Sur fond sombre, les teintes or/argent/bronze du numéro gravé deviennent
+     illisibles : on les remonte au clair. */
+  [data-theme="sombre"] .parr-p.r1{--or-t:#fcd34d}
+  [data-theme="sombre"] .parr-p.r2{--or-t:#cbd5e1}
+  [data-theme="sombre"] .parr-p.r3{--or-t:#fdba74}
   @media (max-width:600px){
     .parr-lien{flex-direction:column}
     .parr-copie,.parr-part{width:100%}
+    /* Trois marches côte à côte sur un écran de téléphone deviennent illisibles :
+       on les empile, la première en tête. `flex:none` est indispensable : en
+       colonne, le `flex:1 1 0` du bureau s'applique à la HAUTEUR et écrase les
+       cartes en trois barres vides. */
+    /* Le titre et sa glose passent l'un sous l'autre : côte à côte, « LE
+       CLASSEMENT » se coupait en deux lignes au milieu du mot. */
+    .parr-sect{flex-direction:column;gap:2px}
+    .parr-podium{flex-direction:column;align-items:stretch}
+    .parr-p{flex:none;max-width:none;padding-top:14px}
+    .parr-p.r1{order:-1;padding-top:18px}
+    .parr-p.r3{order:1}
+    .parr-p-socle,.parr-p.r1 .parr-p-socle,.parr-p.r2 .parr-p-socle,
+    .parr-p.r3 .parr-p-socle{height:26px}
   }
 
   /* ---------- BIC ou BNC : l'orientation ---------- */

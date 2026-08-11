@@ -71,6 +71,7 @@ $routes = [
     'GET /sav/fils'              => 'route_sav_fils',
     'POST /sav/fil/vu'           => 'route_sav_fil_vu',
     'GET /admin/demandes'        => 'route_admin_demandes',
+    'GET /admin/demandes/nb'     => 'route_admin_demandes_nb',
     'POST /admin/demandes/traiter' => 'route_admin_demandes_traiter',
 
     // Public

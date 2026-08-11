@@ -97,6 +97,21 @@ function route_admin_demandes(): void
     json_reponse(['demandes' => $out]);
 }
 
+/**
+ * GET /api/admin/demandes/nb — le nombre de demandes encore à traiter.
+ * Route séparée et volontairement minuscule : la pastille de la barre latérale
+ * se rafraîchit en fond, et rapatrier 400 messages complets pour afficher un
+ * chiffre serait absurde.
+ */
+function route_admin_demandes_nb(): void
+{
+    exige_admin();
+    $pdo = db();
+    $n = (int) $pdo->query('SELECT COUNT(*) FROM partner_requests WHERE traite = 0')->fetchColumn()
+       + (int) $pdo->query('SELECT COUNT(*) FROM sav_requests WHERE traite = 0')->fetchColumn();
+    json_reponse(['n' => $n]);
+}
+
 /** POST /api/admin/demandes/traiter — cocher ou décocher une demande. */
 function route_admin_demandes_traiter(): void
 {
