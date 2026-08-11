@@ -1251,6 +1251,15 @@
   // extinctions possibles - la date butoir ci-dessous, ou l'ouverture de la
   // fiche, qui vaut découverte. Il suffit de changer la date pour prolonger.
   var PART_NEUF_FIN = '2026-08-17';   // borne exclue : visible jusqu'au 16 inclus
+
+  // Même principe pour un simulateur fraîchement mis en ligne : le « New » de
+  // la barre latérale s'éteint à la date butoir, ou dès qu'on l'a ouvert.
+  var SIM_NEUF = 'categorie';
+  var SIM_NEUF_FIN = '2026-08-25';
+  function simulateurNeuf(){
+    if(Date.now() >= Date.parse(SIM_NEUF_FIN)) return false;
+    return !state.faits['sim-neuf-vu:' + SIM_NEUF];
+  }
   function partenairesNouveaux(){
     if(Date.now() >= Date.parse(PART_NEUF_FIN)) return [];
     var out = [];
@@ -3069,6 +3078,7 @@
         + '<span class="nav-tip">'+esc(t.label)+'</span>'
         + ((t.key === 'objectifs' && objectifsNouveaux().length)
            || (t.key === 'partenaires' && partenairesNouveaux().length)
+           || (t.key === 'simulateur' && simulateurNeuf())
             ? '<span class="nav-badge">New</span>' : '')
         + (t.alpha ? '<span class="nav-badge alpha">Alpha</span>' : '')
         + (t.key === 'chat' && state.chat.nonLus
@@ -7821,21 +7831,28 @@
           + 'l’expertise&nbsp;? Les deux&nbsp;? Dis-le ici.</div>'
         + (c.erreur ? '<div class="bulle-erreur">'+esc(c.erreur)+'</div>' : '')
         + '<button type="submit" class="cat-go"'+(c.enCours ? ' disabled' : '')+'>'
-          + (c.enCours ? 'On regarde…' : 'M’orienter')+'</button>'
+          + (c.enCours
+              ? '<span class="cat-spin" aria-hidden="true"></span>On regarde ton activité…'
+              : 'M’orienter')
+        + '</button>'
       + '</form>';
     }
 
-    return '<div class="view">'
+    // Même ossature que « Combien mettre de côté » : sim-wrap, bouton retour,
+    // res-topbar. C'est ce qui donne aux simulateurs leur air de famille.
+    return '<div class="view"><div class="sim-wrap">'
       + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
-      + '<h1 class="sim-t">BIC ou BNC&nbsp;?</h1>'
-      + '<p class="sim-lead">Cette catégorie décide de ta case de déclaration et de ton '
-        + 'abattement. Elle dépend de ce que tu fais réellement, pas de ton code APE.</p>'
+      + '<div class="res-topbar cat-topbar"><h2>BIC ou BNC&nbsp;?</h2></div>'
+      + '<div class="cote-tete cat-tete">'
+        + '<div class="cote-s">Cette catégorie décide de ta case de déclaration et de ton '
+          + 'abattement. Elle dépend de ce que tu fais réellement, pas de ton code APE.</div>'
+      + '</div>'
       + corps
       + '<div class="cat-avert">⚖️ Une orientation, pas une qualification officielle. '
         + 'Certaines activités relèvent des deux catégories selon ce qu’elles vendent, et '
         + 'quelques cas se tranchent au cas par cas. En cas de doute, fais confirmer par '
         + 'ton service des impôts des entreprises ou un expert-comptable.</div>'
-    + '</div>';
+    + '</div></div>';
   }
 
   function simulateurHtml(){
@@ -10369,7 +10386,8 @@
     // sans attendre un rechargement. On le pose ou le retire à chaque rendu
     // plutôt que de reconstruire la nav entière.
     [['objectifs', objectifsNouveaux().length],
-     ['partenaires', partenairesNouveaux().length]].forEach(function(n){
+     ['partenaires', partenairesNouveaux().length],
+     ['simulateur', simulateurNeuf() ? 1 : 0]].forEach(function(n){
       var row = app.querySelector('.nav-row[data-tab="'+n[0]+'"]');
       if(!row) return;
       var pastille = row.querySelector('.nav-badge:not(.alpha)');
@@ -11570,6 +11588,8 @@
       }
       case 'sim-open': {
         var quel = el.getAttribute('data-sim') || 'depenses';
+        // L'ouvrir vaut découverte : le « New » de la barre latérale s'éteint.
+        if(quel === SIM_NEUF) marquerFait('sim-neuf-vu:' + SIM_NEUF);
         // Première visite de ce simulateur : on explique d'abord à quoi il sert.
         if(SIM_INTRO[quel] && !state.faits['sim-intro:'+quel]){
           state.simIntro = quel;

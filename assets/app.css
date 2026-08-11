@@ -3131,8 +3131,17 @@
 
   /* ---------- BIC ou BNC : l'orientation ---------- */
   .sim-hero.categorie{background:linear-gradient(135deg,#4a0d2e 0%,#9d174d 55%,#ec4899 135%)}
-  .cat-form{background:var(--surface);border:1px solid var(--border);border-radius:20px;
-    padding:24px;display:flex;flex-direction:column;gap:8px;max-width:720px}
+  /* Rose de la catégorie, repris de la carte : chaque simulateur porte sa
+     teinte, celle-ci ne faisait exception que par oubli. */
+  .cat-form,.cat-res{margin:0 auto;max-width:640px}
+  .cat-topbar{justify-content:center}
+  .cat-tete{max-width:640px;margin:-6px auto 20px;text-align:center}
+  .cat-form{position:relative;overflow:hidden;background:var(--surface);
+    border:1px solid var(--border);border-radius:20px;padding:26px;
+    display:flex;flex-direction:column;gap:8px}
+  /* Un filet coloré en tête, comme les cartes de résultat des autres outils. */
+  .cat-form::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;
+    background:linear-gradient(90deg,#9d174d,#ec4899)}
   .cat-l{font-size:12px;font-weight:800;letter-spacing:.05em;color:var(--muted2);
     margin-top:8px}
   .cat-form input,.cat-form textarea{padding:12px 14px;border:1.5px solid var(--border);
@@ -3140,14 +3149,26 @@
     background:var(--surface);outline:none;resize:vertical}
   .cat-form input:focus,.cat-form textarea:focus{border-color:var(--blue)}
   .cat-aide{font-size:12.5px;color:var(--muted);line-height:1.5}
-  .cat-go{margin-top:14px;padding:14px;border:none;border-radius:14px;background:var(--blue);
+  .cat-go{margin-top:14px;padding:14px;border:none;border-radius:14px;
+    background:linear-gradient(135deg,#9d174d,#ec4899);
     color:#fff;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;
-    transition:.18s var(--ease)}
+    transition:.18s var(--ease);display:flex;align-items:center;justify-content:center;gap:10px}
   .cat-go:hover{filter:brightness(1.08);transform:translateY(-1px)}
-  .cat-go:disabled{opacity:.6;cursor:default;transform:none}
+  .cat-go:disabled{opacity:.75;cursor:default;transform:none}
+  /* L'attente dure plusieurs secondes : sans repère animé, on croit que rien
+     ne se passe et on reclique. */
+  @keyframes cat-tourne{to{transform:rotate(360deg)}}
+  .cat-spin{width:16px;height:16px;flex:none;border-radius:50%;
+    border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
+    animation:cat-tourne .7s linear infinite}
+  @media (prefers-reduced-motion:reduce){ .cat-spin{animation-duration:2.4s} }
 
-  .cat-res{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--c);
-    border-radius:20px;padding:24px;max-width:720px}
+  .cat-res{position:relative;overflow:hidden;background:var(--surface);
+    border:1px solid var(--border);border-radius:20px;padding:26px}
+  /* La teinte du résultat suit la catégorie trouvée, pas celle de l'outil :
+     on doit lire l'issue avant de lire le texte. */
+  .cat-res::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;
+    background:linear-gradient(90deg,var(--c),color-mix(in srgb,var(--c) 45%,#fff))}
   .cat-res-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
   .cat-res-t{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--c)}
   .cat-res-s{font-size:13px;color:var(--muted);font-weight:600;margin-top:2px}
@@ -3170,8 +3191,8 @@
     border-radius:12px;background:var(--surface);font-family:inherit;font-size:13.5px;
     font-weight:700;color:var(--muted2);cursor:pointer}
   .cat-refaire:hover{border-color:var(--blue);color:var(--blue)}
-  .cat-avert{max-width:720px;margin-top:18px;font-size:12.5px;line-height:1.6;
-    color:var(--muted)}
+  .cat-avert{max-width:640px;margin:18px auto 0;font-size:12.5px;line-height:1.6;
+    color:var(--muted);text-align:center}
 
   /* ---------- Combien mettre de côté ---------- */
   /* Même construction que les autres cartes : sombre au départ, saturé au bout. */
