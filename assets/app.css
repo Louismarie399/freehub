@@ -3129,6 +3129,50 @@
     cursor:pointer;transition:.18s var(--ease)}
   .annonce-ok:hover{filter:brightness(1.08);transform:translateY(-1px)}
 
+  /* ---------- BIC ou BNC : l'orientation ---------- */
+  .sim-hero.categorie{background:linear-gradient(135deg,#4a0d2e 0%,#9d174d 55%,#ec4899 135%)}
+  .cat-form{background:var(--surface);border:1px solid var(--border);border-radius:20px;
+    padding:24px;display:flex;flex-direction:column;gap:8px;max-width:720px}
+  .cat-l{font-size:12px;font-weight:800;letter-spacing:.05em;color:var(--muted2);
+    margin-top:8px}
+  .cat-form input,.cat-form textarea{padding:12px 14px;border:1.5px solid var(--border);
+    border-radius:12px;font-family:inherit;font-size:14.5px;color:var(--ink);
+    background:var(--surface);outline:none;resize:vertical}
+  .cat-form input:focus,.cat-form textarea:focus{border-color:var(--blue)}
+  .cat-aide{font-size:12.5px;color:var(--muted);line-height:1.5}
+  .cat-go{margin-top:14px;padding:14px;border:none;border-radius:14px;background:var(--blue);
+    color:#fff;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;
+    transition:.18s var(--ease)}
+  .cat-go:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .cat-go:disabled{opacity:.6;cursor:default;transform:none}
+
+  .cat-res{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--c);
+    border-radius:20px;padding:24px;max-width:720px}
+  .cat-res-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+  .cat-res-t{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--c)}
+  .cat-res-s{font-size:13px;color:var(--muted);font-weight:600;margin-top:2px}
+  .cat-conf{flex:none;padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:800;
+    background:var(--soft);color:var(--muted2)}
+  .cat-conf.haute{background:rgba(15,157,110,.14);color:#0f9d6e}
+  .cat-conf.faible{background:rgba(234,179,8,.16);color:#a16207}
+  :root[data-theme="sombre"] .cat-conf.faible{color:#fcd34d}
+  .cat-res-r{font-size:15.5px;line-height:1.6;color:var(--ink);font-weight:600;margin-top:14px}
+  .cat-bloc{margin-top:18px}
+  .cat-bloc-t{font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--blue);margin-bottom:6px}
+  .cat-bloc.warn .cat-bloc-t{color:#a16207}
+  :root[data-theme="sombre"] .cat-bloc.warn .cat-bloc-t{color:#fcd34d}
+  .cat-bloc ul{margin:0;padding-left:20px}
+  .cat-bloc li{font-size:14px;line-height:1.6;color:var(--muted2);margin:4px 0}
+  .cat-question{margin-top:18px;padding:13px 16px;background:var(--soft);border-radius:12px;
+    font-size:14px;line-height:1.55;color:var(--muted2)}
+  .cat-refaire{margin-top:20px;padding:10px 18px;border:1px solid var(--border);
+    border-radius:12px;background:var(--surface);font-family:inherit;font-size:13.5px;
+    font-weight:700;color:var(--muted2);cursor:pointer}
+  .cat-refaire:hover{border-color:var(--blue);color:var(--blue)}
+  .cat-avert{max-width:720px;margin-top:18px;font-size:12.5px;line-height:1.6;
+    color:var(--muted)}
+
   /* ---------- Combien mettre de côté ---------- */
   /* Même construction que les autres cartes : sombre au départ, saturé au bout. */
   .sim-hero.cote{background:linear-gradient(135deg,#0b2a3d 0%,#075985 58%,#0ea5e9 135%)}

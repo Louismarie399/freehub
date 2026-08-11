@@ -16,6 +16,7 @@ require_once __DIR__ . '/routes_data.php';
 require_once __DIR__ . '/routes_analyze.php';
 require_once __DIR__ . '/routes_chat.php';
 require_once __DIR__ . '/routes_notif.php';
+require_once __DIR__ . '/routes_categorie.php';
 require_once __DIR__ . '/routes_sav.php';
 
 // Chemin demandé, sans query string ni préfixe /api.
@@ -74,6 +75,7 @@ $routes = [
     // Public
     'POST /partenaire'           => 'route_partenaire',
     'POST /analyze'              => 'route_analyze',
+    'POST /categorie'            => 'route_categorie',
 
     // Sonde de santé (sans secret : ne révèle rien de sensible).
     // `maj` = date de dernière mise à jour de ce fichier : permet de vérifier

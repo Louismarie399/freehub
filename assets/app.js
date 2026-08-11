@@ -2499,6 +2499,9 @@
     annonces: { liste: [], deplie: false },
     savFils: [],            // ses réclamations qui ont reçu une réponse
     pfAlerte: null,         // combinaison fiscale refusée, à expliquer
+    // Orientation BIC/BNC. `null` sur activite/description = on n'a pas encore
+    // touché aux champs, donc on affiche ceux du profil.
+    categorie: { activite:null, description:null, enCours:false, erreur:null, resultat:null },
     profilDirty: false,     // des champs modifiés sans enregistrement
     profilQuitter: null,    // action mise en attente pendant la question
     // Préférences de rappels : chargées à l'ouverture du profil.
@@ -7248,6 +7251,19 @@
         + '</div>'
         + '<div class="sim-hero-cta">Calculer ma part →</div>'
       + '</div></div>'
+      + '<div class="sim-hero categorie" data-action="sim-open" data-sim="categorie">'
+        + '<div class="sim-hero-inner">'
+        + '<div class="sim-hero-emoji">🧭</div>'
+        + '<div class="sim-hero-title">BIC ou BNC&nbsp;?</div>'
+        + '<div class="sim-hero-sub">La case dans laquelle l’administration range tes revenus. '
+          + 'Décris ce que tu fais vraiment, on t’oriente et on t’explique pourquoi.</div>'
+        + '<div class="sim-hero-chips">'
+          + chip('#fbcfe8', 'D’après ton activité')
+          + chip('#f9a8d4', 'Avec le raisonnement')
+          + chip('#f472b6', 'Cas limites signalés')
+        + '</div>'
+        + '<div class="sim-hero-cta">M’orienter →</div>'
+      + '</div></div>'
       + '<div class="sim-hero" data-action="sim-open" data-sim="depenses"><div class="sim-hero-inner">'
         + '<div class="sim-hero-emoji">🧾</div>'
         + '<div class="sim-hero-title">Qu’est-ce qui peut passer sur&nbsp;ta&nbsp;société&nbsp;?</div>'
@@ -7750,9 +7766,82 @@
       + '</div></div>';
   }
 
+  // ---------------------------------------------------------------------------
+  // BIC ou BNC — orientation d'après l'activité réellement décrite
+  // ---------------------------------------------------------------------------
+  // Le profil porte déjà l'activité et sa description : l'écran les reprend et
+  // les laisse modifiables, parce que c'est la précision de la description qui
+  // fait la qualité de la réponse.
+  var CAT_LIB = {
+    BIC:   { t:'Plutôt BIC', s:'Bénéfices industriels et commerciaux', c:'#b45309' },
+    BNC:   { t:'Plutôt BNC', s:'Bénéfices non commerciaux',            c:'#0f766e' },
+    MIXTE: { t:'Les deux',   s:'Ton activité relève des deux',         c:'#7c3aed' },
+  };
+  var CAT_CONF = { haute:'Cas assez net', moyenne:'À confirmer', faible:'Cas limite' };
+
+  function categorieHtml(){
+    var c = state.categorie;
+    var p = state.profil;
+    var act = c.activite !== null ? c.activite : (p.activite || '');
+    var des = c.description !== null ? c.description : (p.description || '');
+
+    var corps;
+    if(c.resultat){
+      var r = c.resultat;
+      var d = CAT_LIB[r.categorie] || CAT_LIB.MIXTE;
+      corps = '<div class="cat-res" style="--c:'+d.c+'">'
+        + '<div class="cat-res-h">'
+          + '<div><div class="cat-res-t">'+esc(d.t)+'</div>'
+          + '<div class="cat-res-s">'+esc(d.s)+'</div></div>'
+          + '<span class="cat-conf '+esc(r.confiance)+'">'
+            + esc(CAT_CONF[r.confiance] || '')+'</span>'
+        + '</div>'
+        + (r.resume ? '<div class="cat-res-r">'+esc(r.resume)+'</div>' : '')
+        + (r.pourquoi.length
+            ? '<div class="cat-bloc"><div class="cat-bloc-t">Pourquoi</div><ul>'
+              + r.pourquoi.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')
+              + '</ul></div>' : '')
+        + (r.attention.length
+            ? '<div class="cat-bloc warn"><div class="cat-bloc-t">Ce qui pourrait changer la réponse</div><ul>'
+              + r.attention.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')
+              + '</ul></div>' : '')
+        + (r.question ? '<div class="cat-question">🤔 '+esc(r.question)+'</div>' : '')
+        + '<button class="cat-refaire" data-action="cat-refaire">Recommencer</button>'
+      + '</div>';
+    } else {
+      corps = '<form class="cat-form" data-cat-form>'
+        + '<label class="cat-l">Ton activité</label>'
+        + '<input data-cat-activite value="'+esc(act)+'" maxlength="200"'
+          + ' placeholder="Développeur web, coiffeuse, photographe…">'
+        + '<label class="cat-l">Ce que tu fais concrètement</label>'
+        + '<textarea data-cat-description rows="5" maxlength="1500"'
+          + ' placeholder="Le plus précis possible : ce que tu vends, à qui, et comment. '
+          + 'C’est ce qui fait la différence entre les deux catégories.">'+esc(des)+'</textarea>'
+        + '<div class="cat-aide">Vends-tu des biens que tu achètes&nbsp;? Du temps et de '
+          + 'l’expertise&nbsp;? Les deux&nbsp;? Dis-le ici.</div>'
+        + (c.erreur ? '<div class="bulle-erreur">'+esc(c.erreur)+'</div>' : '')
+        + '<button type="submit" class="cat-go"'+(c.enCours ? ' disabled' : '')+'>'
+          + (c.enCours ? 'On regarde…' : 'M’orienter')+'</button>'
+      + '</form>';
+    }
+
+    return '<div class="view">'
+      + '<button class="retour" data-action="sim-liste">← Tous les simulateurs</button>'
+      + '<h1 class="sim-t">BIC ou BNC&nbsp;?</h1>'
+      + '<p class="sim-lead">Cette catégorie décide de ta case de déclaration et de ton '
+        + 'abattement. Elle dépend de ce que tu fais réellement, pas de ton code APE.</p>'
+      + corps
+      + '<div class="cat-avert">⚖️ Une orientation, pas une qualification officielle. '
+        + 'Certaines activités relèvent des deux catégories selon ce qu’elles vendent, et '
+        + 'quelques cas se tranchent au cas par cas. En cas de doute, fais confirmer par '
+        + 'ton service des impôts des entreprises ou un expert-comptable.</div>'
+    + '</div>';
+  }
+
   function simulateurHtml(){
     if(!state.sim.open) return simListHtml();      // liste des simulateurs
     if(state.sim.open === 'cote') return coteHtml();          // combien mettre de côté
+    if(state.sim.open === 'categorie') return categorieHtml(); // BIC ou BNC (orientation IA)
     if(state.sim.open === 'depenses') return guideDepHtml();  // guide visuel des dépenses
     if(state.sim.open === 'vl') return vlHtml();   // comparateur (calcul, sans IA)
     if(state.sim.open === 'tva') return tvaHtml(); // passage à la TVA (calcul, sans IA)
@@ -8714,6 +8803,10 @@
   // Montré une seule fois par simulateur (mémorisé dans les faits), pour que la
   // personne sache quelle question l'outil répond avant de saisir quoi que ce soit.
   var SIM_INTRO = {
+    categorie: { ico:'🧭', t:'BIC ou BNC ?',
+      p:'Tu ne sais pas dans quelle catégorie ranger ton activité, et ça change ta case de déclaration comme ton abattement.',
+      q:'On lit ce que tu fais vraiment et on t’oriente, avec le raisonnement — pas juste une étiquette.',
+      f:'Au moment de déclarer, ou quand ton activité évolue.' },
     cote: { ico:'🏦', t:'Combien mettre de côté ?',
       p:'Tu viens d’encaisser une somme et tu ne sais pas ce que tu peux réellement dépenser.',
       q:'On retire ce qui n’est pas à toi - TVA, cotisations, impôt - et on te dit ce qui reste.',
@@ -10174,6 +10267,8 @@
   // qui évite l'effet de « clignotement » à chaque clic.
   // En-tête de l'onglet Simulateur : il suit le simulateur réellement ouvert.
   var TITRES_SIM = {
+    categorie: ['Orientation', 'BIC ou BNC ?',
+               'La catégorie dont dépendent ta case de déclaration et ton abattement.'],
     depenses: ['Analyse', 'Guide des dépenses',
                'Ce que les indépendants peuvent passer sur leur société, et à quelles conditions.'],
     vl:       ['Analyse', 'Versement libératoire',
@@ -10447,6 +10542,27 @@
         setState({ sondageForm:false });
         chatCharger(true);
       });
+      return;
+    }
+    // Orientation BIC / BNC.
+    var cf = e.target.closest && e.target.closest('[data-cat-form]');
+    if(cf){
+      e.preventDefault();
+      var cAct = (cf.querySelector('[data-cat-activite]') || {}).value || '';
+      var cDes = (cf.querySelector('[data-cat-description]') || {}).value || '';
+      state.categorie = Object.assign({}, state.categorie,
+        { activite:cAct, description:cDes, enCours:true, erreur:null });
+      render();
+      apiJson('POST', '/api/categorie', { activite:cAct, description:cDes })
+        .then(function(r){
+          state.categorie = Object.assign({}, state.categorie, {
+            enCours:false,
+            resultat: r.ok ? r.data : null,
+            erreur: r.ok ? null : ((r.data && r.data.error) || 'Orientation indisponible.'),
+          });
+          if(r.ok) marquerFait('sim:categorie');
+          render();
+        });
       return;
     }
     // Relance de l'auteur dans son propre fil, depuis la bulle d'aide.
@@ -10813,6 +10929,12 @@
         break;
       case 'pf-alerte-ok':
         setState({ pfAlerte: null });
+        break;
+      case 'cat-refaire':
+        // On garde ce qui a été saisi : on recommence rarement de zéro, on
+        // vient plutôt préciser sa description.
+        setState({ categorie: Object.assign({}, state.categorie,
+          { resultat:null, erreur:null }) });
         break;
       case 'pq-enregistrer': {
         profilEnregistrer();

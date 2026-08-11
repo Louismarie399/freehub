@@ -229,6 +229,15 @@ function init_db(PDO $pdo): void
             created TEXT NOT NULL,
             lu INTEGER DEFAULT 0)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_sav_reponses ON sav_reponses(demande_id)');
+    // Journal des orientations BIC/BNC : sert uniquement à plafonner les
+    // appels payants à l'API, on n'y garde ni la question ni la réponse.
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS categorie_appels(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            created TEXT NOT NULL)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_categorie_appels
+                ON categorie_appels(user_id, created)');
 }
 
 // --------------------------------------------------------------------------- //
