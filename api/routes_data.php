@@ -22,10 +22,27 @@ function route_data_put(): void
     $u = exige_connexion();
     $d = corps()['donnees'] ?? null;
     if (!is_array($d)) erreur('Données invalides.');
+    $blob = json_encode($d, JSON_UNESCAPED_UNICODE);
     $st = db()->prepare(
         'INSERT INTO data(user_id, blob, updated) VALUES (?,?,?)
          ON CONFLICT(user_id) DO UPDATE SET blob = excluded.blob, updated = excluded.updated');
-    $st->execute([$u['id'], json_encode($d, JSON_UNESCAPED_UNICODE), maintenant()]);
+    $st->execute([$u['id'], $blob, maintenant()]);
+
+    // L'identité vit à deux endroits : le profil (table `data`) et les colonnes
+    // de `users`, écrites à l'inscription et jamais reprises ensuite. Or c'est
+    // `users` que lisent l'Entraide et la file de réclamations : changer son
+    // nom dans le profil ne se voyait donc nulle part ailleurs. On réaligne ici.
+    $profil = profil_de($blob);
+    if ($profil) {
+        $prenom = mb_substr(trim((string) ($profil['prenom'] ?? '')), 0, 80);
+        $nom    = mb_substr(trim((string) ($profil['nom'] ?? '')), 0, 80);
+        // Un profil vidé n'efface pas l'identité du compte : sans prénom,
+        // l'Entraide n'aurait plus personne à afficher.
+        if ($prenom !== '' && ($prenom !== $u['prenom'] || $nom !== $u['nom'])) {
+            db()->prepare('UPDATE users SET prenom = ?, nom = ? WHERE id = ?')
+                ->execute([$prenom, $nom, $u['id']]);
+        }
+    }
     json_reponse(['ok' => true, 'updated' => maintenant()]);
 }
 
