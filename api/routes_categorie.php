@@ -103,8 +103,15 @@ function route_categorie(): void
         return $out;
     };
 
-    db()->prepare('INSERT INTO categorie_appels(user_id, created) VALUES (?,?)')
-        ->execute([$u['id'], maintenant()]);
+    // L'orientation est obtenue et payée : le compteur ne doit en aucun cas
+    // faire échouer la réponse. SQLite peut refuser une écriture concurrente
+    // (base verrouillée) — on perd alors une unité de quota, pas le résultat.
+    try {
+        db()->prepare('INSERT INTO categorie_appels(user_id, created) VALUES (?,?)')
+            ->execute([$u['id'], maintenant()]);
+    } catch (Throwable $e) {
+        error_log('[FreeHub] quota categorie non enregistre : ' . $e->getMessage());
+    }
 
     json_reponse([
         'categorie'  => $cat,
