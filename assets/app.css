@@ -3131,11 +3131,34 @@
 
   /* ---------- BIC ou BNC : l'orientation ---------- */
   .sim-hero.categorie{background:linear-gradient(135deg,#4a0d2e 0%,#9d174d 55%,#ec4899 135%)}
+  /* Carte d'un simulateur fraîchement mis en ligne. Même doré et même
+     respiration que les tuiles d'objectifs ; le contour passe par une ombre
+     et non par une bordure, sinon il décalerait le contenu de la carte. */
+  @keyframes sim-halo{
+    0%,100%{box-shadow:0 0 0 2px #eab308,0 0 0 0 rgba(234,179,8,.5)}
+    50%    {box-shadow:0 0 0 2px #eab308,0 0 0 12px rgba(234,179,8,0)}}
+  .sim-hero.inedit{animation:sim-halo 2.4s ease-out infinite}
+  /* Au survol la carte a sa propre ombre : on garde le liseré, on arrête l'onde. */
+  .sim-hero.inedit:hover{animation:none;
+    box-shadow:0 0 0 2px #eab308,0 26px 52px -28px rgba(15,27,51,.75)}
+  /* La carte est en overflow:hidden : la pastille reste à l'intérieur. */
+  .sim-neuf{position:absolute;top:18px;right:18px;z-index:3;display:inline-flex;
+    align-items:center;gap:5px;padding:5px 11px;border-radius:999px;
+    font-size:11px;font-weight:900;letter-spacing:.04em;color:#4a2c00;
+    background:linear-gradient(135deg,#fbbf24,#d97706);
+    box-shadow:0 6px 16px -6px rgba(217,119,6,.9)}
+  @media (prefers-reduced-motion:reduce){
+    .sim-hero.inedit{animation:none;box-shadow:0 0 0 2px #eab308}
+  }
+
   /* Rose de la catégorie, repris de la carte : chaque simulateur porte sa
      teinte, celle-ci ne faisait exception que par oubli. */
   .cat-form,.cat-res{margin:0 auto;max-width:640px}
   .cat-topbar{justify-content:center}
-  .cat-tete{max-width:640px;margin:-6px auto 20px;text-align:center}
+  /* Deux classes : .cote-tete est déclarée plus bas dans le fichier et, à
+     spécificité égale, écrasait le margin:auto — le sous-titre restait collé
+     à gauche pendant que le reste était centré. */
+  .cote-tete.cat-tete{max-width:640px;margin:-6px auto 20px;text-align:center}
   .cat-form{position:relative;overflow:hidden;background:var(--surface);
     border:1px solid var(--border);border-radius:20px;padding:26px;
     display:flex;flex-direction:column;gap:8px}

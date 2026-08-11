@@ -7261,7 +7261,9 @@
         + '</div>'
         + '<div class="sim-hero-cta">Calculer ma part →</div>'
       + '</div></div>'
-      + '<div class="sim-hero categorie" data-action="sim-open" data-sim="categorie">'
+      + '<div class="sim-hero categorie'+(simulateurNeuf() ? ' inedit' : '')+'"'
+        + ' data-action="sim-open" data-sim="categorie">'
+        + (simulateurNeuf() ? '<span class="sim-neuf">🔔 Nouveau</span>' : '')
         + '<div class="sim-hero-inner">'
         + '<div class="sim-hero-emoji">🧭</div>'
         + '<div class="sim-hero-title">BIC ou BNC&nbsp;?</div>'
