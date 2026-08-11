@@ -561,21 +561,88 @@
 
   // Tant qu'on regarde le classement, il se rafraîchit tout seul : voir une
   // place bouger sous ses yeux vaut mieux qu'un chiffre figé.
+  var PARR_FRAICHEUR = 45000;
   var parrVeilleTimer = null;
   function parrainageVeille(){
     if(parrVeilleTimer) return;
     parrVeilleTimer = setInterval(function(){
-      if(state.tab === 'succes' && document.visibilityState === 'visible'){
+      if(state.tab === 'parrainage' && document.visibilityState === 'visible'){
         parrainageCharger();
       }
-    }, 45000);
+    }, PARR_FRAICHEUR);
   }
 
   var PARR_MEDAILLES = ['🥇', '🥈', '🥉'];
 
-  function parrainageHtml(){
+  // L'encadré personnel : le lien à partager, et où l'on en est. C'est la
+  // première chose de la page, avant même le classement — on vient d'abord
+  // chercher son lien.
+  function parrainageMoiHtml(){
     var p = state.parrainage;
-    if(!state.compte) return '';
+    var moi;
+    if(!p.mes){
+      moi = 'Personne n’est encore arrivé par toi. Le premier te place au classement.';
+    } else if(p.rang === 1){
+      moi = 'Tu es en tête avec ' + p.mes + ' membre' + (p.mes > 1 ? 's' : '')
+          + ' arrivé' + (p.mes > 1 ? 's' : '') + ' par toi.';
+    } else {
+      moi = p.mes + ' membre' + (p.mes > 1 ? 's' : '') + ' grâce à toi'
+          + (p.rang ? ' · ' + p.rang + '<sup>e</sup> au classement' : '');
+    }
+
+    var lien = parrainageLien();
+    // Partage natif quand l'appareil le propose (surtout sur mobile) : c'est le
+    // chemin le plus court vers une conversation ou un réseau.
+    var partage = (typeof navigator !== 'undefined' && navigator.share)
+      ? '<button class="parr-part" data-action="parr-partager">Partager</button>' : '';
+
+    return '<div class="parr-moi-c">'
+      + '<div class="parr-t">Ton lien à partager</div>'
+      + '<div class="parr-s">Tous ceux qui créent leur compte avec ce lien te sont '
+        + 'rattachés. C’est le seul moyen d’être compté.</div>'
+      + '<div class="parr-lien">'
+        + '<input readonly value="'+esc(lien)+'" data-parr-lien'
+          + (lien ? '' : ' placeholder="Ton lien arrive…"')+'>'
+        + '<button class="parr-copie" data-action="parr-copier">'
+          + (p.copie ? '✓ Copié' : 'Copier')+'</button>'
+        + partage
+      + '</div>'
+      + '<div class="parr-moi">'+moi+'</div>'
+    + '</div>';
+  }
+
+  // Les règles, dites une bonne fois : un classement dont on ne comprend pas
+  // le décompte n'engage personne.
+  function parrainageReglesHtml(){
+    var regles = [
+      ['1', 'Tu partages ton lien',
+       'Message, réseau, bouche-à-oreille : peu importe le chemin, c’est le lien qui compte.'],
+      ['2', 'Ton filleul crée son compte',
+       'Le code de ton lien se remplit tout seul sur la page d’inscription.'],
+      ['3', 'Il termine son arrivée',
+       'C’est à ce moment-là seulement qu’il est compté : un compte ouvert puis '
+       + 'abandonné ne fait grimper personne.'],
+    ];
+    return '<div class="parr-regles">'
+      + '<div class="parr-sect">Comment ça marche</div>'
+      + '<div class="parr-etapes">'
+        + regles.map(function(r){
+            return '<div class="parr-et">'
+              + '<span class="parr-et-n">'+r[0]+'</span>'
+              + '<div><div class="parr-et-t">'+esc(r[1])+'</div>'
+              + '<div class="parr-et-d">'+esc(r[2])+'</div></div>'
+            + '</div>';
+          }).join('')
+      + '</div>'
+      + '<div class="parr-note">Le classement est public entre membres et se rafraîchit '
+        + 'tout seul. On n’y affiche que le prénom et l’initiale du nom, jamais l’e-mail. '
+        + 'Deux badges à la clé : un au premier filleul, un autre le jour où tu passes '
+        + 'en tête.</div>'
+    + '</div>';
+  }
+
+  function parrainageClassementHtml(){
+    var p = state.parrainage;
 
     var podium = p.classement.slice(0, 3).map(function(x, i){
       return '<div class="parr-p'+(x.moi ? ' moi' : '')+' r'+(i+1)+'">'
@@ -593,32 +660,41 @@
       + '</div>';
     }).join('');
 
-    // Sa propre situation, dite en clair : un classement sans repère personnel
-    // ne donne envie à personne.
-    var moi;
-    if(!p.mes){
-      moi = 'Personne n’est encore arrivé par toi. Le premier te place au classement.';
-    } else if(p.rang === 1){
-      moi = 'Tu es en tête avec ' + p.mes + ' membre' + (p.mes > 1 ? 's' : '') + '.';
+    var corps;
+    if(!p.charge){
+      corps = '<div class="parr-vide">Chargement du classement…</div>';
+    } else if(!p.classement.length){
+      // Personne n'a encore de filleul : c'est une invitation, pas un échec.
+      corps = '<div class="parr-vide">Le classement est encore vide. '
+            + 'Le premier à faire venir quelqu’un ouvre le podium.</div>';
     } else {
-      moi = p.mes + ' membre' + (p.mes > 1 ? 's' : '') + ' grâce à toi'
-          + (p.rang ? ' · ' + p.rang + '<sup>e</sup> au classement' : '');
+      corps = (podium ? '<div class="parr-podium">'+podium+'</div>' : '')
+            + (suite ? '<div class="parr-liste">'+suite+'</div>' : '');
     }
 
-    return '<div class="parr">'
-      + '<div class="parr-h">'
-        + '<div><div class="parr-t">Fais tourner FreeHub</div>'
-        + '<div class="parr-s">C’est gratuit, et ça le restera. Le seul moteur, '
-          + 'c’est le bouche-à-oreille.</div></div>'
+    return '<div class="parr-cl">'
+      + '<div class="parr-sect">Le classement<span class="parr-sect-h">'
+        + 'les vingt premiers, mis à jour en continu</span></div>'
+      + corps
+    + '</div>';
+  }
+
+  function parrainageVueHtml(){
+    if(!state.compte){
+      return '<div class="view"><div class="parr"><div class="parr-t">Classement</div>'
+        + '<div class="parr-s">Le classement des recommandations est réservé aux membres '
+        + 'connectés : c’est ton compte qui porte ton lien.</div></div></div>';
+    }
+    if(!state.parrainage.charge
+       || Date.now() - (state.parrainage.quand || 0) > PARR_FRAICHEUR){
+      parrainageCharger();
+    }
+    return '<div class="view">'
+      + '<div class="parr">'
+        + parrainageMoiHtml()
+        + parrainageReglesHtml()
       + '</div>'
-      + '<div class="parr-lien">'
-        + '<input readonly value="'+esc(parrainageLien())+'" data-parr-lien>'
-        + '<button class="parr-copie" data-action="parr-copier">'
-          + (p.copie ? '✓ Copié' : 'Copier')+'</button>'
-      + '</div>'
-      + '<div class="parr-moi">'+moi+'</div>'
-      + (podium ? '<div class="parr-podium">'+podium+'</div>' : '')
-      + (suite ? '<div class="parr-liste">'+suite+'</div>' : '')
+      + '<div class="parr">'+parrainageClassementHtml()+'</div>'
     + '</div>';
   }
 
@@ -1381,6 +1457,13 @@
     if(Date.now() >= Date.parse(SIM_NEUF_FIN)) return false;
     return !state.faits['sim-neuf-vu:' + SIM_NEUF];
   }
+  // Le Classement est un onglet neuf : sans repère visuel, ceux qui connaissent
+  // déjà la barre latérale ne le verraient tout simplement pas.
+  var PARR_NEUF_FIN = '2026-09-30';
+  function parrainageNeuf(){
+    if(Date.now() >= Date.parse(PARR_NEUF_FIN)) return false;
+    return !state.faits['parrainage-vu'];
+  }
   function partenairesNouveaux(){
     if(Date.now() >= Date.parse(PART_NEUF_FIN)) return [];
     var out = [];
@@ -1398,6 +1481,7 @@
     calendrier: ['Calendrier',      '🗓', '#db2777'],
     partenaires:['Nos partenaires', '🤝', '#16a34a'],
     chat:       ['Entraide',        '💬', '#e11d48'],
+    parrainage: ['Classement',      '🏅', '#0d9488'],
     succes:     ['Récompenses',     '🏆', '#d97706'],
     sav:        ['Réclamations',    '📮', '#be123c'],
     profil:     ['Mon profil',      '👤', '#475569'],
@@ -2794,7 +2878,7 @@
   // Les onglets d'administration sont volontairement absents : ils dépendent
   // d'un rôle connu seulement après la vérification de session.
   var ONGLETS_URL = ['accueil', 'objectifs', 'calendrier', 'simulateur', 'lexique',
-                     'partenaires', 'chat', 'succes', 'profil'];
+                     'partenaires', 'chat', 'parrainage', 'succes', 'profil'];
 
   function ecrireHash(){
     // Pendant l'onboarding, il n'y a pas d'écran à retrouver.
@@ -3175,6 +3259,10 @@
     succes:     '<path d="M7 4h10v3.6a5 5 0 0 1-10 0z"/>'
               + '<path d="M7 5H4.7a2.9 2.9 0 0 0 3 2.9M17 5h2.3a2.9 2.9 0 0 1-3 2.9"/>'
               + '<path d="M12 12.6V16M10 16h4l.7 3.5H9.3z"/><path d="M8.3 19.5h7.4"/>',
+    // Classement : trois barres de podium, la plus haute au milieu.
+    parrainage: '<rect x="9.6" y="7" width="4.8" height="13"/>'
+              + '<rect x="3.5" y="12" width="4.8" height="8"/>'
+              + '<rect x="15.7" y="14.5" width="4.8" height="5.5"/>',
     // Espace admin : un bouclier, pour marquer l'accès restreint.
     admin:      '<path d="M12 3.5 19 6v6c0 4-3 7-7 8.5C8 19 5 16 5 12V6z"/>'
               + '<path d="M9.2 12.2l2 2 3.6-3.9"/>',
@@ -3187,6 +3275,7 @@
     // L'entraide vit à part : c'est le seul endroit où l'on croise d'autres
     // personnes, autant que la navigation le dise.
     tabs.push({ key:'chat', label:'Entraide', section:'Social', alpha:true });
+    tabs.push({ key:'parrainage', label:'Classement', alpha:true });
     tabs.push({ key:'succes', label:'Récompenses', alpha:true });
     // Espace admin : tout en bas, et seulement pour les comptes administrateurs.
     // (L'API vérifie de toute façon le rôle côté serveur.)
@@ -3208,8 +3297,12 @@
         + ((t.key === 'objectifs' && objectifsNouveaux().length)
            || (t.key === 'partenaires' && partenairesNouveaux().length)
            || (t.key === 'simulateur' && simulateurNeuf())
+           || (t.key === 'parrainage' && parrainageNeuf())
             ? '<span class="nav-badge">New</span>' : '')
-        + (t.alpha ? '<span class="nav-badge alpha">Alpha</span>' : '')
+        // « New » remplace « Alpha » le temps qu'on découvre l'onglet : deux
+        // pastilles côte à côte ne diraient plus rien.
+        + (t.alpha && !(t.key === 'parrainage' && parrainageNeuf())
+            ? '<span class="nav-badge alpha">Alpha</span>' : '')
         + (t.key === 'chat' && state.chat.nonLus
             ? '<span class="nav-pastille">'+state.chat.nonLus+'</span>' : '')
         + '</button>';
@@ -8804,13 +8897,9 @@
       + '<text x="36" y="42" text-anchor="middle" font-size="17" font-weight="800" fill="#fff">'
         + n + '</text></svg>';
 
-    // Le classement se relit à l'ouverture de la page, puis toutes les
-    // 45 secondes tant qu'on la regarde : assez frais pour voir bouger les
-    // places, assez espacé pour ne pas marteler le serveur.
-    if(state.compte && (!state.parrainage.charge
-        || Date.now() - (state.parrainage.quand || 0) > 45000)){
-      parrainageCharger();
-    }
+    // Les badges de parrainage se lisent ici aussi : sans ce relevé, quelqu'un
+    // qui ne passe jamais par le Classement ne les verrait jamais tomber.
+    if(state.compte && !state.parrainage.charge) parrainageCharger();
 
     var entete = '<div class="suc-tete">'
       + '<div class="obj-tete-r">'+anneau+'</div>'
@@ -8836,7 +8925,6 @@
 
     return '<div class="view">'
       + entete
-      + parrainageHtml()
       + '<div class="suc-sec"><div class="suc-sec-t">Collection'
         + '<span class="suc-sec-h">plus tu débloques, plus tu montes</span></div>'
         + '<div class="suc-paliers">'
@@ -10565,7 +10653,8 @@
     // plutôt que de reconstruire la nav entière.
     [['objectifs', objectifsNouveaux().length],
      ['partenaires', partenairesNouveaux().length],
-     ['simulateur', simulateurNeuf() ? 1 : 0]].forEach(function(n){
+     ['simulateur', simulateurNeuf() ? 1 : 0],
+     ['parrainage', parrainageNeuf() ? 1 : 0]].forEach(function(n){
       var row = app.querySelector('.nav-row[data-tab="'+n[0]+'"]');
       if(!row) return;
       var pastille = row.querySelector('.nav-badge:not(.alpha)');
@@ -10578,6 +10667,20 @@
         pastille.remove();
       }
     });
+    // Sur le Classement, « New » prend la place de « Alpha » : la pastille
+    // d'origine revient une fois l'onglet découvert.
+    var ligneParr = app.querySelector('.nav-row[data-tab="parrainage"]');
+    if(ligneParr){
+      var alphaParr = ligneParr.querySelector('.nav-badge.alpha');
+      if(parrainageNeuf() && alphaParr){
+        alphaParr.remove();
+      } else if(!parrainageNeuf() && !alphaParr){
+        var a = document.createElement('span');
+        a.className = 'nav-badge alpha';
+        a.textContent = 'Alpha';
+        ligneParr.appendChild(a);
+      }
+    }
     // Même chose pour le compteur de messages non lus : la nav n'étant bâtie
     // qu'une fois, il restait figé sur sa valeur du premier rendu — visible
     // même une fois qu'on avait ouvert l'Entraide.
@@ -10636,6 +10739,7 @@
                       : state.tab === 'partenaires' ? partenairesHtml()
                       : state.tab === 'profil' ? profilHtml()
                       : state.tab === 'chat' ? chatHtml()
+                      : state.tab === 'parrainage' ? parrainageVueHtml()
                       : state.tab === 'succes' ? succesHtml()
                       : state.tab === 'sav' ? savAdminHtml()
                       : state.tab === 'admin' ? adminHtml()
@@ -11040,6 +11144,8 @@
           if(!vuCharte) state.chatCharte = true;
           chatCharger(false);
         }
+        // Le Classement est découvert : la pastille « New » peut s'éteindre.
+        if(target === 'parrainage') marquerFait('parrainage-vu');
         // Revenir sur l'onglet Simulateur ramène à la liste des simulateurs.
         if(target === 'simulateur') state.sim.open = null;
         if(target === 'objectifs') state.objectifOuvert = null;
@@ -11146,6 +11252,16 @@
         break;
       case 'pf-alerte-ok':
         setState({ pfAlerte: null });
+        break;
+      case 'parr-partager':
+        if(navigator.share){
+          navigator.share({
+            title: 'FreeHub',
+            text: 'FreeHub m’aide à comprendre l’administratif de mon activité. '
+                + 'C’est gratuit, voici mon lien :',
+            url: parrainageLien(),
+          }).catch(function(){});   // partage annulé : rien à signaler
+        }
         break;
       case 'parr-copier': {
         var champ = document.querySelector('[data-parr-lien]');

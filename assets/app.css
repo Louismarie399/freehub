@@ -3134,6 +3134,25 @@
     padding:24px;margin-bottom:22px}
   .parr-t{font-size:18px;font-weight:800;letter-spacing:-.015em;color:var(--ink)}
   .parr-s{font-size:13.5px;color:var(--muted2);line-height:1.55;margin-top:3px;max-width:560px}
+  .parr-sect{font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:14px;display:flex;align-items:baseline;gap:10px}
+  .parr-sect-h{font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;
+    color:var(--muted)}
+  .parr-vide{padding:26px 18px;text-align:center;font-size:14px;color:var(--muted2);
+    background:var(--soft);border-radius:14px}
+
+  /* Les règles du jeu, sous l'encadré personnel. */
+  .parr-regles{margin-top:26px;padding-top:22px;border-top:1px solid var(--border)}
+  .parr-etapes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .parr-et{display:flex;gap:11px;align-items:flex-start}
+  .parr-et-n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--blue);
+    color:#fff;font-size:12.5px;font-weight:800;display:flex;align-items:center;
+    justify-content:center;margin-top:1px}
+  .parr-et-t{font-size:14px;font-weight:800;color:var(--ink);line-height:1.35}
+  .parr-et-d{font-size:13px;color:var(--muted2);line-height:1.5;margin-top:3px}
+  .parr-note{margin-top:18px;font-size:12.5px;color:var(--muted);line-height:1.6}
+  @media (max-width:820px){ .parr-etapes{grid-template-columns:1fr} }
+
   .parr-lien{display:flex;gap:9px;margin-top:16px}
   .parr-lien input{flex:1;min-width:0;padding:11px 14px;border:1.5px solid var(--border);
     border-radius:12px;font-family:inherit;font-size:13.5px;font-weight:600;
@@ -3142,6 +3161,10 @@
     color:#fff;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;
     transition:.16s var(--ease)}
   .parr-copie:hover{filter:brightness(1.08)}
+  .parr-part{flex:none;padding:11px 20px;border:1.5px solid var(--border);border-radius:12px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:13.5px;
+    font-weight:800;cursor:pointer;transition:.16s var(--ease)}
+  .parr-part:hover{border-color:var(--blue);color:var(--blue)}
   .parr-moi{margin-top:14px;font-size:14px;font-weight:700;color:var(--ink)}
 
   /* Le podium : jusqu'à trois blocs, le premier surélevé. En flex centré plutôt
@@ -3172,7 +3195,7 @@
   .parr-l-c{flex:none;color:var(--muted2);font-weight:800}
   @media (max-width:600px){
     .parr-lien{flex-direction:column}
-    .parr-copie{width:100%}
+    .parr-copie,.parr-part{width:100%}
   }
 
   /* ---------- BIC ou BNC : l'orientation ---------- */
