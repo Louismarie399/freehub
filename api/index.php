@@ -93,7 +93,14 @@ if (isset($routes[$cle])) {
         ($routes[$cle])();
     } catch (Throwable $e) {
         // Jamais de détail technique au client : il partirait dans le navigateur.
-        error_log('[FreeHub] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+        // error_log() part dans /dev/null chez l'hébergeur : on tient donc notre
+        // propre journal, hors webroot, sinon une erreur 500 est indiagnosticable.
+        $ligne = '[' . gmdate('Y-m-d H:i:s') . '] ' . $cle . ' — '
+               . get_class($e) . ' : ' . $e->getMessage()
+               . ' @ ' . basename($e->getFile()) . ':' . $e->getLine() . "\n";
+        error_log($ligne);
+        @file_put_contents(rtrim(config('data_dir'), '/') . '/erreurs.log',
+                           $ligne, FILE_APPEND | LOCK_EX);
         json_reponse(['error' => 'Erreur interne du serveur.'], 500);
     }
 }
