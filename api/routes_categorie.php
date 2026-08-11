@@ -44,6 +44,18 @@ function route_categorie(): void
     $cle = (string) config('anthropic_api_key');
     if ($cle === '') erreur('Orientation indisponible pour le moment.', 503);
 
+    // Le quota est réservé AVANT l'appel, pas après. Écrire au retour revenait
+    // à toucher la base après une connexion restée ouverte une dizaine de
+    // secondes : SQLite refusait alors l'écriture (base verrouillée) environ
+    // une fois sur quatre. Réserver d'abord protège aussi mieux d'une boucle,
+    // puisqu'un appel qui échoue compte quand même.
+    try {
+        db()->prepare('INSERT INTO categorie_appels(user_id, created) VALUES (?,?)')
+            ->execute([$u['id'], maintenant()]);
+    } catch (Throwable $e) {
+        error_log('[FreeHub] quota categorie non enregistre : ' . $e->getMessage());
+    }
+
     $message = "ACTIVITÉ DÉCLARÉE\n" . ($activite !== '' ? $activite : '(non précisée)')
         . "\n\nCE QUE FAIT CONCRÈTEMENT CETTE PERSONNE\n"
         . ($description !== '' ? $description : '(non précisé)')
@@ -102,16 +114,6 @@ function route_categorie(): void
         }
         return $out;
     };
-
-    // L'orientation est obtenue et payée : le compteur ne doit en aucun cas
-    // faire échouer la réponse. SQLite peut refuser une écriture concurrente
-    // (base verrouillée) — on perd alors une unité de quota, pas le résultat.
-    try {
-        db()->prepare('INSERT INTO categorie_appels(user_id, created) VALUES (?,?)')
-            ->execute([$u['id'], maintenant()]);
-    } catch (Throwable $e) {
-        error_log('[FreeHub] quota categorie non enregistre : ' . $e->getMessage());
-    }
 
     json_reponse([
         'categorie'  => $cat,
