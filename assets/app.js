@@ -1490,6 +1490,14 @@
     if(Date.now() >= Date.parse(PARR_NEUF_FIN)) return false;
     return !state.faits['parrainage-vu'];
   }
+  // L'accueil a été refondu : le marqueur signale la nouveauté à ceux qui
+  // connaissent l'ancienne page, et s'éteint dès qu'ils l'ont vue.
+  var ACC_NEUF = '2026-08-14';
+  var ACC_NEUF_FIN = '2026-09-15';
+  function accueilNeuf(){
+    if(Date.now() >= Date.parse(ACC_NEUF_FIN)) return false;
+    return !state.faits['accueil-neuf-vu:' + ACC_NEUF];
+  }
   function partenairesNouveaux(){
     if(Date.now() >= Date.parse(PART_NEUF_FIN)) return [];
     var out = [];
@@ -3329,6 +3337,7 @@
            || (t.key === 'partenaires' && partenairesNouveaux().length)
            || (t.key === 'simulateur' && simulateurNeuf())
            || (t.key === 'parrainage' && parrainageNeuf())
+           || (t.key === 'accueil' && accueilNeuf())
             ? '<span class="nav-badge">New</span>' : '')
         // L'étiquette est toujours posée ; render() la masque sur les lignes
         // qui portent déjà un « New » ou un compteur.
@@ -3385,38 +3394,6 @@
     return { ca:ca, cle:cle, res:r[cle], tous:r,
              label: STATUT_LABELS[cle] || cle,
              part: ca > 0 ? Math.round(r[cle].net / ca * 100) : 0 };
-  }
-
-  // L'action du moment : ce qui débloque le plus, dans l'ordre.
-  function actionDuMoment(){
-    var secs = sectionsProfil();
-    var trou = secs.filter(function(x){ return !x.ok; })[0];
-    if(trou){
-      return { ico:'🗂', titre:'Complète « '+trou.titre+' »',
-        texte:'Il manque '+trou.manquants.join(', ').toLowerCase()
-          + ' - sans ça, tes simulateurs travaillent à l’aveugle.',
-        cta:'Compléter mon profil', action:'open-profil', data:'' };
-    }
-    // Sinon : la prochaine étape non faite du parcours le plus avancé.
-    // On propose d'abord de finir ce qui est entamé, sinon ce que le profil désigne.
-    var candidats = state.added.filter(function(id){ return !!obj(id); }).map(function(id){
-      var o = obj(id), pr = pctOf(id);
-      return { id:id, pct:pr.pct, done:pr.done, o:o,
-               reco: o.pertinent && o.pertinent(state.profil) };
-    }).filter(function(x){ return x.pct < 100; })
-      .sort(function(a, b){
-        if((a.done > 0) !== (b.done > 0)) return a.done > 0 ? -1 : 1;
-        if(a.reco !== b.reco) return a.reco ? -1 : 1;
-        return b.pct - a.pct;
-      });
-    if(candidats.length){
-      var c = candidats[0], st = c.o.steps[c.done];
-      return { ico:'🎯', titre:st.t, texte:c.o.title + ' · ' + st.h,
-        cta:'Reprendre où j’en suis', action:'view', data:c.id, color:dom(c.o).c };
-    }
-    return { ico:'🎉', titre:'Tous tes objectifs sont bouclés',
-      texte:'Tu as fait le tour - explore les simulateurs pour affiner tes chiffres.',
-      cta:'Revoir mes parcours', action:'tab', data:'' };
   }
 
   // Met à jour le hero en direct pendant le glissement, sans re-render : sinon
@@ -3508,8 +3485,8 @@
       action:'auth-open' });
 
     if(!portes.length) return '';
-    return '<div class="acc-bloc">'
-      + '<div class="acc-bloc-h">Par où on continue ?</div>'
+    return '<div class="acc-sec">'
+      + '<div class="acc-sec-h">Par où on continue ?</div>'
       + '<div class="acc-portes">'+portes.slice(0, 4).map(function(x){
           return '<button class="acc-porte" style="--c:'+x.c+'" data-action="'+x.action+'"'
             + (x.sim ? ' data-sim="'+x.sim+'"' : '')
@@ -3532,16 +3509,63 @@
     return 'Bonsoir';
   }
 
+  // Le mot du jour. Volontairement sans aucun chiffre ni règle fiscale : ces
+  // phrases changent tous les jours et ne sont pas datées, elles n'ont donc
+  // rien à faire de la loi de finances. Elles parlent de méthode et de moral,
+  // ce qui est justement ce qui manque quand on ouvre son administratif.
+  var MOTS_DU_JOUR = [
+    'L’administratif n’est pas un test d’intelligence. C’est une suite d’habitudes.',
+    'Une tâche ouverte pèse plus lourd qu’une tâche faite. Commence par la plus courte.',
+    'Tu n’as pas à tout comprendre aujourd’hui. Juste la prochaine étape.',
+    'Personne ne naît en sachant lire un avis d’imposition. Ça s’apprend, comme le reste.',
+    'Dix minutes maintenant valent mieux qu’une soirée entière la veille de l’échéance.',
+    'Le bon réflexe : noter la question qui t’angoisse, puis aller chercher la réponse.',
+    'Ranger ses justificatifs au fil de l’eau, c’est se rendre service à soi-même dans six mois.',
+    'Un doute sur une dépense ? Mieux vaut le lever tout de suite que le porter toute l’année.',
+    'Ton temps de travail facturable n’est pas ton seul temps utile. Celui-ci compte aussi.',
+    'La sérénité, ce n’est pas tout savoir. C’est savoir où regarder.',
+    'Avancer d’une étape par semaine, c’est cinquante-deux étapes dans l’année.',
+    'Le pire moment pour découvrir une obligation, c’est le jour de l’échéance.',
+    'Se tromper puis corriger fait partie du métier. L’administration prévoit ça.',
+    'Tu gères une entreprise. Le fait qu’elle soit petite ne la rend pas moins réelle.',
+    'Un chiffre que tu ne comprends pas est un chiffre qu’il faut poser à quelqu’un.',
+    'Ce qui est écrit quelque part n’a plus besoin d’être retenu.',
+    'La question bête n’existe pas. L’Entraide est là pour ça.',
+    'Fais le point une fois par mois plutôt que de tout revérifier une fois par an.',
+    'Facturer, relancer, encaisser : la troisième étape compte autant que la première.',
+    'Ce que tu mets en place aujourd’hui, tu ne le remettras plus jamais en place.',
+    'Un statut n’est pas un engagement à vie. Il se change quand il ne colle plus.',
+    'Le meilleur outil est celui que tu rouvriras la semaine prochaine.',
+    'Mettre un montant de côté chaque mois évite d’avoir à en trouver un d’un coup.',
+    'Tu n’es pas en retard. Tu es en train de t’y mettre.',
+  ];
+
+  // Le même mot pour tout le monde et pour toute la journée : indexé sur le
+  // quantième, pas sur un tirage au sort qui changerait à chaque rendu.
+  function motDuJour(){
+    var d = new Date();
+    var jour = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+    return MOTS_DU_JOUR[(jour + d.getFullYear()) % MOTS_DU_JOUR.length];
+  }
+
+  function dateDuJour(){
+    return new Date().toLocaleDateString('fr-FR',
+      { weekday:'long', day:'numeric', month:'long' });
+  }
+
   function accueilHtml(){
     var p = state.profil;
     var prenom = (p.prenom || '').trim();
     var ech = prochaineEcheance();
-    var act = actionDuMoment();
 
-    // Une salutation, pas un tableau de bord : le bandeau chiffré a été retiré,
-    // le simulateur fait déjà ce travail mieux que lui.
-    var hero = '<div class="acc-salut">'+salutation()
-      + (prenom ? ' '+esc(prenom) : '')+' <span class="acc-salut-m">👋</span></div>';
+    // --- Le bandeau d'accueil : la date, la salutation, le mot du jour ---
+    var hero = '<div class="acc-tete">'
+      + '<div class="acc-tete-d">'+esc(dateDuJour())+'</div>'
+      + '<div class="acc-salut">'+salutation()
+        + (prenom ? ' '+esc(prenom) : '')+' <span class="acc-salut-m">👋</span></div>'
+      + '<div class="acc-mot"><span class="acc-mot-q">“</span>'
+        + esc(motDuJour())+'</div>'
+    + '</div>';
 
     // --- L'échéance : une ligne datée, pas un pavé ---
     var carteEch = ech
@@ -3554,27 +3578,6 @@
         + '</button>'
       : '';
 
-    var carteAct = '<button class="acc-card" style="--c:'+(act.color || '#2f6bff')+'"'
-      + ' data-action="'+act.action+'"'+(act.data ? ' data-id="'+act.data+'"' : '')
-      + (act.action === 'tab' ? ' data-tab="objectifs"' : '')+'>'
-      + '<div class="acc-card-h"><span class="acc-ico">'+act.ico+'</span>À faire maintenant</div>'
-      + '<div class="acc-card-t">'+esc(act.titre)+'</div>'
-      + '<div class="acc-card-d">'+esc(act.texte)+'</div>'
-      + '<div class="acc-card-f"><strong>'+esc(act.cta)+' →</strong></div>'
-      + '</button>';
-
-    var secs = sectionsProfil();
-    var faits = secs.reduce(function(a, x){ return a + x.faits; }, 0);
-    var total = secs.reduce(function(a, x){ return a + x.total; }, 0);
-    var pctProfil = total ? Math.round(faits / total * 100) : 100;
-    var carteProfil = '<button class="acc-card" style="--c:#7c3aed" data-action="open-profil">'
-      + '<div class="acc-card-h"><span class="acc-ico">🗂</span>Ton profil</div>'
-      + '<div class="acc-card-ring">'+anneauSection(pctProfil, '#7c3aed', 62)+'</div>'
-      + '<div class="acc-card-d">'+faits+' information'+(faits>1?'s':'')+' sur '+total
-        + '. Plus il est complet, plus tes simulateurs sont justes.</div>'
-      + '<div class="acc-card-f"><strong>'+(pctProfil === 100 ? 'Le revoir' : 'Le compléter')+' →</strong></div>'
-      + '</button>';
-
     // --- Objectifs en cours, en compact ---
     var enCours = state.added.filter(function(id){ return !!obj(id); })
       .map(function(id){ return obj(id); }).slice(0, 4).map(function(o){
@@ -3586,19 +3589,37 @@
         + '</button>';
     }).join('');
 
-    return '<div class="view">'
-      + hero
-      + sereniteCarteHtml()
-      + repriseHtml()
-      + carteEch
-      + portesHtml()
+    var reprise = repriseHtml();
+
+    // Deux colonnes plutôt qu'une pile : à gauche ce sur quoi on agit, à droite
+    // où l'on en est. Tout empilé, la page se lisait comme une liste de courses
+    // et la moitié de la largeur restait vide sur un écran d'ordinateur.
+    var colonneGauche = ''
+      + (reprise
+          ? '<div class="acc-sec"><div class="acc-sec-h">Reprendre</div>'+reprise+'</div>'
+          : '')
+      + portesHtml();
+
+    var colonneDroite = ''
+      + '<div class="acc-sec"><div class="acc-sec-h">Ta sérénité</div>'
+        + sereniteCarteHtml(true)+'</div>'
+      + (carteEch
+          ? '<div class="acc-sec"><div class="acc-sec-h">À venir</div>'+carteEch+'</div>'
+          : '')
       + (enCours
-          ? '<div class="acc-bloc">'
-            + '<div class="acc-bloc-h">Tes objectifs'
+          ? '<div class="acc-sec">'
+            + '<div class="acc-sec-h">Tes objectifs'
               + '<button class="btn-link" data-action="tab" data-tab="objectifs">Tout voir →</button></div>'
             + '<div class="acc-objs">'+enCours+'</div>'
           + '</div>'
-          : '')
+          : '');
+
+    return '<div class="view">'
+      + hero
+      + '<div class="acc-grille">'
+        + '<div class="acc-col">'+colonneGauche+'</div>'
+        + '<aside class="acc-rail">'+colonneDroite+'</aside>'
+      + '</div>'
       + '</div>';
   }
 
@@ -9611,7 +9632,9 @@
   }
 
   // La carte de l'accueil : le chiffre, la jauge, et ce qui le ferait monter.
-  function sereniteCarteHtml(){
+  // `rail` : version étroite pour la colonne de droite de l'accueil. Même
+  // contenu, la mise en page passe en colonne (voir .ser.rail dans le CSS).
+  function sereniteCarteHtml(rail){
     var s = serenite();
     var n = sereniteNiveau(s.score);
     // On ne montre que les leviers non acquis : une liste de choses à faire,
@@ -9619,9 +9642,9 @@
     var leviers = s.preuves.filter(function(x){ return x.pct < 100; })
       .sort(function(a, b){ return a.pct - b.pct; }).slice(0, 3);
 
-    return '<div class="ser" style="--c:'+n.c+'">'
+    return '<div class="ser'+(rail ? ' rail' : '')+'" style="--c:'+n.c+'">'
       + '<div class="ser-h">'
-        + '<div class="ser-jauge">'+anneauSection(s.score, n.c, 96, true)+'</div>'
+        + '<div class="ser-jauge">'+anneauSection(s.score, n.c, rail ? 84 : 96, true)+'</div>'
         + '<div class="ser-x">'
           + '<div class="ser-k">Ton score de sérénité</div>'
           + '<div class="ser-t">'+n.em+' '+n.l+'</div>'
@@ -10746,7 +10769,8 @@
     [['objectifs', objectifsNouveaux().length],
      ['partenaires', partenairesNouveaux().length],
      ['simulateur', simulateurNeuf() ? 1 : 0],
-     ['parrainage', parrainageNeuf() ? 1 : 0]].forEach(function(n){
+     ['parrainage', parrainageNeuf() ? 1 : 0],
+     ['accueil', accueilNeuf() ? 1 : 0]].forEach(function(n){
       var row = app.querySelector('.nav-row[data-tab="'+n[0]+'"]');
       if(!row) return;
       var pastille = row.querySelector('.nav-badge:not(.alpha)');
@@ -11246,6 +11270,9 @@
         }
         // Le Classement est découvert : la pastille « New » peut s'éteindre.
         if(target === 'parrainage') marquerFait('parrainage-vu');
+        // L'accueil est l'écran d'atterrissage : on n'éteint son « New » que sur
+        // un vrai clic, sinon il disparaîtrait avant même d'avoir été vu.
+        if(target === 'accueil') marquerFait('accueil-neuf-vu:' + ACC_NEUF);
         // Les badges débloqués sont vus dès qu'on ouvre la vitrine.
         if(target === 'succes') badgesMarquerVus();
         // La file des réclamations est relue à l'ouverture : le compteur doit

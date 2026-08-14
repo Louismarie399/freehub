@@ -576,6 +576,9 @@
   .acc-reprise-d{font-size:13px;color:var(--muted);line-height:1.4}
   .acc-reprise-cta{flex:none;padding:11px 16px;border-radius:11px;background:var(--c);color:#fff;
     font-size:13px;font-weight:800}
+  /* Dans une section de l'accueil, la carte perd sa marge basse : la section
+     l'encadre déjà, et deux cadres imbriqués font une carte dans une carte. */
+  .acc-sec > .acc-reprise{margin-bottom:0}
 
   /* La salutation : une ligne chaleureuse, pas un bandeau */
   .acc-salut{font-size:23px;font-weight:800;letter-spacing:-.018em;color:var(--ink);
@@ -2841,11 +2844,46 @@
     font-size:13.5px;font-weight:800;color:var(--c)}
   .acc-card-f span{font-size:12px;font-weight:600;color:var(--muted)}
 
-  .acc-bloc{margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  /* ---------- Accueil : bandeau, deux colonnes, sections ---------- */
+  /* Le bandeau d'accueil. Il porte la date, la salutation et le mot du jour :
+     trois lignes qui situent, plutôt qu'une salutation seule flottant au-dessus
+     d'une pile de cartes. */
+  .acc-tete{margin-bottom:22px;padding:22px 26px;border-radius:20px;position:relative;
+    overflow:hidden;background:linear-gradient(135deg,var(--surface),var(--soft));
+    border:1px solid var(--border)}
+  .acc-tete::after{content:'';position:absolute;top:-70px;right:-40px;width:260px;height:260px;
+    border-radius:50%;pointer-events:none;
+    background:radial-gradient(circle,color-mix(in srgb,var(--blue) 16%,transparent),transparent 68%)}
+  .acc-tete-d{position:relative;font-size:12px;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--muted)}
+  .acc-tete .acc-salut{position:relative;margin:5px 0 0;font-size:26px}
+  /* Le mot du jour : une voix, pas une consigne. D'où l'italique et le guillemet. */
+  .acc-mot{position:relative;margin-top:12px;padding-left:16px;max-width:640px;
+    border-left:3px solid color-mix(in srgb,var(--blue) 55%,transparent);
+    font-size:14px;font-style:italic;color:var(--muted2);line-height:1.55}
+  .acc-mot-q{font-style:normal;font-weight:800;color:var(--blue);margin-right:2px}
+
+  /* Deux colonnes : les actions à gauche, l'état des lieux à droite. */
+  .acc-grille{display:grid;grid-template-columns:minmax(0,1fr) 336px;gap:18px;align-items:start}
+  .acc-col,.acc-rail{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .acc-sec{background:var(--surface);border:1px solid var(--border);border-radius:16px;
     padding:16px 20px 18px}
-  .acc-bloc-h{display:flex;align-items:center;justify-content:space-between;
-    font-size:12px;font-weight:800;
+  .acc-sec-h{display:flex;align-items:center;justify-content:space-between;
+    font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
     color:var(--muted);margin-bottom:12px}
+  /* Dans le rail, les tuiles reviennent sur une seule colonne. */
+  .acc-rail .acc-objs{grid-template-columns:minmax(0,1fr)}
+  /* Sous 1100 px, le rail passe dessous : à cette largeur, 336 px de colonne
+     étranglent la colonne principale au lieu de l'équilibrer. */
+  @media (max-width:1100px){
+    .acc-grille{grid-template-columns:minmax(0,1fr)}
+    .acc-rail .acc-objs{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  }
+  @media (max-width:640px){
+    .acc-tete{padding:18px 18px 20px}
+    .acc-tete .acc-salut{font-size:22px}
+    .acc-mot{font-size:13.5px}
+  }
   .acc-objs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
   .acc-obj{display:flex;align-items:center;gap:11px;background:var(--bg);border:1px solid transparent;
     border-radius:12px;padding:9px 13px;cursor:pointer;text-align:left;font-family:inherit;
@@ -3415,6 +3453,30 @@
   .ser-l-d{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-top:1px}
   .ser-l-p{flex:none;font-size:12.5px;font-weight:800;color:var(--muted2);
     background:#f2f5fa;border-radius:999px;padding:4px 11px}
+
+  /* Variante rail : la même carte dans la colonne étroite de l'accueil. Elle y
+     passe en colonne et perd son cadre — la section qui la porte en a déjà un,
+     et deux bordures imbriquées font une carte dans une carte. */
+  .ser.rail{background:none;border:none;box-shadow:none;padding:0;margin:0}
+  .ser.rail .ser-h{flex-direction:column;align-items:flex-start;gap:14px}
+  .ser.rail .ser-jauge{align-self:center}
+  .ser.rail .ser-x{width:100%}
+  .ser.rail .ser-t{font-size:19px}
+  .ser.rail .ser-plus{align-self:stretch;text-align:center}
+  .ser.rail .ser-liste{margin-top:14px}
+  /* Sous 1100 px le rail passe SOUS la colonne principale et retrouve toute la
+     largeur : la carte reprend alors sa mise en page horizontale, sans quoi la
+     jauge flotterait seule au milieu du vide. Ces surcharges doivent rester
+     après les règles ci-dessus — à spécificité égale, c'est l'ordre qui tranche. */
+  @media (max-width:1100px){
+    .ser.rail .ser-h{flex-direction:row;align-items:center;gap:20px}
+    .ser.rail .ser-jauge{align-self:auto}
+    .ser.rail .ser-plus{align-self:flex-start;text-align:left}
+  }
+  @media (max-width:520px){
+    .ser.rail .ser-h{flex-direction:column;align-items:flex-start}
+    .ser.rail .ser-jauge{align-self:center}
+  }
 
   /* Le curseur de ressenti : une échelle, pas dix cases à lire */
   .onb-curseur{margin:20px 0 26px}
