@@ -938,7 +938,7 @@
         {t:'Comprendre ce qui change', h:'Facture papier vs électronique, et pour qui', duree:'10 min', illu:'loupe'},
         {t:'Situer ton calendrier d’obligation', h:'La date dépend de la taille de ton entreprise', duree:'5 min', illu:'calendrier'},
         {t:'Choisir un outil compatible', h:'Une plateforme de facturation conforme', part:1, duree:'20 min', illu:'outil'},
-        {t:'Adapter tes factures', h:'Mentions et format électronique', duree:'30 min', illu:'facture'},
+        {t:'Adapter tes factures', h:'Mentions et format électronique', part:2, duree:'30 min', illu:'facture'},
       ]},
     { id:'facturer-etranger', dom:'tva', title:'Facturer à l’étranger, comment ça marche',
       suite:['tva-comprendre','facture-elec'],
@@ -1544,7 +1544,14 @@
   // l'Entraide, la modération) puis l'identité. Tout cela vivait auparavant
   // dans le corps de la page et mangeait la hauteur du fil de discussion.
   function titreOutilsHtml(){
-    var out = '';
+    // Un raccourci que personne ne connaît n'existe pas : la palette a aussi un
+    // bouton, qui affiche le raccourci pour l'apprendre au passage.
+    var out = '<button class="rc-btn" data-action="rech-open" aria-label="Rechercher">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+        + 'stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>'
+      + '<span class="rc-btn-t">Rechercher</span>'
+      + '<span class="rc-btn-k">'+(partageSurMac() ? '⌘K' : 'Ctrl K')+'</span>'
+    + '</button>';
     if(state.tab === 'chat'){
       var c = state.chat;
       out += '<span class="ptitre-stats">'
@@ -2743,6 +2750,8 @@
     demandesNb: 0,          // réclamations en attente, pour la pastille admin
     // Image de réussite en cours de composition : { id, format, fond }.
     partageObj: null,
+    // Palette de recherche : ouverte au clavier ou depuis la barre de titre.
+    rech: { ouvert:false, q:'', res:[], ia:[], iaEtat:null, sel:0 },
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
     simIntro: null,         // simulateur dont on montre l'explication d'accueil
@@ -4010,6 +4019,302 @@
           + finis.map(function(id){ return objectifTuileHtml(id, false); }).join('')
         + '</div></div>'
       + '</div></div>';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Recherche — la barre qui mène partout
+  // ---------------------------------------------------------------------------
+  // Deux étages. Le premier cherche par mots-clés dans tout ce que contient
+  // l'application : instantané, gratuit, hors ligne. Le second n'entre en jeu
+  // que pour les questions en phrases, que les mots-clés ne savent pas relier
+  // à un écran — et il ne fait qu'ORIENTER, il ne répond jamais sur le fond.
+
+  // Accents et casse retirés : « société » et « societe » doivent trouver.
+  function rechNorm(s){
+    return (s || '').toString().toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[’']/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  var RECH_ONGLETS = [
+    { id:'accueil',     l:'Accueil',          d:'Ton point de situation du jour' },
+    { id:'objectifs',   l:'Mes objectifs',    d:'Tous les parcours guidés' },
+    { id:'calendrier',  l:'Calendrier',       d:'Les échéances qui te concernent' },
+    { id:'simulateur',  l:'Simulateurs',      d:'Tous les calculs sur tes chiffres' },
+    { id:'lexique',     l:'Lexique',          d:'Les mots de l’administratif expliqués' },
+    { id:'partenaires', l:'Nos partenaires',  d:'Les offres négociées pour les membres' },
+    { id:'chat',        l:'Entraide',         d:'Poser une question aux autres membres' },
+    { id:'parrainage',  l:'Classement',       d:'Ton lien de partage et le classement' },
+    { id:'succes',      l:'Récompenses',      d:'Tes badges et ta collection' },
+    { id:'profil',      l:'Mon profil',       d:'Statut, régime, chiffres de ton activité' },
+  ];
+
+  var RECH_SIMS = [
+    { id:'cote',      l:'Combien mettre de côté ce mois',
+      d:'Ce qu’il faut provisionner pour ne pas être pris de court' },
+    { id:'categorie', l:'BIC ou BNC ?',
+      d:'Dans quelle catégorie tombe ton activité' },
+    { id:'depenses',  l:'Qu’est-ce qui peut passer sur ta société',
+      d:'Tes dépenses passées en revue une par une' },
+    { id:'vl',        l:'Versement libératoire ou impôt classique',
+      d:'La comparaison chiffrée sur ton cas' },
+    { id:'tva',       l:'Est-ce intéressant de passer à la TVA',
+      d:'Ce que le passage change pour toi et tes clients' },
+    { id:'statut',    l:'Quand passer en société',
+      d:'Micro, EURL ou SASU : le seuil de bascule' },
+    { id:'optim',     l:'Optimiser ma société',
+      d:'L’équilibre entre rémunération et dividendes' },
+  ];
+
+  // L'index complet, reconstruit à la demande : le catalogue et le lexique sont
+  // figés, mais les objectifs ajoutés et le profil changent en cours de route.
+  function rechIndex(){
+    var out = [];
+    RECH_ONGLETS.forEach(function(t){
+      out.push({ type:'onglet', id:t.id, l:t.l, d:t.d, ico:'🧭', mots:t.l + ' ' + t.d });
+    });
+    RECH_SIMS.forEach(function(s){
+      out.push({ type:'sim', id:s.id, l:s.l, d:s.d, ico:'📊', mots:s.l + ' ' + s.d });
+    });
+    catalog.forEach(function(o){
+      var etapes = o.steps.map(function(st){ return st.t + ' ' + (st.h || ''); }).join(' ');
+      out.push({ type:'objectif', id:o.id, l:o.title, d:o.desc, ico:'🎯',
+                 mots:o.title + ' ' + o.desc + ' ' + (o.pourquoi || '') + ' ' + etapes });
+    });
+    LEXIQUE.forEach(function(x){
+      out.push({ type:'lexique', id:x.id, l:x.t, d:x.court, ico:'📖',
+                 mots:x.t + ' ' + x.court + ' ' + (x.def || '') });
+    });
+    PARTENAIRES.forEach(function(pa, i){
+      if(pa.tease) return;   // partenaire encore secret : rien à indexer
+      out.push({ type:'partenaire', id:String(i), l:pa.nom, d:pa.kind, ico:'🤝',
+                 mots:pa.nom + ' ' + pa.kind });
+    });
+    return out;
+  }
+
+  // Les mots qui ne portent aucune information : dans une question entière, ils
+  // sont majoritaires, et les exiger ferait échouer toute recherche formulée en
+  // phrase — « comment ça se passe pour la facturation électronique » ne
+  // trouverait rien alors que « facturation électronique » est bien là.
+  var RECH_VIDES = (' a au aux avec ca ce ces cet cette comment dans de des du elle en est '
+    + 'et eux il ils je la le les leur lui ma mais me meme mes moi mon ne nos notre nous on '
+    + 'ont ou par pas peut plus pour quand que quel quelle qui quoi sa sans se ses son sont '
+    + 'sur ta te tes toi ton tu un une vos votre vous y faire fait faut passe je suis dois '
+    + 'puis-je c est qu il d un l a').split(' ');
+
+  // Score : un mot trouvé dans le titre pèse plus que dans le corps, et une
+  // correspondance en début de titre pèse plus qu'au milieu.
+  function rechScore(item, mots){
+    var titre = rechNorm(item.l), corps = rechNorm(item.mots);
+    var total = 0, trouves = 0;
+    for(var i = 0; i < mots.length; i++){
+      var m = mots[i];
+      var dansTitre = titre.indexOf(m);
+      if(dansTitre === 0)            { total += 12; trouves++; }
+      else if(dansTitre > 0)         { total += 8;  trouves++; }
+      else if(corps.indexOf(m) >= 0) { total += 3;  trouves++; }
+    }
+    // Il faut la moitié des mots utiles, jamais moins : sans ce seuil, un seul
+    // mot commun ferait remonter la moitié du catalogue.
+    return trouves >= Math.ceil(mots.length / 2) ? total : 0;
+  }
+
+  function rechLocale(q){
+    var tous = rechNorm(q).split(' ').filter(Boolean);
+    // On écarte les mots vides, sauf s'il ne reste rien — quelqu'un qui tape
+    // « ou » cherche peut-être vraiment ça.
+    var mots = tous.filter(function(m){
+      return m.length > 1 && RECH_VIDES.indexOf(m) < 0;
+    });
+    if(!mots.length) mots = tous;
+    if(!mots.length) return [];
+    return rechIndex().map(function(it){
+      return { it:it, s:rechScore(it, mots) };
+    }).filter(function(x){ return x.s > 0; })
+      .sort(function(a, b){ return b.s - a.s; })
+      .slice(0, 8).map(function(x){ return x.it; });
+  }
+
+  // Une question, ce n'est pas un mot-clé : plusieurs mots, ou une formulation
+  // interrogative. C'est ce qui décide si l'on propose l'aide assistée.
+  function rechEstQuestion(q){
+    var n = rechNorm(q);
+    if(n.split(' ').length >= 4) return true;
+    return /\?|^(comment|pourquoi|quand|est ce|qu est ce|dois je|puis je|faut il|combien|ou )/.test(n);
+  }
+
+  function rechOuvrir(){
+    state.rech = { ouvert:true, q:'', res:[], ia:[], iaEtat:null, sel:0 };
+    majRecherche();
+    setTimeout(function(){
+      var i = document.querySelector('[data-rech-input]');
+      if(i) i.focus();
+    }, 30);
+  }
+  function rechFermer(){
+    state.rech = { ouvert:false, q:'', res:[], ia:[], iaEtat:null, sel:0 };
+    majRecherche();
+  }
+
+  function rechSaisie(q){
+    state.rech.q = q;
+    state.rech.res = rechLocale(q);
+    state.rech.sel = 0;
+    // Une nouvelle frappe invalide la réponse assistée précédente.
+    state.rech.ia = [];
+    state.rech.iaEtat = null;
+    majRecherche();
+  }
+
+  function rechDemanderIA(){
+    var r = state.rech;
+    if(!r.q || r.iaEtat === 'charge') return;
+    if(!state.compte){ r.iaEtat = 'compte'; majRecherche(); return; }
+    r.iaEtat = 'charge';
+    majRecherche();
+    var dests = rechIndex().map(function(it){
+      return { type:it.type, id:it.id, l:it.l, d:it.d };
+    });
+    apiJson('POST', '/api/recherche', { question:r.q, destinations:dests })
+      .then(function(rep){
+        // La question a pu changer pendant l'appel : on ne remplace rien alors.
+        if(state.rech.q !== r.q) return;
+        if(!rep.ok){
+          state.rech.iaEtat = 'erreur';
+          state.rech.iaErreur = (rep.data && rep.data.error) || 'La recherche assistée n’a pas répondu.';
+        } else {
+          var index = rechIndex(), parCle = {};
+          index.forEach(function(it){ parCle[it.type + ':' + it.id] = it; });
+          state.rech.ia = ((rep.data && rep.data.resultats) || []).map(function(x){
+            var it = parCle[x.cle];
+            return it ? Object.assign({}, it, { pourquoi:x.pourquoi }) : null;
+          }).filter(Boolean);
+          state.rech.iaEtat = state.rech.ia.length ? 'ok' : 'vide';
+        }
+        majRecherche();
+      });
+  }
+
+  // Aller à une destination, quelle que soit sa nature.
+  function rechAller(item){
+    rechFermer();
+    if(item.type === 'onglet'){
+      if(item.id === 'profil'){ setState({ tab:'profil' }); return; }
+      setState({ tab:item.id, objectifOuvert:null });
+      return;
+    }
+    if(item.type === 'sim'){
+      state.sim.open = item.id;
+      setState({ tab:'simulateur' });
+      return;
+    }
+    if(item.type === 'objectif'){
+      // Un objectif qu'on n'a pas encore ajouté s'ouvre quand même : la fiche
+      // explique de quoi il s'agit, et propose de l'ajouter.
+      setState({ tab:'objectifs', objectifOuvert:item.id });
+      return;
+    }
+    if(item.type === 'lexique'){
+      setState({ tab:'lexique', lexOuvert:item.id });
+      return;
+    }
+    if(item.type === 'partenaire'){
+      setState({ tab:'partenaires' });
+    }
+  }
+
+  function rechLigneHtml(it, i, sel, pourquoi){
+    return '<button class="rc-l'+(i === sel ? ' sel' : '')+'" data-action="rech-aller"'
+      + ' data-i="'+i+'"'+(pourquoi ? ' data-ia="1"' : '')+'>'
+      + '<span class="rc-l-i">'+it.ico+'</span>'
+      + '<span class="rc-l-x">'
+        + '<span class="rc-l-t">'+esc(it.l)+'</span>'
+        + '<span class="rc-l-d">'+esc(pourquoi || it.d || '')+'</span>'
+      + '</span>'
+      + '<span class="rc-l-k">'+esc(RECH_TYPES[it.type] || '')+'</span>'
+    + '</button>';
+  }
+
+  var RECH_TYPES = { onglet:'Écran', sim:'Simulateur', objectif:'Parcours',
+                     lexique:'Lexique', partenaire:'Partenaire' };
+
+  function majRecherche(){
+    var root = document.getElementById('rech-root');
+    if(!root) return;
+    var r = state.rech;
+    if(!r || !r.ouvert){ root.innerHTML = ''; return; }
+
+    // La coquille n'est bâtie qu'une fois : on ne remplace que la liste, sinon
+    // le champ de saisie perdrait le focus à chaque lettre tapée.
+    if(!root.querySelector('.rc-modal')){
+      root.innerHTML = '<div class="overlay rc-overlay" data-action="rech-close">'
+        + '<div class="rc-modal" data-action="stop">'
+          + '<div class="rc-haut">'
+            + '<span class="rc-loupe" aria-hidden="true">🔍</span>'
+            + '<input data-rech-input class="rc-input" type="text" autocomplete="off"'
+              + ' spellcheck="false" placeholder="Cherche un mot, ou pose ta question…">'
+            + '<span class="rc-esc">esc</span>'
+          + '</div>'
+          + '<div class="rc-liste" data-rech-liste></div>'
+        + '</div></div>';
+    }
+
+    var liste = root.querySelector('[data-rech-liste]');
+    var html = '';
+
+    if(!r.q){
+      html = '<div class="rc-aide">'
+        + '<div class="rc-aide-t">Tape ce que tu cherches</div>'
+        + '<div class="rc-aide-d">Un mot — « TVA », « CFE », « Qonto » — trouve tout de suite '
+          + 'le parcours, le simulateur ou la définition qui va avec. '
+          + 'Une question entière — « comment ça se passe pour la facturation électronique » '
+          + '— peut être envoyée à l’assistant, qui t’orientera vers le bon écran.</div>'
+      + '</div>';
+    } else {
+      if(r.res.length){
+        html += '<div class="rc-sec">Dans l’application</div>'
+          + r.res.map(function(it, i){ return rechLigneHtml(it, i, r.sel); }).join('');
+      }
+
+      // L'aide assistée : proposée sur une question, jamais imposée.
+      if(rechEstQuestion(r.q) || !r.res.length){
+        html += '<div class="rc-sec">Recherche assistée</div>';
+        if(r.iaEtat === 'ok'){
+          html += r.ia.map(function(it, i){
+            return rechLigneHtml(it, r.res.length + i, r.sel, it.pourquoi);
+          }).join('');
+        } else if(r.iaEtat === 'charge'){
+          html += '<div class="rc-etat"><span class="rc-spin"></span>'
+            + 'On cherche où ça se trouve…</div>';
+        } else if(r.iaEtat === 'vide'){
+          html += '<div class="rc-etat">Rien dans l’application ne répond vraiment à ça. '
+            + 'L’Entraide est peut-être le bon endroit pour poser la question.</div>';
+        } else if(r.iaEtat === 'erreur'){
+          html += '<div class="rc-etat">'+esc(r.iaErreur || 'Indisponible pour le moment.')+'</div>';
+        } else if(r.iaEtat === 'compte'){
+          html += '<div class="rc-etat">La recherche assistée demande un compte.</div>';
+        } else {
+          html += '<button class="rc-ia" data-action="rech-ia">'
+            + '<span class="rc-ia-i">✨</span>'
+            + '<span><b>Demander à FreeHub où aller</b>'
+            + '<span>« '+esc(r.q.slice(0, 70))+' »</span></span>'
+          + '</button>';
+        }
+      }
+
+      if(!r.res.length && !rechEstQuestion(r.q) && !r.iaEtat){
+        html = '<div class="rc-etat">Aucun résultat pour « '+esc(r.q)+' ».</div>' + html;
+      }
+    }
+
+    liste.innerHTML = html;
+  }
+
+  // Toutes les lignes affichées, dans l'ordre, pour la navigation au clavier.
+  function rechLignes(){
+    var r = state.rech;
+    return (r.res || []).concat(r.iaEtat === 'ok' ? (r.ia || []) : []);
   }
 
   // ---------------------------------------------------------------------------
@@ -11196,6 +11501,7 @@
       + '<div id="vlo-root"></div>'
       + '<div id="simintro-root"></div>'
       + '<div id="poj-root"></div>'
+      + '<div id="rech-root"></div>'
       + '<div id="annonce-root"></div>';
   }
 
@@ -11418,9 +11724,71 @@
   });
 
   // ---------------------------------------------------------------------------
+  // La palette de recherche au clavier.
+  //
+  // Cmd+K plutôt que Cmd+H : sur macOS, Cmd+H est « masquer l'application » au
+  // niveau du système, une page web ne peut pas l'intercepter. Cmd+K est la
+  // convention des palettes de commande, et « / » ouvre aussi quand on n'est
+  // pas déjà en train d'écrire quelque part.
+  function rechDansUnChamp(e){
+    var t = e.target;
+    if(!t || !t.tagName) return false;
+    return /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable;
+  }
+
+  document.addEventListener('keydown', function(e){
+    var r = state.rech;
+
+    if((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')){
+      e.preventDefault();
+      if(r && r.ouvert) rechFermer(); else rechOuvrir();
+      return;
+    }
+    if(e.key === '/' && !rechDansUnChamp(e) && !(r && r.ouvert)
+       && !state.onboarding.actif){
+      e.preventDefault();
+      rechOuvrir();
+      return;
+    }
+    if(!r || !r.ouvert) return;
+
+    if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); rechFermer(); return; }
+
+    var lignes = rechLignes();
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      if(!lignes.length) return;
+      e.preventDefault();
+      var pas = e.key === 'ArrowDown' ? 1 : -1;
+      r.sel = (r.sel + pas + lignes.length) % lignes.length;
+      majRecherche();
+      var sel = document.querySelector('.rc-l.sel');
+      if(sel && sel.scrollIntoView) sel.scrollIntoView({ block:'nearest' });
+      return;
+    }
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      // Aucune destination trouvée mais une vraie question : Entrée lance
+      // directement la recherche assistée, c'est le geste attendu.
+      if(!lignes.length){
+        if(r.q && rechEstQuestion(r.q) && !r.iaEtat) rechDemanderIA();
+        return;
+      }
+      if(lignes[r.sel]) rechAller(lignes[r.sel]);
+    }
+  }, true);
+
+  document.addEventListener('input', function(e){
+    if(e.target && e.target.hasAttribute && e.target.hasAttribute('data-rech-input')){
+      rechSaisie(e.target.value);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   // Échap referme la fiche ouverte (partenaire ou terme du lexique).
   document.addEventListener('keydown', function(e){
     if(e.key !== 'Escape') return;
+    if(state.rech && state.rech.ouvert) return;   // la palette s'en charge
+
     if(state.partOpen !== null) setState({ partOpen: null });
     else if(state.depOuvert !== null) setState({ depOuvert: null });
     // La fiche d'abord, le dictionnaire ensuite : on remonte les couches dans
@@ -12513,6 +12881,21 @@
       case 'obj-partage-ouvrir':
         partageOuvrir(el.getAttribute('data-id'));
         break;
+      case 'rech-open':
+        rechOuvrir();
+        break;
+      case 'rech-close':
+        rechFermer();
+        break;
+      case 'rech-ia':
+        rechDemanderIA();
+        break;
+      case 'rech-aller': {
+        var lignes = rechLignes();
+        var cible = lignes[parseInt(el.getAttribute('data-i'), 10)];
+        if(cible) rechAller(cible);
+        break;
+      }
       case 'partage-close':
         state.partageObj = null;
         majPartageObj();

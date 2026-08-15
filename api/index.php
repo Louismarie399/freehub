@@ -19,6 +19,7 @@ require_once __DIR__ . '/routes_notif.php';
 require_once __DIR__ . '/routes_categorie.php';
 require_once __DIR__ . '/routes_sav.php';
 require_once __DIR__ . '/routes_parrainage.php';
+require_once __DIR__ . '/routes_recherche.php';
 
 // Chemin demandé, sans query string ni préfixe /api.
 $chemin = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -78,6 +79,7 @@ $routes = [
     'POST /partenaire'           => 'route_partenaire',
     'POST /analyze'              => 'route_analyze',
     'POST /categorie'            => 'route_categorie',
+    'POST /recherche'            => 'route_recherche',
 
     // Parrainage
     'GET /parrainage'            => 'route_parrainage',

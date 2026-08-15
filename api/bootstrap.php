@@ -238,6 +238,16 @@ function init_db(PDO $pdo): void
             created TEXT NOT NULL)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_categorie_appels
                 ON categorie_appels(user_id, created)');
+    // Quota de la recherche assistée. `jour` est stocké tel quel pour que le
+    // décompte du jour soit un simple test d'égalité, sans calcul de date.
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS recherche_appels(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            jour TEXT NOT NULL,
+            created TEXT NOT NULL)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_recherche_appels
+                ON recherche_appels(user_id, jour)');
     // Parrainage : un code personnel par membre. `parrain_id` relie le code à
     // son propriétaire ; les codes d'ouverture (ALPHA-2026) restent sans
     // parrain et ne comptent donc pour personne.
