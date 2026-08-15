@@ -2741,6 +2741,8 @@
     })(),
     demandes: { chargees:false, enCours:false, liste:[], filtre:null },
     demandesNb: 0,          // réclamations en attente, pour la pastille admin
+    // Image de réussite en cours de composition : { id, format, fond }.
+    partageObj: null,
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
     simIntro: null,         // simulateur dont on montre l'explication d'accueil
@@ -4010,6 +4012,323 @@
       + '</div></div>';
   }
 
+  // ---------------------------------------------------------------------------
+  // Partager une réussite — l'image à poster en story
+  // ---------------------------------------------------------------------------
+  // Tout est dessiné sur un canvas côté navigateur : aucune image n'est
+  // fabriquée sur le serveur, et rien de ce qui apparaît dessus ne quitte le
+  // poste tant que la personne n'a pas choisi de partager.
+  var PARTAGE_FORMATS = {
+    story: { l:'Story', d:'9:16', w:1080, h:1920 },
+    carre: { l:'Carré', d:'1:1',  w:1080, h:1080 },
+  };
+
+  // Les polices doivent être chargées AVANT de peindre : sinon le canvas se
+  // rabat silencieusement sur une police système et l'image ne ressemble plus
+  // du tout à l'application.
+  function partagePolices(){
+    if(!document.fonts || !document.fonts.load) return Promise.resolve();
+    return Promise.all([
+      document.fonts.load('900 100px Nunito'),
+      document.fonts.load('800 100px Nunito'),
+      document.fonts.load('600 100px Nunito'),
+    ]).catch(function(){});
+  }
+
+  // Une image, ou rien : un visuel manquant ne doit jamais bloquer le partage.
+  function partageImage(src){
+    return new Promise(function(res){
+      var i = new Image();
+      i.onload = function(){ res(i); };
+      i.onerror = function(){ res(null); };
+      i.src = src;
+    });
+  }
+
+  function partageRect(ctx, x, y, w, h, r){
+    if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(x, y, w, h, r); return; }
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Découpe un titre en lignes qui tiennent dans `max`, sans couper les mots.
+  function partageLignes(ctx, texte, max, nbMax){
+    var mots = texte.split(' '), lignes = [], cur = '';
+    mots.forEach(function(m){
+      var essai = cur ? cur + ' ' + m : m;
+      if(ctx.measureText(essai).width <= max || !cur){ cur = essai; }
+      else { lignes.push(cur); cur = m; }
+    });
+    if(cur) lignes.push(cur);
+    if(lignes.length > nbMax){
+      lignes = lignes.slice(0, nbMax);
+      lignes[nbMax - 1] = lignes[nbMax - 1].replace(/[\s,.;:]+$/, '') + '…';
+    }
+    return lignes;
+  }
+
+  function partageDessiner(cvs, o){
+    var p = state.partageObj;
+    var fmt = PARTAGE_FORMATS[p.format] || PARTAGE_FORMATS.story;
+    var d = dom(o);
+    var ctx = cvs.getContext('2d');
+
+    return partagePolices().then(function(){
+      return Promise.all([
+        partageImage(illusObjectif(o.id)),
+        partageImage('assets/freehub-logo.png'),
+      ]);
+    }).then(function(imgs){
+      var illu = imgs[0], logo = imgs[1];
+
+      // On mesure AVANT de dimensionner : la hauteur de l'autocollant dépend du
+      // nombre de lignes du titre, et la taille de l'image dépend de lui quand
+      // on exporte sans fond.
+      var cw = p.fond ? (p.format === 'story' ? 900 : 940) : 900;
+      var R = 132;
+      ctx.font = '900 68px Nunito, sans-serif';
+      var lignes = partageLignes(ctx, o.title, cw - 130, 3);
+      var ch = 96 + R * 2 + 74 + 78 + lignes.length * 82 + 64 + 108 + 168;
+
+      // Sans fond, l'image est l'autocollant lui-même : pas de bande
+      // transparente autour, seulement la marge nécessaire à son ombre portée.
+      var MARGE = 46;
+      var L = p.fond ? fmt.w : cw + MARGE * 2;
+      var H = p.fond ? fmt.h : ch + MARGE * 2;
+      cvs.width = L; cvs.height = H;
+      ctx = cvs.getContext('2d');
+      ctx.font = '900 68px Nunito, sans-serif';   // la police est perdue au redimensionnement
+
+      // Le fond. Sans lui, on obtient un autocollant sur transparence, à poser
+      // sur sa propre photo — c'est l'usage réel en story.
+      if(p.fond){
+        var g = ctx.createLinearGradient(0, 0, L, H);
+        g.addColorStop(0, d.c);
+        g.addColorStop(1, partageAssombrir(d.c, .55));
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, L, H);
+        // Deux halos très doux : un aplat pur fait « fond d'écran par défaut ».
+        [[0.18, 0.16, 520], [0.86, 0.82, 620]].forEach(function(h){
+          var rg = ctx.createRadialGradient(L*h[0], H*h[1], 0, L*h[0], H*h[1], h[2]);
+          rg.addColorStop(0, 'rgba(255,255,255,.16)');
+          rg.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = rg;
+          ctx.fillRect(0, 0, L, H);
+        });
+      }
+
+      var cx = (L - cw) / 2;
+      var cy = (H - ch) / 2;
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(10,18,35,.28)';
+      ctx.shadowBlur = 70; ctx.shadowOffsetY = 26;
+      ctx.fillStyle = '#ffffff';
+      partageRect(ctx, cx, cy, cw, ch, 56);
+      ctx.fill();
+      ctx.restore();
+
+      var mid = L / 2;
+      var y = cy + 96;
+
+      // Le médaillon : l'illustration de l'objectif, ou son emoji de domaine.
+      ctx.fillStyle = d.soft;
+      ctx.beginPath(); ctx.arc(mid, y + R, R, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = d.c; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(mid, y + R, R - 3, 0, Math.PI * 2); ctx.stroke();
+      if(illu){
+        var s = 186;
+        ctx.drawImage(illu, mid - s/2, y + R - s/2, s, s);
+      } else {
+        ctx.font = '400 130px Nunito, sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(d.ico, mid, y + R + 6);
+      }
+      y += R * 2 + 74;
+
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+
+      // L'accroche.
+      ctx.font = '900 34px Nunito, sans-serif';
+      ctx.fillStyle = d.c;
+      ctx.letterSpacing = '4px';
+      ctx.fillText('OBJECTIF ATTEINT', mid, y);
+      ctx.letterSpacing = '0px';
+      y += 78;
+
+      // Le titre.
+      ctx.font = '900 68px Nunito, sans-serif';
+      ctx.fillStyle = '#0f1b33';
+      lignes.forEach(function(l){ ctx.fillText(l, mid, y); y += 82; });
+      y += 10;
+
+      // La pastille de domaine.
+      ctx.font = '800 30px Nunito, sans-serif';
+      var lw = ctx.measureText(d.l).width + 56;
+      ctx.fillStyle = d.soft;
+      partageRect(ctx, mid - lw/2, y - 34, lw, 54, 27);
+      ctx.fill();
+      ctx.fillStyle = d.c;
+      ctx.fillText(d.l, mid, y + 2);
+      y += 104;
+
+      // Deux chiffres, pour que la carte dise quelque chose plutôt que de se
+      // contenter d'un titre. Ce sont les seuls chiffres de l'image, et ils
+      // viennent des données réelles du parcours.
+      var pr = pctOf(o.id);
+      var nFinis = nbObjectifsFinis();
+      var stats = [
+        [String(pr.total), 'étape' + (pr.total > 1 ? 's' : '') + ' franchie'
+          + (pr.total > 1 ? 's' : '')],
+        [String(nFinis), 'parcours bouclé' + (nFinis > 1 ? 's' : '') + ' en tout'],
+      ];
+      var demi = cw / 4;
+      stats.forEach(function(s, i){
+        var sx = cx + demi + i * demi * 2;
+        ctx.font = '900 60px Nunito, sans-serif';
+        ctx.fillStyle = d.c;
+        ctx.fillText(s[0], sx, y);
+        ctx.font = '700 25px Nunito, sans-serif';
+        ctx.fillStyle = '#5b6b85';
+        ctx.fillText(s[1], sx, y + 36);
+      });
+      // Le trait de séparation entre les deux chiffres.
+      ctx.strokeStyle = 'rgba(15,27,51,.10)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(mid, y - 46); ctx.lineTo(mid, y + 44); ctx.stroke();
+
+      // Le pied : qui, quand, et où — c'est la seule signature de la marque.
+      var by = cy + ch - 74;
+      ctx.strokeStyle = 'rgba(15,27,51,.10)'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + 64, by - 56); ctx.lineTo(cx + cw - 64, by - 56); ctx.stroke();
+
+      var prenom = (state.profil.prenom || '').trim();
+      var quand = new Date().toLocaleDateString('fr-FR',
+        { day:'numeric', month:'long', year:'numeric' });
+      ctx.textAlign = 'left';
+      ctx.font = '800 29px Nunito, sans-serif';
+      ctx.fillStyle = '#5b6b85';
+      ctx.fillText((prenom ? prenom + ' · ' : '') + quand, cx + 64, by);
+
+      ctx.textAlign = 'right';
+      if(logo){
+        var lh = 40, lwd = logo.width / logo.height * lh;
+        ctx.drawImage(logo, cx + cw - 64 - lwd, by - lh + 8, lwd, lh);
+      } else {
+        ctx.font = '900 32px Nunito, sans-serif';
+        ctx.fillStyle = '#0f1b33';
+        ctx.fillText('free-hub.fr', cx + cw - 64, by);
+      }
+    });
+  }
+
+  // Assombrit une couleur hexadécimale, pour le bas du dégradé de fond.
+  function partageAssombrir(hex, k){
+    var n = parseInt(hex.slice(1), 16);
+    var r = Math.round(((n >> 16) & 255) * k);
+    var v = Math.round(((n >> 8) & 255) * k);
+    var b = Math.round((n & 255) * k);
+    return 'rgb(' + r + ',' + v + ',' + b + ')';
+  }
+
+  function partageFichier(){
+    var cvs = document.querySelector('[data-partage-cvs]');
+    if(!cvs) return Promise.resolve(null);
+    return new Promise(function(res){
+      cvs.toBlob(function(blob){
+        if(!blob) return res(null);
+        var o = obj(state.partageObj.id);
+        var nom = 'freehub-' + (o ? o.id : 'objectif')
+          + (state.partageObj.fond ? '' : '-sans-fond') + '.png';
+        res(new File([blob], nom, { type:'image/png' }));
+      }, 'image/png');
+    });
+  }
+
+  function partageTexte(o){
+    return 'Objectif atteint sur FreeHub : ' + o.title + ' ✅';
+  }
+
+  // Le partage natif ne sait envoyer un fichier que sur mobile, et seulement si
+  // le navigateur le déclare. Ailleurs on ne montre pas le bouton plutôt que de
+  // proposer un chemin qui échouerait.
+  function partageNatifDispo(){
+    if(!navigator.share || !navigator.canShare) return false;
+    try {
+      return navigator.canShare({ files: [new File([''], 'x.png', { type:'image/png' })] });
+    } catch(e){ return false; }
+  }
+
+  // La pop-up vit dans son propre root : le canvas ne doit pas être recréé à
+  // chaque rendu de l'application, sinon l'image se redessine sans arrêt.
+  function majPartageObj(){
+    var root = document.getElementById('poj-root');
+    if(!root) return;
+    var p = state.partageObj;
+    if(!p){ root.innerHTML = ''; return; }
+    var o = obj(p.id);
+    if(!o){ root.innerHTML = ''; return; }
+
+    var signature = p.id + '|' + p.format + '|' + p.fond;
+    if(root.getAttribute('data-sig') === signature) return;
+    root.setAttribute('data-sig', signature);
+
+    var boutonsFormat = Object.keys(PARTAGE_FORMATS).map(function(k){
+      var f = PARTAGE_FORMATS[k];
+      return '<button class="pj-opt'+(p.format === k ? ' on' : '')+'"'
+        + ' data-action="partage-format" data-f="'+k+'">'
+        + esc(f.l)+'<span>'+esc(f.d)+'</span></button>';
+    }).join('');
+
+    root.innerHTML = '<div class="overlay" data-action="partage-close">'
+      + '<div class="modal pj-modal" data-action="stop">'
+        + '<button class="pj-x" data-action="partage-close" aria-label="Fermer">×</button>'
+        + '<div class="pj-tete">'
+          + '<div class="pj-l">Objectif bouclé 🎉</div>'
+          + '<div class="pj-t">'+esc(o.title)+'</div>'
+          + '<div class="pj-d">Garde une trace, ou montre-le. '
+            + 'L’image se fabrique sur ton appareil.</div>'
+        + '</div>'
+        + '<div class="pj-apercu'+(p.fond ? '' : ' damier')+'">'
+          + '<canvas data-partage-cvs class="pj-cvs'
+            + (!p.fond ? ' sticker' : (p.format === 'carre' ? ' carre' : ''))+'"></canvas>'
+        + '</div>'
+        + '<div class="pj-reglages">'
+          // Sans fond, l'image est l'autocollant lui-même : il n'y a plus de
+          // cadre à choisir, donc plus de format à proposer.
+          + (p.fond ? '<div class="pj-groupe">'+boutonsFormat+'</div>' : '')
+          + '<button class="pj-fond'+(p.fond ? '' : ' off')+'" data-action="partage-fond">'
+            + '<span class="pj-case">'+(p.fond ? '' : '✓')+'</span>Sans fond (PNG)</button>'
+        + '</div>'
+        + '<div class="pj-actions">'
+          + (partageNatifDispo()
+              ? '<button class="pj-b pj-b-p" data-action="partage-natif">Partager…</button>'
+              : '')
+          + '<button class="pj-b pj-b-p" data-action="partage-dl">Télécharger l’image</button>'
+          + '<button class="pj-b" data-action="partage-x">Sur X</button>'
+          + '<button class="pj-b" data-action="partage-li">Sur LinkedIn</button>'
+        + '</div>'
+        + '<div class="pj-note">Instagram et TikTok n’acceptent pas d’image envoyée '
+          + 'depuis un navigateur : télécharge-la, puis publie-la depuis l’application. '
+          + 'Sur X et LinkedIn, le texte est prérempli — il reste à joindre l’image.</div>'
+      + '</div></div>';
+
+    var cvs = root.querySelector('[data-partage-cvs]');
+    if(cvs) partageDessiner(cvs, o);
+  }
+
+  function partageOuvrir(id){
+    state.partageObj = { id:id, format:'story', fond:true };
+    var root = document.getElementById('poj-root');
+    if(root) root.removeAttribute('data-sig');
+    majPartageObj();
+  }
+
   // Le catalogue vit dans un root persistant : ajouter un objectif ne doit pas
   // recréer l'overlay, sinon la pop-up rejoue son animation à chaque clic et on
   // a l'impression que la page se rafraîchit.
@@ -4218,12 +4537,18 @@
             + '<span><span class="obj-fini-t">Objectif bouclé</span>'
             + '<span class="obj-fini-d">Tu peux repasser sur n’importe quelle étape quand tu veux</span>'
             + '</span>'
-            + (state.compte
-                ? (state.faits['partage:'+curId]
-                    ? '<span class="obj-partage fait">✓ Partagé</span>'
-                    : '<button class="obj-partage" data-action="obj-partager" data-id="'+curId+'">'
-                      + 'Partager dans l’Entraide 🎉</button>')
-                : '')
+            + '<span class="obj-fini-b">'
+              // Toujours disponible : on revient souvent chercher l'image plus
+              // tard, une fois l'euphorie du moment passée.
+              + '<button class="obj-partage img" data-action="obj-partage-ouvrir"'
+                + ' data-id="'+curId+'">📸 Mon image</button>'
+              + (state.compte
+                  ? (state.faits['partage:'+curId]
+                      ? '<span class="obj-partage fait">✓ Partagé</span>'
+                      : '<button class="obj-partage" data-action="obj-partager" data-id="'+curId+'">'
+                        + 'Partager dans l’Entraide 🎉</button>')
+                  : '')
+            + '</span>'
             + '</div>' : '')
       + '<div class="steps">'+steps+'</div>'
       + suiteHtml(cur, cp.pct === 100)
@@ -10729,6 +11054,7 @@
       + '<div id="dgo-root"></div>'
       + '<div id="vlo-root"></div>'
       + '<div id="simintro-root"></div>'
+      + '<div id="poj-root"></div>'
       + '<div id="annonce-root"></div>';
   }
 
@@ -10914,6 +11240,7 @@
     // ne remplace que le contenu de leur carte, sans recréer l'overlay ni
     // rejouer leur animation.
     majCatalogue();
+    majPartageObj();
     majLexTous();
     var savRoot = document.getElementById('sav-root');
     if(savRoot) savRoot.innerHTML = savBulleHtml();
@@ -12029,14 +12356,71 @@
         e.stopPropagation();
         var curId = state.objectifOuvert || catalog[0].id;
         var key = curId + ':' + el.getAttribute('data-i');
+        var avant = pctOf(curId).pct;
         var checks = Object.assign({}, state.checks);
         checks[key] = !checks[key];
         state.checks = checks;
         saveObjectifs();
         // On rouvre l'étape en cours après avoir coché (stepOuvert repart en auto).
         setState({ checks: checks, stepOuvert: null });
+        // Le parcours vient de se boucler : on propose l'image à partager. Au
+        // franchissement seulement — décocher puis recocher une étape ne doit
+        // pas relancer la pop-up à chaque fois.
+        if(avant < 100 && pctOf(curId).pct === 100) partageOuvrir(curId);
         break;
       }
+      case 'obj-partage-ouvrir':
+        partageOuvrir(el.getAttribute('data-id'));
+        break;
+      case 'partage-close':
+        state.partageObj = null;
+        majPartageObj();
+        break;
+      case 'partage-format':
+        state.partageObj = Object.assign({}, state.partageObj,
+          { format: el.getAttribute('data-f') });
+        majPartageObj();
+        break;
+      case 'partage-fond':
+        state.partageObj = Object.assign({}, state.partageObj,
+          { fond: !state.partageObj.fond });
+        majPartageObj();
+        break;
+      case 'partage-dl':
+        partageFichier().then(function(f){
+          if(!f) return;
+          var url = URL.createObjectURL(f);
+          var a = document.createElement('a');
+          a.href = url; a.download = f.name;
+          document.body.appendChild(a); a.click(); a.remove();
+          // On libère l'URL après le clic, pas avant : Safari lit le blob
+          // de façon asynchrone et un révocation immédiate annule le fichier.
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+          marquerFait('partage-image:' + state.partageObj.id);
+        });
+        break;
+      case 'partage-natif': {
+        var oPart = obj(state.partageObj.id);
+        partageFichier().then(function(f){
+          if(!f || !oPart) return;
+          navigator.share({ files:[f], text: partageTexte(oPart) })
+            .then(function(){ marquerFait('partage-image:' + oPart.id); })
+            .catch(function(){});   // partage annulé : rien à signaler
+        });
+        break;
+      }
+      case 'partage-x': {
+        var oX = obj(state.partageObj.id);
+        if(!oX) break;
+        window.open('https://x.com/intent/post?text='
+          + encodeURIComponent(partageTexte(oX) + '\n\nhttps://free-hub.fr'),
+          '_blank', 'noopener');
+        break;
+      }
+      case 'partage-li':
+        window.open('https://www.linkedin.com/sharing/share-offsite/?url='
+          + encodeURIComponent('https://free-hub.fr'), '_blank', 'noopener');
+        break;
       case 'step-expand': {
         var idx = parseInt(el.getAttribute('data-i'), 10);
         setState({ stepOuvert: state.stepOuvert === idx ? -1 : idx });
