@@ -229,7 +229,7 @@
 
   /* ---------- Objectifs : groupés par domaine, couleur par domaine ---------- */
   .dot{width:8px;height:8px;border-radius:50%;flex:none}
-  .tag{font-size:12px;font-weight:800;letter-spacing:0}
+  .tag{font-size:12px;font-weight:800;letter-spacing:0;color:var(--c,inherit)}
   .prog-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
   .prog-label{font-size:12.5px;font-weight:700;color:var(--muted2)}
   .prog-pct{font-size:12.5px;font-weight:800;color:var(--blue)}
@@ -2174,6 +2174,21 @@
     .rc-l-k{display:none}
   }
 
+  /* Les nouveautés du lot */
+  .nv-modal{width:520px;max-width:100%;padding:26px 26px 22px}
+  .nv-t{font-size:22px;font-weight:800;letter-spacing:-.022em;color:var(--ink)}
+  .nv-s{font-size:14px;color:var(--muted2);margin-top:5px;line-height:1.5}
+  .nv-liste{margin-top:20px;display:flex;flex-direction:column;gap:15px;
+    max-height:52vh;overflow-y:auto}
+  .nv-p{display:flex;gap:13px;align-items:flex-start}
+  .nv-p-i{flex:none;width:38px;height:38px;border-radius:12px;background:var(--soft);
+    display:flex;align-items:center;justify-content:center;font-size:18px}
+  .nv-p-x{flex:1;min-width:0}
+  .nv-p-t{display:block;font-size:14.5px;font-weight:800;color:var(--ink);
+    letter-spacing:-.012em;line-height:1.3}
+  .nv-p-d{display:block;font-size:13px;color:var(--muted2);line-height:1.5;margin-top:3px}
+  .nv-ok{width:100%;margin-top:20px}
+
   /* Ajouter un parcours trouvé par la recherche */
   .ra-modal{width:400px;max-width:100%;padding:26px 26px 22px;text-align:center}
   .ra-ico{width:76px;height:76px;border-radius:22px;margin:0 auto;display:flex;
@@ -4053,6 +4068,29 @@
   [data-theme="sombre"] .et-ok-illu{color:#5fbd85}
   [data-theme="sombre"] .et-defaire:hover{color:#a6f2c2}
   [data-theme="sombre"] .sc-liste.warn li{color:#fbd9a5}
+
+  /* ---------- Accents prévus pour un fond clair, corrigés en sombre ----------
+     Les couleurs de domaine (DOMAINES) et de partenaire (PARTENAIRES) ont été
+     choisies pour du texte sur blanc. Posées telles quelles sur une carte
+     sombre, elles tombent à un contraste de 2 ou 3 pour 1 : lisibles nulle
+     part. On ne les remplace pas — on les éclaircit vers le blanc, ce qui
+     marche pour n'importe quelle teinte, y compris celles des partenaires qui
+     arrivent en style en ligne. */
+  [data-theme="sombre"] .tag{color:color-mix(in srgb,var(--c) 40%,#fff)}
+  [data-theme="sombre"] .step-cta.part{
+    color:color-mix(in srgb,var(--c) 34%,#fff);
+    background:color-mix(in srgb,var(--c) 22%,var(--surface))}
+  [data-theme="sombre"] .step-cta.part:hover{
+    background:color-mix(in srgb,var(--c) 55%,var(--surface));color:#fff}
+  /* Le vert « bouclé » et l'ambre « vigilance » : deux teintes fixes, donc
+     deux valeurs claires plutôt qu'un mélange. */
+  [data-theme="sombre"] .obj-partage.img{color:#7ee0a8;border-color:#3f8a5f;
+    background:rgba(126,224,168,.08)}
+  [data-theme="sombre"] .obj-partage.img:hover{background:rgba(126,224,168,.18)}
+  [data-theme="sombre"] .sc-l.warn{color:#e8b06a}
+  /* La jauge d'étapes : le segment vide se confondait avec la carte, on ne
+     voyait donc plus ce qu'il restait à faire. */
+  [data-theme="sombre"] .dp-segs i{background:#3a4761}
   [data-theme="sombre"] .obj-suite.pret .obj-suite-t{color:#a6f2c2}
   [data-theme="sombre"] .sim-consent-text{color:var(--muted2)}
   [data-theme="sombre"] .field > label{color:var(--muted2)}

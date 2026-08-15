@@ -823,7 +823,10 @@
       echeance:{ jour:15, mois:12, quoi:'Paiement de la CFE' },
       pourquoi:'Elle concerne presque toutes les entreprises, et son avis n’arrive pas par courrier',
       steps:[
-        {t:'Créer ton espace pro sur impots.gouv', h:'Indispensable pour recevoir ton avis', duree:'15 min', illu:'ecran'},
+        // « 15 min » était trompeur : l'espace n'est utilisable qu'après
+        // réception d'un code d'activation PAR COURRIER. Sur un parcours dont
+        // l'enjeu est d'être prêt au 15 décembre, la nuance change tout.
+        {t:'Créer ton espace pro sur impots.gouv', h:'15 min, puis un code reçu par courrier', duree:'15 min + courrier', illu:'ecran'},
         {t:'Vérifier ton avis de CFE', h:'Disponible en novembre dans ton espace', duree:'10 min', illu:'enveloppe'},
         {t:'Vérifier si tu es exonéré·e', h:'1re année ou faible CA : possible exonération', duree:'10 min', illu:'loupe'},
         {t:'Payer avant le 15 décembre', h:'Prélèvement ou paiement en ligne', duree:'10 min', illu:'euro'},
@@ -903,7 +906,7 @@
       suite:['compte-pro','urssaf-1'],
       steps:[
         {t:'Créer ton compte URSSAF', h:'C’est là que tu déclareras ton chiffre d’affaires', duree:'10 min', illu:'ecran'},
-        {t:'Créer ton espace pro sur impots.gouv', h:'Rien n’arrive par courrier, tout passe par là', duree:'15 min', illu:'batiment'},
+        {t:'Créer ton espace pro sur impots.gouv', h:'15 min, puis un code reçu par courrier', duree:'15 min + courrier', illu:'batiment'},
         {t:'Envoyer ta déclaration initiale de CFE', h:'Le formulaire que presque tout le monde oublie', duree:'20 min', illu:'form'},
         {t:'Ouvrir un compte dédié à ton activité', h:'Obligatoire au-delà d’un certain chiffre d’affaires', part:2, duree:'20 min', illu:'carte'},
       ]},
@@ -1076,7 +1079,11 @@
     cfe: [
       { intro:'Ton espace professionnel sur impots.gouv.fr est indispensable : c’est là qu’arrive ton avis de CFE, jamais par courrier',
         astuce:'Crée cet espace dès ta première année : la CFE oubliée est la mauvaise surprise classique de décembre',
-        faire:['Crée ton espace pro avec ton SIRET','Active la réception des avis en ligne'],
+        faire:['Crée ton espace pro avec ton SIRET',
+               'L’inscription en ligne prend un quart d’heure, mais l’espace n’est PAS utilisable dans la foulée : un code d’activation t’est envoyé par courrier postal',
+               'À réception, saisis-le pour finaliser — tu as 60 jours, au-delà il faut tout recommencer',
+               'Active ensuite la réception des avis en ligne'],
+        vigilance:['Ne t’y prends pas début décembre pour un avis à payer le 15 : entre l’inscription et le courrier, tu n’aurais pas le temps'],
         liens:[IMPOTS] },
       { intro:'L’avis de CFE est mis à disposition en fin d’année dans ton espace',
         faire:['Consulte-le dès sa mise en ligne, en général à l’automne','Vérifie la commune et la base retenues'] },
@@ -2766,6 +2773,7 @@
     // Palette de recherche : ouverte au clavier ou depuis la barre de titre.
     rech: { ouvert:false, q:'', res:[], ia:[], iaEtat:null, sel:0 },
     rechAjout: null,        // parcours trouvé mais pas encore dans les siens
+    nouvOuvert: false,      // la pop-up des nouveautés du lot en cours
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
     simIntro: null,         // simulateur dont on montre l'explication d'accueil
@@ -4078,6 +4086,78 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Les nouveautés — ce qui a changé depuis la dernière visite
+  // ---------------------------------------------------------------------------
+  // Une seule fois par lot, et jamais pendant l'onboarding : quelqu'un qui
+  // découvre l'application n'a pas de « nouveautés », il a tout à découvrir.
+  // Pour annoncer un prochain lot : changer NOUV_VERSION et réécrire la liste.
+  var NOUV_VERSION = '2026-08-15';
+  var NOUV = {
+    titre: 'Du nouveau sur FreeHub',
+    sous: 'Voilà ce qui a changé depuis ta dernière visite.',
+    points: [
+      { ico:'🔍', t:'Une recherche qui mène partout',
+        d:'Cmd K (ou le bouton en haut à gauche) ouvre une barre qui cherche dans '
+          + 'les parcours, le lexique, les simulateurs et les partenaires. Tu peux '
+          + 'aussi y poser ta question en une phrase.' },
+      { ico:'🏅', t:'Le classement des recommandations',
+        d:'Un nouvel onglet avec ton lien de partage, le podium, et deux badges '
+          + 'à décrocher.' },
+      { ico:'📸', t:'Une image à partager quand tu boucles un objectif',
+        d:'Format story ou carré, avec ou sans fond, à poster ou à garder.' },
+      { ico:'🏠', t:'Un accueil réorganisé',
+        d:'Deux colonnes, un mot du jour, et tes échéances mieux mises en avant.' },
+      { ico:'🧾', t:'La facture électronique, mise à jour',
+        d:'Les deux dates de la réforme — recevoir en septembre 2026, émettre en '
+          + 'septembre 2027 — et comment savoir si ton outil actuel suffit.' },
+    ],
+  };
+
+  // Le marqueur vit dans sa PROPRE clé, hors du lot synchronisé : `freehub_faits`
+  // est renvoyé par le serveur au chargement et écrase la version locale, si
+  // bien qu'un marqueur posé juste avant un rechargement était perdu — et la
+  // pop-up revenait. Un accusé de lecture n'a de toute façon pas à voyager
+  // d'un appareil à l'autre.
+  function nouveautesVues(){
+    try { return localStorage.getItem('freehub_nouv_vu') === NOUV_VERSION; }
+    catch(e){ return true; }   // stockage indisponible : on n'insiste pas
+  }
+  function nouveautesMarquer(){
+    try { localStorage.setItem('freehub_nouv_vu', NOUV_VERSION); } catch(e){}
+  }
+  function nouveautesAMontrer(){
+    if(state.onboarding && state.onboarding.actif) return false;
+    if(!state.badgesInitialises) return false;   // pas avant le premier rendu
+    // Quelqu'un qui arrive pour la première fois n'a pas de « nouveautés » :
+    // tout est nouveau pour lui, la pop-up n'aurait aucun sens.
+    var deja = false;
+    try { deja = localStorage.getItem('freehub_onboarded') === '1'; } catch(e){}
+    return deja && !nouveautesVues();
+  }
+
+  function nouveautesHtml(){
+    if(!state.nouvOuvert) return '';
+    return '<div class="overlay" data-action="nouv-fermer">'
+      + '<div class="modal nv-modal" data-action="stop">'
+        + '<div class="nv-h">'
+          + '<div class="nv-t">'+esc(NOUV.titre)+'</div>'
+          + '<div class="nv-s">'+esc(NOUV.sous)+'</div>'
+        + '</div>'
+        + '<div class="nv-liste">'
+          + NOUV.points.map(function(p){
+              return '<div class="nv-p">'
+                + '<span class="nv-p-i">'+p.ico+'</span>'
+                + '<span class="nv-p-x"><span class="nv-p-t">'+esc(p.t)+'</span>'
+                + '<span class="nv-p-d">'+esc(p.d)+'</span></span>'
+              + '</div>';
+            }).join('')
+        + '</div>'
+        + '<button class="btn-primary nv-ok" data-action="nouv-fermer">'
+          + 'C’est noté</button>'
+      + '</div></div>';
+  }
+
+  // ---------------------------------------------------------------------------
   // Recherche — la barre qui mène partout
   // ---------------------------------------------------------------------------
   // Deux étages. Le premier cherche par mots-clés dans tout ce que contient
@@ -5053,7 +5133,10 @@
         + '<div class="detail-head-l">'
           + '<div class="detail-tag"><span class="detail-ico" style="background:'+dd.soft+'">'
             + dd.ico+'</span>'
-            + '<span class="tag" style="color:'+dd.c+'">'+esc(dd.l)+'</span></div>'
+            // La couleur passe par une variable, pas par `color` en ligne : un
+            // style en ligne ne peut pas être corrigé par le thème sombre, où
+            // ces teintes prévues pour du blanc deviennent illisibles.
+            + '<span class="tag" style="--c:'+dd.c+'">'+esc(dd.l)+'</span></div>'
           + '<div class="detail-title">'+esc(cur.title)+'</div>'
           + '<div class="detail-desc">'+esc(cur.desc)+'</div>'
         + '</div>'
@@ -11771,6 +11854,11 @@
 
     // Débloque les badges nouvellement mérités (ne relance pas render()).
     evaluerBadges();
+    // Les nouveautés passent APRÈS les badges : une célébration en cours a la
+    // priorité, on ne superpose pas deux pop-up.
+    if(!state.nouvOuvert && !state.badgeQueue.length && nouveautesAMontrer()){
+      state.nouvOuvert = true;
+    }
     // Un badge qui tombe pendant qu'on est sur la vitrine est vu sur-le-champ.
     if(state.tab === 'succes' && state.badgesInitialises) badgesMarquerVus();
 
@@ -11778,7 +11866,8 @@
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
       + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml()
       + finisModalHtml() + suiteAjoutHtml() + chatCharteHtml() + chatModerationHtml() + badgeFicheHtml()
-      + badgeCelebreHtml() + pfAlerteHtml() + profilQuitterHtml() + rechAjoutHtml();
+      + badgeCelebreHtml() + pfAlerteHtml() + profilQuitterHtml() + rechAjoutHtml()
+      + nouveautesHtml();
 
     // L'onboarding et le catalogue vivent dans leur propre root persistant : on
     // ne remplace que le contenu de leur carte, sans recréer l'overlay ni
@@ -12993,6 +13082,12 @@
         if(cible) rechAller(cible);
         break;
       }
+      case 'nouv-fermer':
+        // Marqué comme vu à la fermeture, jamais à l'ouverture : si la page est
+        // rechargée pendant la lecture, on la retrouve.
+        nouveautesMarquer();
+        setState({ nouvOuvert:false });
+        break;
       case 'rech-ajout-non':
         setState({ rechAjout:null });
         break;
