@@ -1544,14 +1544,7 @@
   // l'Entraide, la modération) puis l'identité. Tout cela vivait auparavant
   // dans le corps de la page et mangeait la hauteur du fil de discussion.
   function titreOutilsHtml(){
-    // Un raccourci que personne ne connaît n'existe pas : la palette a aussi un
-    // bouton, qui affiche le raccourci pour l'apprendre au passage.
-    var out = '<button class="rc-btn" data-action="rech-open" aria-label="Rechercher">'
-      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
-        + 'stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>'
-      + '<span class="rc-btn-t">Rechercher</span>'
-      + '<span class="rc-btn-k">'+(partageSurMac() ? '⌘K' : 'Ctrl K')+'</span>'
-    + '</button>';
+    var out = '';
     if(state.tab === 'chat'){
       var c = state.chat;
       out += '<span class="ptitre-stats">'
@@ -2752,6 +2745,7 @@
     partageObj: null,
     // Palette de recherche : ouverte au clavier ou depuis la barre de titre.
     rech: { ouvert:false, q:'', res:[], ia:[], iaEtat:null, sel:0 },
+    rechAjout: null,        // parcours trouvé mais pas encore dans les siens
     sondageForm: false,     // formulaire « question de la semaine » (admin)
     sondageOuvert: false,   // la carte du sondage, repliée par défaut
     simIntro: null,         // simulateur dont on montre l'explication d'accueil
@@ -3674,6 +3668,48 @@
     }).join('') + '</span>';
   }
 
+  // L'ouverture d'un simulateur, extraite de son action : la recherche doit
+  // faire exactement la même chose qu'un clic sur la carte — l'intro à la
+  // première visite, les données du profil appliquées, le bon écran de départ.
+  // Ne rend pas : l'appelant décide quand.
+  function simOuvrir(quel){
+    // L'ouvrir vaut découverte : le « New » de la barre latérale s'éteint.
+    if(quel === SIM_NEUF) marquerFait('sim-neuf-vu:' + SIM_NEUF);
+    // Première visite de ce simulateur : on explique d'abord à quoi il sert.
+    if(SIM_INTRO[quel] && !state.faits['sim-intro:'+quel]){
+      state.simIntro = quel;
+      marquerFait('sim-intro:'+quel);
+    }
+    state.sim.open = quel;
+    state.sim.step = 'form';
+    appliquerProfil();   // le simulateur part toujours des données du profil
+    // Statut et cockpit produisent un résultat dès l'ouverture (temps réel).
+    if(quel === 'statut' || quel === 'optim') marquerFait('sim:'+quel);
+    if(quel === 'depenses'){
+      // Le parcours d'accueil ne se joue qu'à la première visite.
+      var vu = false;
+      try { vu = !!localStorage.getItem('freehub_dep_onb'); } catch(err){}
+      if(!vu) state.depOnb = { actif:true, etape:0 };
+      marquerFait('sim:depenses');
+    }
+    if(quel === 'statut'){ state.statut.outil = null; marquerFait('sim:statut'); }
+    if(quel === 'optim'){ state.optim.outil = null; marquerFait('sim:optim'); }
+    if(quel === 'vl'){
+      state.vl.step = 'form';
+      var vuVl = false;
+      try { vuVl = !!localStorage.getItem('freehub_vl_onb'); } catch(err){}
+      if(!vuVl) state.vl.onb = { actif:true, etape:0 };
+    }
+    if(quel === 'tva'){
+      // Une fois le parcours mené à son terme, on arrive directement sur la
+      // page du simulateur, avec les simulations déjà enregistrées.
+      var vuTva = false;
+      try { vuTva = !!localStorage.getItem('freehub_tva_onb'); } catch(err){}
+      state.tva.step = 'form';
+      if(!vuTva) state.tva.onb = { actif:true, etape:0 };
+    }
+  }
+
   // Libellés courts, pour tenir sur une tuile.
   var SIM_COURT = {
     depenses:'Mes dépenses', vl:'Versement libératoire',
@@ -4196,23 +4232,19 @@
       });
   }
 
-  // Aller à une destination, quelle que soit sa nature.
+  // Aller à une destination — vraiment à la destination. Un résultat qui se
+  // contente d'ouvrir le bon onglet oblige à recommencer la recherche à la
+  // main : chaque type mène donc à l'écran précis qu'il désigne.
   function rechAller(item){
     rechFermer();
+
     if(item.type === 'onglet'){
-      if(item.id === 'profil'){ setState({ tab:'profil' }); return; }
       setState({ tab:item.id, objectifOuvert:null });
       return;
     }
     if(item.type === 'sim'){
-      state.sim.open = item.id;
+      simOuvrir(item.id);
       setState({ tab:'simulateur' });
-      return;
-    }
-    if(item.type === 'objectif'){
-      // Un objectif qu'on n'a pas encore ajouté s'ouvre quand même : la fiche
-      // explique de quoi il s'agit, et propose de l'ajouter.
-      setState({ tab:'objectifs', objectifOuvert:item.id });
       return;
     }
     if(item.type === 'lexique'){
@@ -4220,8 +4252,42 @@
       return;
     }
     if(item.type === 'partenaire'){
-      setState({ tab:'partenaires' });
+      setState({ tab:'partenaires', partOpen:parseInt(item.id, 10) });
+      return;
     }
+    if(item.type === 'objectif'){
+      // Le détail d'un parcours ne s'affiche que s'il fait partie des siens :
+      // sinon la vue retombait sur la grille, et le résultat de recherche
+      // semblait ne mener nulle part. On demande donc avant de l'ajouter.
+      if(state.added.indexOf(item.id) < 0){
+        setState({ rechAjout:item.id });
+        return;
+      }
+      setState({ tab:'objectifs', objectifOuvert:item.id });
+    }
+  }
+
+  // La confirmation avant d'ajouter un parcours trouvé par la recherche. On
+  // n'ajoute rien dans le dos de quelqu'un : la liste des objectifs est à lui.
+  function rechAjoutHtml(){
+    var id = state.rechAjout;
+    var o = id && obj(id);
+    if(!o) return '';
+    var d = dom(o);
+    return '<div class="overlay" data-action="rech-ajout-non">'
+      + '<div class="modal ra-modal" data-action="stop" style="--c:'+d.c+'">'
+        + '<div class="ra-ico" style="background:'+d.soft+'">'
+          + '<img src="'+illusObjectif(o.id)+'" alt="" width="44" height="44"></div>'
+        + '<div class="ra-l">Parcours guidé · '+esc(d.l)+'</div>'
+        + '<div class="ra-t">'+esc(o.title)+'</div>'
+        + '<div class="ra-d">'+esc(o.desc)+'</div>'
+        + '<div class="ra-n">'+o.steps.length+' étapes</div>'
+        + '<div class="ra-b">'
+          + '<button class="ra-non" data-action="rech-ajout-non">Pas maintenant</button>'
+          + '<button class="ra-oui" data-action="rech-ajout-oui">'
+            + 'Ajouter et l’ouvrir</button>'
+        + '</div>'
+      + '</div></div>';
   }
 
   function rechLigneHtml(it, i, sel, pourquoi){
@@ -11464,6 +11530,17 @@
             + ' stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 7 9.5 12l5 5"/></svg>'
           + '</button>'
         + '</div>'
+        // Le bouton de recherche vit dans la barre latérale, pas dans la barre
+        // de titre : celle-ci disparaît dès qu'un objectif est ouvert, et la
+        // recherche doit rester accessible partout. Un raccourci que personne
+        // ne connaît n'existe pas — le bouton affiche donc le sien.
+        + '<button class="rc-btn" data-action="rech-open" aria-label="Rechercher">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+            + 'stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>'
+          + '<span class="rc-btn-t">Rechercher</span>'
+          + '<span class="rc-btn-k">'+(partageSurMac() ? '⌘K' : 'Ctrl K')+'</span>'
+          + '<span class="nav-tip">Rechercher</span>'
+        + '</button>'
         + '<nav>'+navHtml()+'</nav>'
         // Le profil vit désormais en haut à droite : la barre latérale ne garde
         // que la bascule de thème, et récupère toute la place.
@@ -11681,7 +11758,7 @@
       consentModalHtml() + loadingModalHtml() + partModalHtml() + partFormModalHtml()
       + lexModalHtml() + depFicheHtml() + simOutilModalHtml() + authModalHtml()
       + finisModalHtml() + suiteAjoutHtml() + chatCharteHtml() + chatModerationHtml() + badgeFicheHtml()
-      + badgeCelebreHtml() + pfAlerteHtml() + profilQuitterHtml();
+      + badgeCelebreHtml() + pfAlerteHtml() + profilQuitterHtml() + rechAjoutHtml();
 
     // L'onboarding et le catalogue vivent dans leur propre root persistant : on
     // ne remplace que le contenu de leur carte, sans recréer l'overlay ni
@@ -12896,6 +12973,18 @@
         if(cible) rechAller(cible);
         break;
       }
+      case 'rech-ajout-non':
+        setState({ rechAjout:null });
+        break;
+      case 'rech-ajout-oui': {
+        var aObj = state.rechAjout;
+        if(!aObj) break;
+        marquerNouveauVu(aObj);
+        if(state.added.indexOf(aObj) < 0) state.added = state.added.concat([aObj]);
+        saveObjectifs();
+        setState({ rechAjout:null, tab:'objectifs', objectifOuvert:aObj });
+        break;
+      }
       case 'partage-close':
         state.partageObj = null;
         majPartageObj();
@@ -12976,44 +13065,7 @@
         break;
       }
       case 'sim-open': {
-        var quel = el.getAttribute('data-sim') || 'depenses';
-        // L'ouvrir vaut découverte : le « New » de la barre latérale s'éteint.
-        if(quel === SIM_NEUF) marquerFait('sim-neuf-vu:' + SIM_NEUF);
-        // Première visite de ce simulateur : on explique d'abord à quoi il sert.
-        if(SIM_INTRO[quel] && !state.faits['sim-intro:'+quel]){
-          state.simIntro = quel;
-          marquerFait('sim-intro:'+quel);
-        }
-        state.sim.open = quel;
-        state.sim.step = 'form';
-        appliquerProfil();   // le simulateur part toujours des données du profil
-        // Statut et cockpit produisent un résultat dès l'ouverture (temps réel).
-        if(quel === 'statut' || quel === 'optim') marquerFait('sim:'+quel);
-        if(quel === 'depenses'){
-          // Le parcours d'accueil ne se joue qu'à la première visite.
-          var vu = false;
-          try { vu = !!localStorage.getItem('freehub_dep_onb'); } catch(err){}
-          if(!vu) state.depOnb = { actif:true, etape:0 };
-          marquerFait('sim:depenses');
-        }
-        // Le simulateur TVA s'ouvre directement sur son parcours guidé.
-        // Comparateur et cockpit : on arrive directement sur le simulateur.
-        if(quel === 'statut'){ state.statut.outil = null; marquerFait('sim:statut'); }
-        if(quel === 'optim'){ state.optim.outil = null; marquerFait('sim:optim'); }
-        if(quel === 'vl'){
-          state.vl.step = 'form';
-          var vuVl = false;
-          try { vuVl = !!localStorage.getItem('freehub_vl_onb'); } catch(err){}
-          if(!vuVl) state.vl.onb = { actif:true, etape:0 };
-        }
-        if(quel === 'tva'){
-          // Une fois le parcours mené à son terme, on arrive directement sur la
-          // page du simulateur, avec les simulations déjà enregistrées.
-          var vuTva = false;
-          try { vuTva = !!localStorage.getItem('freehub_tva_onb'); } catch(err){}
-          state.tva.step = 'form';
-          if(!vuTva) state.tva.onb = { actif:true, etape:0 };
-        }
+        simOuvrir(el.getAttribute('data-sim') || 'depenses');
         render();
         break;
       }

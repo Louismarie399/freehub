@@ -2089,15 +2089,23 @@
   .obj-partage.img:hover{background:#dcfce7}
 
   /* ---------- La palette de recherche ---------- */
-  .rc-btn{display:flex;align-items:center;gap:8px;background:var(--surface);
-    border:1.5px solid var(--border);border-radius:11px;padding:8px 12px;font-family:inherit;
-    font-size:13px;font-weight:700;color:var(--muted2);cursor:pointer;
-    transition:.16s var(--ease)}
-  .rc-btn:hover{border-color:var(--blue);color:var(--blue)}
-  .rc-btn svg{width:16px;height:16px;flex:none}
-  .rc-btn-k{font-size:11px;font-weight:800;color:var(--muted);background:var(--soft);
-    border-radius:5px;padding:2px 6px}
-  .rc-btn:hover .rc-btn-k{color:var(--blue)}
+  /* Le bouton de recherche, dans la barre latérale, juste au-dessus de la
+     navigation. Il reprend les codes de la barre : fond translucide sur le bleu
+     nuit, et il se réduit à sa loupe quand le menu est replié. */
+  .rc-btn{position:relative;display:flex;align-items:center;gap:10px;width:100%;
+    margin:0 0 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+    border-radius:11px;padding:9px 12px;font-family:inherit;font-size:13.5px;font-weight:700;
+    color:rgba(255,255,255,.62);cursor:pointer;transition:.16s var(--ease)}
+  .rc-btn:hover{background:rgba(255,255,255,.13);color:#fff}
+  .rc-btn svg{width:17px;height:17px;flex:none}
+  .rc-btn-t{flex:1;text-align:left}
+  .rc-btn-k{font-size:10.5px;font-weight:800;color:rgba(255,255,255,.5);
+    background:rgba(255,255,255,.1);border-radius:5px;padding:2px 6px}
+  .app.side-plie .rc-btn{justify-content:center;padding:9px 0}
+  .app.side-plie .rc-btn-t,.app.side-plie .rc-btn-k{display:none}
+  /* L'infobulle ne s'affiche que replié, comme pour les entrées de navigation. */
+  .rc-btn .nav-tip{display:none}
+  .app.side-plie .rc-btn:hover .nav-tip{display:block}
 
   /* La palette s'ouvre haut dans l'écran, comme toutes les palettes : le regard
      y est déjà, et la liste a la place de descendre. */
@@ -2159,12 +2167,34 @@
     .rc-modal{animation:none}
   }
   @media (max-width:720px){
-    .rc-btn-t{display:none}
+    /* Le raccourci clavier n'a pas de sens sur un téléphone ; le libellé, si. */
     .rc-btn-k{display:none}
     .rc-overlay{padding:12px;padding-top:6vh}
     .rc-modal{max-height:82vh}
     .rc-l-k{display:none}
   }
+
+  /* Ajouter un parcours trouvé par la recherche */
+  .ra-modal{width:400px;max-width:100%;padding:26px 26px 22px;text-align:center}
+  .ra-ico{width:76px;height:76px;border-radius:22px;margin:0 auto;display:flex;
+    align-items:center;justify-content:center}
+  .ra-l{margin-top:15px;font-size:11.5px;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--c)}
+  .ra-t{margin-top:5px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:var(--ink);
+    line-height:1.25}
+  .ra-d{margin-top:7px;font-size:14px;color:var(--muted2);line-height:1.5}
+  /* `align-self` est nécessaire : .modal est un conteneur flex en colonne, la
+     pastille s'y étirait sur toute la largeur au lieu de rester une pastille. */
+  .ra-n{align-self:center;margin-top:12px;font-size:12px;font-weight:800;color:var(--c);
+    background:var(--soft);border-radius:999px;padding:5px 13px}
+  .ra-ico img{display:block}
+  .ra-b{display:flex;gap:9px;margin-top:20px}
+  .ra-non,.ra-oui{flex:1;border-radius:12px;padding:12px 14px;font-family:inherit;
+    font-size:13.5px;font-weight:800;cursor:pointer;transition:.16s var(--ease)}
+  .ra-non{border:1.5px solid var(--border);background:var(--surface);color:var(--muted2)}
+  .ra-non:hover{border-color:var(--muted);color:var(--ink)}
+  .ra-oui{border:none;background:var(--c);color:#fff}
+  .ra-oui:hover{filter:brightness(1.08)}
 
   /* ---------- L'image de réussite ---------- */
   /* Deux colonnes : l'aperçu à gauche, les réglages à droite. Empilée, la
