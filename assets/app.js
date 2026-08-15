@@ -933,12 +933,12 @@
     { id:'facture-elec', dom:'administratif', title:'Tout comprendre sur la facture électronique',
       suite:['facturer-etranger','tva-comprendre'],
       desc:'La réforme qui va toucher toutes les entreprises',
-      pourquoi:'La facturation électronique se généralise : mieux vaut l’anticiper',
+      pourquoi:'Recevoir des factures électroniques devient obligatoire pour tout le monde en septembre 2026',
       steps:[
-        {t:'Comprendre ce qui change', h:'Facture papier vs électronique, et pour qui', duree:'10 min', illu:'loupe'},
-        {t:'Situer ton calendrier d’obligation', h:'La date dépend de la taille de ton entreprise', duree:'5 min', illu:'calendrier'},
-        {t:'Choisir un outil compatible', h:'Une plateforme de facturation conforme', part:1, duree:'20 min', illu:'outil'},
-        {t:'Adapter tes factures', h:'Mentions et format électronique', part:2, duree:'30 min', illu:'facture'},
+        {t:'Comprendre ce qui change', h:'Un PDF par mail n’est pas une facture électronique', duree:'10 min', illu:'loupe'},
+        {t:'Retenir tes deux dates', h:'Recevoir en 2026, émettre en 2027', duree:'5 min', illu:'calendrier'},
+        {t:'Choisir ta plateforme agréée', h:'Ton outil ou ta banque le fait peut-être déjà', part:1, duree:'20 min', illu:'outil'},
+        {t:'Vérifier tes factures', h:'Émises et reçues au même endroit', part:2, duree:'30 min', illu:'facture'},
       ]},
     { id:'facturer-etranger', dom:'tva', title:'Facturer à l’étranger, comment ça marche',
       suite:['tva-comprendre','facture-elec'],
@@ -1029,6 +1029,10 @@
   // Par étape : { intro, faire:[…], vigilance:[…], liens:[{l,url}] }.
   // ---------------------------------------------------------------------------
   var IMPOTS = { l:'impots.gouv.fr', url:'https://www.impots.gouv.fr' };
+  // La page dédiée à la réforme : le calendrier y est tenu à jour, et c'est là
+  // qu'il faut envoyer quelqu'un plutôt que sur l'accueil du site.
+  var IMPOTS_FE = { l:'Le calendrier officiel sur impots.gouv.fr',
+                    url:'https://www.impots.gouv.fr/professionnel/je-decouvre-la-facturation-electronique' };
   var URSSAF = { l:'autoentrepreneur.urssaf.fr', url:'https://www.autoentrepreneur.urssaf.fr' };
   var GUICHET = { l:'Guichet unique - formalites.entreprises.gouv.fr', url:'https://formalites.entreprises.gouv.fr' };
   var SPUBLIC = { l:'entreprendre.service-public.fr', url:'https://entreprendre.service-public.fr' };
@@ -1247,18 +1251,34 @@
         faire:['Mets-la à jour au guichet unique en cas de changement'],
         liens:[GUICHET] },
     ],
+    // Les deux dates ci-dessous viennent de impots.gouv.fr, vérifiées le
+    // 15/08/2026. Ce calendrier a déjà été repoussé par le passé : la mention
+    // « vérifie » reste, et le lien officiel est en bas de l'étape.
     'facture-elec': [
-      { intro:'La facturation électronique va progressivement devenir obligatoire entre entreprises',
-        faire:['Comprends la différence : une facture PDF envoyée par mail n’est pas une facture électronique au sens de la réforme'] },
-      { intro:'Le calendrier dépend de la taille de ton entreprise',
-        faire:['Repère ta date d’entrée dans le dispositif sur les sources officielles'],
-        vigilance:['Le calendrier a déjà évolué : vérifie les échéances à jour plutôt que de te fier à une date entendue'],
-        liens:[IMPOTS] },
-      { intro:'Tu devras émettre et recevoir tes factures via une plateforme conforme',
-        astuce:'Change d’outil avant la date butoir, pas la semaine d’avant : reprendre son historique de factures prend du temps',
-        faire:['Choisis un outil de facturation compatible pour être prêt le moment venu'] },
-      { intro:'Quelques mentions et formats deviennent incontournables',
-        faire:['Assure-toi que ton outil gère le format électronique attendu'] },
+      { intro:'Une facture PDF envoyée par mail n’est PAS une facture électronique au sens de la réforme',
+        faire:['La facture électronique est un fichier structuré, lisible par une machine, qui transite par une plateforme agréée',
+               'Ce n’est pas un changement de mise en page : c’est un changement de tuyau'],
+        astuce:'Retiens la logique : tes factures ne partiront plus « par mail », elles partiront « par plateforme ». Le reste de ton métier ne change pas.' },
+      { intro:'Deux dates, et elles ne veulent pas dire la même chose',
+        faire:['1ᵉʳ septembre 2026 : toutes les entreprises doivent pouvoir RECEVOIR une facture électronique — quelle que soit leur taille, micro comprise',
+               '1ᵉʳ septembre 2027 : les micro, petites et moyennes entreprises doivent ÉMETTRE leurs factures au format électronique',
+               'Les grandes entreprises et les ETI, elles, doivent émettre dès le 1ᵉʳ septembre 2026 : tes gros clients seront donc en avance sur toi'],
+        vigilance:['Recevoir d’abord, émettre ensuite : c’est la première date qui te concerne, et c’est la plus proche',
+                   'Ce calendrier a déjà été repoussé par le passé. Il est à jour au 15/08/2026, mais vérifie-le sur le lien officiel avant de t’organiser'],
+        liens:[IMPOTS_FE] },
+      { intro:'Tu as peut-être déjà ce qu’il faut sans le savoir',
+        faire:['La réforme impose de passer par une « plateforme agréée » : une société privée immatriculée par l’État pour émettre, recevoir et transmettre les données à l’administration',
+               'Beaucoup d’outils de comptabilité et de néobanques se positionnent déjà dessus, ou s’y raccordent',
+               'Si tu utilises déjà un de ces outils pour facturer, le plus simple est souvent de rester chez lui plutôt que d’ajouter une brique de plus',
+               'Demande-lui noir sur blanc : « êtes-vous une plateforme agréée, ou raccordé à une ? »'],
+        astuce:'Une seule plateforme suffit, et elle n’a pas besoin d’être la même que celle de tes clients ou de tes fournisseurs : les plateformes se parlent entre elles.',
+        vigilance:['Change d’outil avant la date butoir, pas la semaine d’avant : reprendre son historique de factures prend du temps'],
+        liens:[IMPOTS_FE] },
+      { intro:'Une fois la plateforme choisie, le quotidien devient assez simple',
+        faire:['Chaque facture que tu émets depuis cet outil part au format électronique, sans geste supplémentaire',
+               'Celles que tu reçois arrivent au même endroit, au lieu d’être éparpillées dans ta boîte mail',
+               'Vérifie que tes mentions obligatoires habituelles sont bien reprises par l’outil'],
+        astuce:'C’est le vrai bénéfice de la réforme pour toi : toutes tes factures, entrantes et sortantes, au même endroit et déjà classées.' },
     ],
     'facturer-etranger': [
       { intro:'La règle de TVA change selon que ton client est dans l’UE ou en dehors',
