@@ -1,0 +1,12 @@
+# FreeHub — https://free-hub.fr
+# L'application elle-même (/app) est derrière un compte : rien à y indexer, et
+# une page vide dans les résultats de recherche ne rend service à personne.
+
+User-agent: *
+Allow: /$
+Allow: /legal.html
+Disallow: /app
+Disallow: /app.html
+Disallow: /api/
+
+Sitemap: https://free-hub.fr/sitemap.xml

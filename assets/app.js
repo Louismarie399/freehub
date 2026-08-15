@@ -4251,7 +4251,31 @@
   }
 
   function partageTexte(o){
-    return 'Objectif atteint sur FreeHub : ' + o.title + ' ✅';
+    return o ? 'Objectif atteint sur FreeHub : ' + o.title + ' ✅' : 'Objectif atteint sur FreeHub ✅';
+  }
+
+  function partageTelecharger(){
+    return partageFichier().then(function(f){
+      if(!f) return null;
+      var url = URL.createObjectURL(f);
+      var a = document.createElement('a');
+      a.href = url; a.download = f.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      // On libère l'URL après le clic, pas avant : Safari lit le blob de façon
+      // asynchrone et une révocation immédiate annule le fichier.
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      if(state.partageObj) marquerFait('partage-image:' + state.partageObj.id);
+      return f;
+    });
+  }
+
+  // On télécharge l'image, puis on ouvre le composeur. La fenêtre est ouverte
+  // dans le même geste utilisateur, sinon les bloqueurs de fenêtres la refusent.
+  function partageVersReseau(url){
+    var w = window.open('', '_blank', 'noopener');
+    partageTelecharger().then(function(){
+      if(w) w.location = url; else window.open(url, '_blank', 'noopener');
+    });
   }
 
   // Le partage natif ne sait envoyer un fichier que sur mobile, et seulement si
@@ -4264,68 +4288,106 @@
     } catch(e){ return false; }
   }
 
-  // La pop-up vit dans son propre root : le canvas ne doit pas être recréé à
-  // chaque rendu de l'application, sinon l'image se redessine sans arrêt.
+  // La pop-up vit dans son propre root, et sa coquille n'est bâtie QU'UNE FOIS
+  // par objectif. Changer de format ou retirer le fond ne reconstruit rien : on
+  // repeint le canvas et on bascule deux classes. Reconstruire le HTML rejouait
+  // l'animation d'ouverture à chaque clic, et la pop-up semblait se recharger.
   function majPartageObj(){
     var root = document.getElementById('poj-root');
     if(!root) return;
     var p = state.partageObj;
-    if(!p){ root.innerHTML = ''; return; }
-    var o = obj(p.id);
-    if(!o){ root.innerHTML = ''; return; }
+    var o = p && obj(p.id);
+    if(!o){ root.innerHTML = ''; root.removeAttribute('data-obj'); return; }
 
-    var signature = p.id + '|' + p.format + '|' + p.fond;
-    if(root.getAttribute('data-sig') === signature) return;
-    root.setAttribute('data-sig', signature);
+    if(root.getAttribute('data-obj') !== p.id){
+      root.setAttribute('data-obj', p.id);
+      root.innerHTML = partageCoquilleHtml(o);
+    }
+    partageMajReglages();
+  }
 
+  function partageCoquilleHtml(o){
     var boutonsFormat = Object.keys(PARTAGE_FORMATS).map(function(k){
       var f = PARTAGE_FORMATS[k];
-      return '<button class="pj-opt'+(p.format === k ? ' on' : '')+'"'
-        + ' data-action="partage-format" data-f="'+k+'">'
+      return '<button class="pj-opt" data-action="partage-format" data-f="'+k+'">'
         + esc(f.l)+'<span>'+esc(f.d)+'</span></button>';
     }).join('');
 
-    root.innerHTML = '<div class="overlay" data-action="partage-close">'
+    return '<div class="overlay" data-action="partage-close">'
       + '<div class="modal pj-modal" data-action="stop">'
         + '<button class="pj-x" data-action="partage-close" aria-label="Fermer">×</button>'
-        + '<div class="pj-tete">'
-          + '<div class="pj-l">Objectif bouclé 🎉</div>'
-          + '<div class="pj-t">'+esc(o.title)+'</div>'
-          + '<div class="pj-d">Garde une trace, ou montre-le. '
-            + 'L’image se fabrique sur ton appareil.</div>'
+        + '<div class="pj-l">Objectif bouclé 🎉</div>'
+        + '<div class="pj-t">'+esc(o.title)+'</div>'
+        + '<div class="pj-corps">'
+          + '<div class="pj-apercu" data-pj-apercu>'
+            + '<canvas data-partage-cvs class="pj-cvs"></canvas>'
+          + '</div>'
+          + '<div class="pj-cote">'
+            + '<div class="pj-reglages">'
+              + '<div class="pj-groupe" data-pj-formats>'+boutonsFormat+'</div>'
+              + '<button class="pj-fond" data-action="partage-fond">'
+                + '<span class="pj-case"></span>Sans fond (PNG)</button>'
+            + '</div>'
+            + '<div class="pj-actions">'
+              + (partageNatifDispo()
+                  ? '<button class="pj-b pj-b-p" data-action="partage-natif">Partager…</button>'
+                  : '')
+              + '<button class="pj-b pj-b-p" data-action="partage-dl">'
+                + 'Télécharger l’image</button>'
+            + '</div>'
+            // Les réseaux à part : ils ne reçoivent pas l'image directement, le
+            // parcours n'est pas le même que celui des deux boutons au-dessus.
+            + '<div class="pj-reseaux">'
+              + '<div class="pj-reseaux-h">Publier sur</div>'
+              + '<div class="pj-reseaux-b">'
+                + '<button class="pj-r" data-action="partage-x">𝕏</button>'
+                + '<button class="pj-r" data-action="partage-li">in</button>'
+              + '</div>'
+              + '<div class="pj-note">L’image se télécharge, puis le composeur '
+                + 's’ouvre avec le texte : aucun réseau n’accepte de pièce jointe '
+                + 'depuis un lien, il reste à la glisser dans le message.</div>'
+            + '</div>'
+          + '</div>'
         + '</div>'
-        + '<div class="pj-apercu'+(p.fond ? '' : ' damier')+'">'
-          + '<canvas data-partage-cvs class="pj-cvs'
-            + (!p.fond ? ' sticker' : (p.format === 'carre' ? ' carre' : ''))+'"></canvas>'
-        + '</div>'
-        + '<div class="pj-reglages">'
-          // Sans fond, l'image est l'autocollant lui-même : il n'y a plus de
-          // cadre à choisir, donc plus de format à proposer.
-          + (p.fond ? '<div class="pj-groupe">'+boutonsFormat+'</div>' : '')
-          + '<button class="pj-fond'+(p.fond ? '' : ' off')+'" data-action="partage-fond">'
-            + '<span class="pj-case">'+(p.fond ? '' : '✓')+'</span>Sans fond (PNG)</button>'
-        + '</div>'
-        + '<div class="pj-actions">'
-          + (partageNatifDispo()
-              ? '<button class="pj-b pj-b-p" data-action="partage-natif">Partager…</button>'
-              : '')
-          + '<button class="pj-b pj-b-p" data-action="partage-dl">Télécharger l’image</button>'
-          + '<button class="pj-b" data-action="partage-x">Sur X</button>'
-          + '<button class="pj-b" data-action="partage-li">Sur LinkedIn</button>'
-        + '</div>'
-        + '<div class="pj-note">Instagram et TikTok n’acceptent pas d’image envoyée '
-          + 'depuis un navigateur : télécharge-la, puis publie-la depuis l’application. '
-          + 'Sur X et LinkedIn, le texte est prérempli — il reste à joindre l’image.</div>'
       + '</div></div>';
+  }
+
+  // Les seuls changements possibles sans reconstruire : le format actif, la
+  // présence du fond, et le contenu du canvas.
+  function partageMajReglages(){
+    var root = document.getElementById('poj-root');
+    var p = state.partageObj;
+    if(!root || !p) return;
+    var o = obj(p.id);
+    if(!o) return;
+
+    var groupe = root.querySelector('[data-pj-formats]');
+    if(groupe){
+      groupe.style.display = p.fond ? '' : 'none';
+      [].forEach.call(groupe.querySelectorAll('.pj-opt'), function(b){
+        b.classList.toggle('on', b.getAttribute('data-f') === p.format);
+      });
+    }
+    var fond = root.querySelector('.pj-fond');
+    if(fond){
+      fond.classList.toggle('off', !p.fond);
+      var c = fond.querySelector('.pj-case');
+      if(c) c.textContent = p.fond ? '' : '✓';
+    }
+    var apercu = root.querySelector('[data-pj-apercu]');
+    if(apercu) apercu.classList.toggle('damier', !p.fond);
 
     var cvs = root.querySelector('[data-partage-cvs]');
-    if(cvs) partageDessiner(cvs, o);
+    if(!cvs) return;
+    cvs.classList.toggle('sticker', !p.fond);
+    cvs.classList.toggle('carre', p.fond && p.format === 'carre');
+    partageDessiner(cvs, o);
   }
 
   function partageOuvrir(id){
     state.partageObj = { id:id, format:'story', fond:true };
     var root = document.getElementById('poj-root');
-    if(root) root.removeAttribute('data-sig');
+    if(root) root.removeAttribute('data-obj');
     majPartageObj();
   }
 
@@ -12387,17 +12449,7 @@
         majPartageObj();
         break;
       case 'partage-dl':
-        partageFichier().then(function(f){
-          if(!f) return;
-          var url = URL.createObjectURL(f);
-          var a = document.createElement('a');
-          a.href = url; a.download = f.name;
-          document.body.appendChild(a); a.click(); a.remove();
-          // On libère l'URL après le clic, pas avant : Safari lit le blob
-          // de façon asynchrone et un révocation immédiate annule le fichier.
-          setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
-          marquerFait('partage-image:' + state.partageObj.id);
-        });
+        partageTelecharger();
         break;
       case 'partage-natif': {
         var oPart = obj(state.partageObj.id);
@@ -12409,17 +12461,21 @@
         });
         break;
       }
+      // X et LinkedIn n'acceptent aucune pièce jointe par URL : leurs composeurs
+      // ne prennent que du texte, et l'aperçu vient des balises Open Graph du
+      // lien partagé. On télécharge donc l'image AVANT d'ouvrir le composeur,
+      // pour qu'elle attende déjà dans les téléchargements au moment de rédiger.
       case 'partage-x': {
         var oX = obj(state.partageObj.id);
         if(!oX) break;
-        window.open('https://x.com/intent/post?text='
-          + encodeURIComponent(partageTexte(oX) + '\n\nhttps://free-hub.fr'),
-          '_blank', 'noopener');
+        partageVersReseau('https://x.com/intent/post?text='
+          + encodeURIComponent(partageTexte(oX) + '\n\nhttps://free-hub.fr'));
         break;
       }
       case 'partage-li':
-        window.open('https://www.linkedin.com/sharing/share-offsite/?url='
-          + encodeURIComponent('https://free-hub.fr'), '_blank', 'noopener');
+        partageVersReseau('https://www.linkedin.com/feed/?shareActive=true&text='
+          + encodeURIComponent(partageTexte(obj(state.partageObj.id))
+            + '\n\nhttps://free-hub.fr'));
         break;
       case 'step-expand': {
         var idx = parseInt(el.getAttribute('data-i'), 10);
