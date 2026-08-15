@@ -4295,22 +4295,35 @@
     return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
   }
 
-  // Le parcours vers un réseau : l'image dans le presse-papier, puis le
-  // composeur avec le texte. La fenêtre est ouverte dans le même geste
-  // utilisateur, sinon les bloqueurs de fenêtres la refusent.
+  // Le parcours vers un réseau : le composeur s'ouvre avec un texte modifiable,
+  // et l'image attend dans le presse-papier — il ne reste qu'à la coller.
+  //
+  // L'onglet est ouvert TOUT DE SUITE, dans le geste du clic : la copie de
+  // l'image est asynchrone, et une fenêtre ouverte après coup est refusée par
+  // les bloqueurs. Et surtout, pas de `noopener` ici — cette option fait
+  // renvoyer `null` à window.open, on perdait donc la référence de l'onglet et
+  // la navigation n'avait jamais lieu. On coupe le lien vers l'ouvreur à la
+  // main juste après, ce qui donne la même protection.
   function partageVersReseau(url){
-    var w = window.open('', '_blank', 'noopener');
-    var suite = function(mode){
+    var w = window.open('about:blank', '_blank');
+    try { if(w) w.opener = null; } catch(e){}
+
+    var aller = function(mode){
       state.partageObj = Object.assign({}, state.partageObj, { copie:mode });
       partageMajAide();
-      if(state.partageObj) marquerFait('partage-image:' + state.partageObj.id);
-      if(w) w.location = url; else window.open(url, '_blank', 'noopener');
+      marquerFait('partage-image:' + state.partageObj.id);
+      if(w && !w.closed) w.location.href = url;
+      else window.location.href = url;   // onglet bloqué : on y va dans l'onglet courant
     };
+
     partageCopierImage().then(
-      function(){ suite('presse'); },
+      function(){ aller('presse'); },
       // Presse-papier refusé ou indisponible : on retombe sur le téléchargement,
       // qui marche partout.
-      function(){ partageTelecharger().then(function(){ suite('telecharge'); }); }
+      function(){
+        partageTelecharger().then(function(){ aller('telecharge'); },
+                                  function(){ aller(null); });
+      }
     );
   }
 
