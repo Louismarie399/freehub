@@ -4022,6 +4022,8 @@
     story: { l:'Story', d:'9:16', w:1080, h:1920 },
     carre: { l:'Carré', d:'1:1',  w:1080, h:1080 },
   };
+  var PARTAGE_BLEU = '#2f6bff';   // le bleu de la marque, celui de la barre latérale
+  var PARTAGE_VERT = '#16a34a';   // le vert du « bouclé », déjà utilisé dans l'app
 
   // Les polices doivent être chargées AVANT de peindre : sinon le canvas se
   // rabat silencieusement sur une police système et l'image ne ressemble plus
@@ -4079,18 +4081,14 @@
     var ctx = cvs.getContext('2d');
 
     return partagePolices().then(function(){
-      return Promise.all([
-        partageImage(illusObjectif(o.id)),
-        partageImage('assets/freehub-logo.png'),
-      ]);
-    }).then(function(imgs){
-      var illu = imgs[0], logo = imgs[1];
+      return partageImage('assets/freehub-logo.png');
+    }).then(function(logo){
 
       // On mesure AVANT de dimensionner : la hauteur de l'autocollant dépend du
       // nombre de lignes du titre, et la taille de l'image dépend de lui quand
       // on exporte sans fond.
       var cw = p.fond ? (p.format === 'story' ? 900 : 940) : 900;
-      var R = 132;
+      var R = 108;   // « un poil plus petite » que le médaillon d'illustration
       ctx.font = '900 68px Nunito, sans-serif';
       var lignes = partageLignes(ctx, o.title, cw - 130, 3);
       var ch = 96 + R * 2 + 74 + 78 + lignes.length * 82 + 64 + 108 + 168;
@@ -4106,10 +4104,13 @@
 
       // Le fond. Sans lui, on obtient un autocollant sur transparence, à poser
       // sur sa propre photo — c'est l'usage réel en story.
+      // Il reste TOUJOURS au bleu de la marque, jamais à la couleur du domaine :
+      // une image partagée doit se reconnaître comme un FreeHub, pas changer de
+      // teinte selon qu'on a bouclé un parcours TVA ou un parcours pilotage.
       if(p.fond){
         var g = ctx.createLinearGradient(0, 0, L, H);
-        g.addColorStop(0, d.c);
-        g.addColorStop(1, partageAssombrir(d.c, .55));
+        g.addColorStop(0, PARTAGE_BLEU);
+        g.addColorStop(1, partageAssombrir(PARTAGE_BLEU, .5));
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, L, H);
         // Deux halos très doux : un aplat pur fait « fond d'écran par défaut ».
@@ -4136,26 +4137,31 @@
       var mid = L / 2;
       var y = cy + 96;
 
-      // Le médaillon : l'illustration de l'objectif, ou son emoji de domaine.
-      ctx.fillStyle = d.soft;
-      ctx.beginPath(); ctx.arc(mid, y + R, R, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = d.c; ctx.lineWidth = 5;
-      ctx.beginPath(); ctx.arc(mid, y + R, R - 3, 0, Math.PI * 2); ctx.stroke();
-      if(illu){
-        var s = 186;
-        ctx.drawImage(illu, mid - s/2, y + R - s/2, s, s);
-      } else {
-        ctx.font = '400 130px Nunito, sans-serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(d.ico, mid, y + R + 6);
-      }
+      // La coche. Une illustration différente à chaque parcours diluait le
+      // signal ; un seul symbole, toujours le même, dit « c'est fait » d'un
+      // coup d'œil et rend la série d'images reconnaissable.
+      var cy0 = y + R;
+      ctx.fillStyle = '#e8f8ef';
+      ctx.beginPath(); ctx.arc(mid, cy0, R, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = PARTAGE_VERT;
+      ctx.beginPath(); ctx.arc(mid, cy0, R * 0.72, 0, Math.PI * 2); ctx.fill();
+      // Tracée à la main plutôt qu'en emoji : le rendu des emoji varie d'un
+      // système à l'autre, et l'image doit être identique partout.
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = R * 0.17;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(mid - R * 0.34, cy0 + R * 0.02);
+      ctx.lineTo(mid - R * 0.09, cy0 + R * 0.27);
+      ctx.lineTo(mid + R * 0.36, cy0 - R * 0.26);
+      ctx.stroke();
       y += R * 2 + 74;
 
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
 
-      // L'accroche.
+      // L'accroche, au vert de la coche : c'est la même information.
       ctx.font = '900 34px Nunito, sans-serif';
-      ctx.fillStyle = d.c;
+      ctx.fillStyle = PARTAGE_VERT;
       ctx.letterSpacing = '4px';
       ctx.fillText('OBJECTIF ATTEINT', mid, y);
       ctx.letterSpacing = '0px';
@@ -4191,7 +4197,7 @@
       stats.forEach(function(s, i){
         var sx = cx + demi + i * demi * 2;
         ctx.font = '900 60px Nunito, sans-serif';
-        ctx.fillStyle = d.c;
+        ctx.fillStyle = PARTAGE_BLEU;
         ctx.fillText(s[0], sx, y);
         ctx.font = '700 25px Nunito, sans-serif';
         ctx.fillStyle = '#5b6b85';
@@ -4269,13 +4275,66 @@
     });
   }
 
-  // On télécharge l'image, puis on ouvre le composeur. La fenêtre est ouverte
-  // dans le même geste utilisateur, sinon les bloqueurs de fenêtres la refusent.
+  // Le presse-papier accepte les images, contrairement aux composeurs de X et
+  // LinkedIn qui ne prennent que du texte dans leur URL. Coller est donc le
+  // chemin le plus court sur ordinateur : un Cmd+V dans le message, au lieu
+  // d'aller rechercher un fichier dans ses téléchargements.
+  function partagePresseCopiable(){
+    return !!(navigator.clipboard && window.ClipboardItem && window.isSecureContext);
+  }
+
+  function partageCopierImage(){
+    if(!partagePresseCopiable()) return Promise.reject();
+    // Safari exige que le ClipboardItem soit construit AVEC la promesse du
+    // blob, et non après son résolution : sinon le geste utilisateur est
+    // considéré comme perdu et l'écriture est refusée.
+    var blob = partageFichier().then(function(f){
+      if(!f) throw new Error('image indisponible');
+      return f;
+    });
+    return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+  }
+
+  // Le parcours vers un réseau : l'image dans le presse-papier, puis le
+  // composeur avec le texte. La fenêtre est ouverte dans le même geste
+  // utilisateur, sinon les bloqueurs de fenêtres la refusent.
   function partageVersReseau(url){
     var w = window.open('', '_blank', 'noopener');
-    partageTelecharger().then(function(){
+    var suite = function(mode){
+      state.partageObj = Object.assign({}, state.partageObj, { copie:mode });
+      partageMajAide();
+      if(state.partageObj) marquerFait('partage-image:' + state.partageObj.id);
       if(w) w.location = url; else window.open(url, '_blank', 'noopener');
-    });
+    };
+    partageCopierImage().then(
+      function(){ suite('presse'); },
+      // Presse-papier refusé ou indisponible : on retombe sur le téléchargement,
+      // qui marche partout.
+      function(){ partageTelecharger().then(function(){ suite('telecharge'); }); }
+    );
+  }
+
+  // Le message d'aide change selon ce qui vient réellement de se passer : dire
+  // « colle l'image » alors qu'elle a été téléchargée serait pire que rien.
+  function partageMajAide(){
+    var n = document.querySelector('[data-pj-note]');
+    if(!n || !state.partageObj) return;
+    var m = state.partageObj.copie;
+    n.classList.toggle('on', !!m);
+    n.innerHTML = m === 'presse'
+      ? '<b>✓ Image copiée.</b> Colle-la dans le message : '
+        + (partageSurMac() ? '⌘V' : 'Ctrl+V') + '.'
+      : (m === 'telecharge'
+          ? '<b>✓ Image téléchargée.</b> Glisse-la dans le message.'
+          : partagePresseCopiable()
+            ? 'L’image est copiée dans ton presse-papier, puis le composeur '
+              + 's’ouvre : il ne reste qu’à la coller dans le message.'
+            : 'L’image se télécharge, puis le composeur s’ouvre : il reste à la '
+              + 'glisser dans le message.');
+  }
+
+  function partageSurMac(){
+    return /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
   }
 
   // Le partage natif ne sait envoyer un fichier que sur mobile, et seulement si
@@ -4329,23 +4388,26 @@
                 + '<span class="pj-case"></span>Sans fond (PNG)</button>'
             + '</div>'
             + '<div class="pj-actions">'
+              // Le partage natif transmet le VRAI fichier à l'application
+              // choisie : c'est le seul chemin qui dépose l'image directement
+              // dans Instagram ou X. Il n'existe que sur mobile.
               + (partageNatifDispo()
                   ? '<button class="pj-b pj-b-p" data-action="partage-natif">Partager…</button>'
                   : '')
-              + '<button class="pj-b pj-b-p" data-action="partage-dl">'
-                + 'Télécharger l’image</button>'
+              + (partagePresseCopiable()
+                  ? '<button class="pj-b pj-b-p" data-action="partage-copier">'
+                    + 'Copier l’image</button>' : '')
+              + '<button class="pj-b" data-action="partage-dl">Télécharger</button>'
             + '</div>'
             // Les réseaux à part : ils ne reçoivent pas l'image directement, le
-            // parcours n'est pas le même que celui des deux boutons au-dessus.
+            // parcours n'est pas le même que celui des boutons au-dessus.
             + '<div class="pj-reseaux">'
               + '<div class="pj-reseaux-h">Publier sur</div>'
               + '<div class="pj-reseaux-b">'
                 + '<button class="pj-r" data-action="partage-x">𝕏</button>'
                 + '<button class="pj-r" data-action="partage-li">in</button>'
               + '</div>'
-              + '<div class="pj-note">L’image se télécharge, puis le composeur '
-                + 's’ouvre avec le texte : aucun réseau n’accepte de pièce jointe '
-                + 'depuis un lien, il reste à la glisser dans le message.</div>'
+              + '<div class="pj-note" data-pj-note></div>'
             + '</div>'
           + '</div>'
         + '</div>'
@@ -4377,6 +4439,8 @@
     var apercu = root.querySelector('[data-pj-apercu]');
     if(apercu) apercu.classList.toggle('damier', !p.fond);
 
+    partageMajAide();
+
     var cvs = root.querySelector('[data-partage-cvs]');
     if(!cvs) return;
     cvs.classList.toggle('sticker', !p.fond);
@@ -4385,7 +4449,9 @@
   }
 
   function partageOuvrir(id){
-    state.partageObj = { id:id, format:'story', fond:true };
+    // `copie` retient ce qui vient de se passer (presse-papier ou fichier), pour
+    // que le message d'aide colle à la réalité plutôt qu'à une supposition.
+    state.partageObj = { id:id, format:'story', fond:true, copie:null };
     var root = document.getElementById('poj-root');
     if(root) root.removeAttribute('data-obj');
     majPartageObj();
@@ -12449,7 +12515,23 @@
         majPartageObj();
         break;
       case 'partage-dl':
-        partageTelecharger();
+        partageTelecharger().then(function(){
+          state.partageObj = Object.assign({}, state.partageObj, { copie:'telecharge' });
+          partageMajAide();
+        });
+        break;
+      case 'partage-copier':
+        partageCopierImage().then(function(){
+          state.partageObj = Object.assign({}, state.partageObj, { copie:'presse' });
+          partageMajAide();
+          if(state.partageObj) marquerFait('partage-image:' + state.partageObj.id);
+        }, function(){
+          // Refusé par le navigateur : on ne laisse pas la personne sans rien.
+          partageTelecharger().then(function(){
+            state.partageObj = Object.assign({}, state.partageObj, { copie:'telecharge' });
+            partageMajAide();
+          });
+        });
         break;
       case 'partage-natif': {
         var oPart = obj(state.partageObj.id);

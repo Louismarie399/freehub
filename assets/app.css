@@ -2156,6 +2156,10 @@
     color:var(--ink);cursor:pointer;transition:.16s var(--ease)}
   .pj-r:hover{border-color:var(--ink);background:var(--soft)}
   .pj-note{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.5}
+  /* Confirmation après coup : le message passe au vert quand l'image est
+     réellement dans le presse-papier ou sur le disque. */
+  .pj-note.on{color:#15803d;font-weight:600}
+  .pj-note b{font-weight:800}
 
   @media (max-width:620px){
     .pj-corps{flex-direction:column;gap:14px}
