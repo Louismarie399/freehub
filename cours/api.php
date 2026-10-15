@@ -67,6 +67,11 @@ function db(): PDO
         jeton TEXT NOT NULL,
         vu TEXT NOT NULL,
         created TEXT NOT NULL)');
+    // Ajout après coup : une base déjà en service n'a pas cette colonne.
+    $colsEl = array_column($pdo->query('PRAGMA table_info(eleves)')->fetchAll(), 'name');
+    if (!in_array('emoji', $colsEl, true)) {
+        $pdo->exec('ALTER TABLE eleves ADD COLUMN emoji TEXT NOT NULL DEFAULT ""');
+    }
     $pdo->exec('CREATE TABLE IF NOT EXISTS reponses(
         question_id INTEGER NOT NULL,
         eleve_id INTEGER NOT NULL,
@@ -108,6 +113,22 @@ function jeton(): string { return bin2hex(random_bytes(16)); }
 
 function partie(): array { return db()->query('SELECT * FROM partie WHERE id = 1')->fetch(); }
 
+/**
+ * Les emojis proposés. Le serveur n'accepte QUE ceux-là : sans liste blanche,
+ * n'importe quel texte pourrait atterrir à la place d'un emoji sur l'écran de
+ * tout le monde.
+ */
+function emojis_permis(): array
+{
+    return ['🦊','🐼','🐸','🦁','🐙','🦄','🐨','🦉','🐢','🦋','🐝','🦕','🐧','🦩',
+            '🐬','🦒','🦔','🐳','🦓','🦜','🐲','🦅','🐺','🦌','🐥','🦚','🐯','🐵',
+            '🦘','🦦','🐰','🦈','🦭','🐞','🌵','🍄','⚡️','🔥','🌙','⭐️','🎸','🚀'];
+}
+function emoji_valide(string $e): string
+{
+    return in_array($e, emojis_permis(), true) ? $e : '';
+}
+
 function toucher(): void
 {
     db()->prepare('UPDATE partie SET maj = ? WHERE id = 1')->execute([maintenant()]);
@@ -144,17 +165,51 @@ if ($a === 'rejoindre') {
 
     // Un même prénom qui revient = la même personne qui a rechargé sa page.
     // On lui rend son jeton plutôt que de créer un doublon dans la liste.
+    $emo = emoji_valide(champ('emoji', 8));
+
     $st = db()->prepare('SELECT * FROM eleves WHERE lower(nom) = lower(?)');
     $st->execute([$nom]);
     $e = $st->fetch();
     if (!$e) {
         $j = jeton();
-        db()->prepare('INSERT INTO eleves(nom, jeton, vu, created) VALUES (?,?,?,?)')
-            ->execute([$nom, $j, maintenant(), maintenant()]);
-        $e = ['id' => (int) db()->lastInsertId(), 'nom' => $nom, 'jeton' => $j];
+        db()->prepare('INSERT INTO eleves(nom, jeton, vu, created, emoji) VALUES (?,?,?,?,?)')
+            ->execute([$nom, $j, maintenant(), maintenant(), $emo]);
+        $e = ['id' => (int) db()->lastInsertId(), 'nom' => $nom, 'jeton' => $j, 'emoji' => $emo];
+    } elseif ($emo !== '') {
+        // Le même prénom qui revient avec un autre emoji : on prend le dernier.
+        db()->prepare('UPDATE eleves SET emoji = ? WHERE id = ?')->execute([$emo, $e['id']]);
+        $e['emoji'] = $emo;
     }
     toucher();
-    sortie(['id' => (int) $e['id'], 'nom' => $e['nom'], 'jeton' => $e['jeton']]);
+    sortie(['id' => (int) $e['id'], 'nom' => $e['nom'], 'jeton' => $e['jeton'],
+            'emoji' => (string) ($e['emoji'] ?? '')]);
+}
+
+if ($a === 'modifier') {
+    // Se corriger reste possible tant que les questions ne sont pas lancées :
+    // une faute de frappe sur son prénom se voit par toute la classe.
+    $jet = champ('jeton', 64);
+    $st = db()->prepare('SELECT id FROM eleves WHERE jeton = ?');
+    $st->execute([$jet]);
+    $id = (int) ($st->fetchColumn() ?: 0);
+    if (!$id) oups('Reconnecte-toi avec ton prénom.', 401);
+
+    if (partie()['etat'] !== 'attente') {
+        oups('Le jeu a commencé : ton prénom ne peut plus changer.', 409);
+    }
+    $nom = champ('nom', 60);
+    if (mb_strlen($nom) < 2) oups('Indique ton prénom (2 caractères minimum).');
+
+    // Un prénom déjà pris par quelqu'un d'autre créerait deux lignes identiques
+    // dans la liste, et on ne saurait plus qui a répondu quoi.
+    $st = db()->prepare('SELECT 1 FROM eleves WHERE lower(nom) = lower(?) AND id <> ?');
+    $st->execute([$nom, $id]);
+    if ($st->fetch()) oups('Ce prénom est déjà pris dans la salle.', 409);
+
+    db()->prepare('UPDATE eleves SET nom = ?, emoji = ? WHERE id = ?')
+        ->execute([$nom, emoji_valide(champ('emoji', 8)), $id]);
+    toucher();
+    sortie(['ok' => true, 'nom' => $nom]);
 }
 
 if ($a === 'etat') {
@@ -162,7 +217,7 @@ if ($a === 'etat') {
     $jet = (string) ($_GET['jeton'] ?? '');
     $moi = null;
     if ($jet !== '') {
-        $st = db()->prepare('SELECT id, nom FROM eleves WHERE jeton = ?');
+        $st = db()->prepare('SELECT id, nom, emoji FROM eleves WHERE jeton = ?');
         $st->execute([$jet]);
         $moi = $st->fetch() ?: null;
         // Signe de présence, pour que l'animateur voie qui est encore là.
@@ -187,7 +242,7 @@ if ($a === 'etat') {
         'total'   => count($qs),
         'maj'     => $p['maj'],
         'moi'     => $moi,
-        'eleves'  => array_column(db()->query('SELECT nom FROM eleves ORDER BY id')->fetchAll(), 'nom'),
+        'eleves'  => db()->query('SELECT nom, emoji FROM eleves ORDER BY id')->fetchAll(),
         'question' => $q ? ['id' => (int) $q['id'], 'texte' => $q['texte']] : null,
         'maReponse' => $maRep,
     ]);
@@ -257,7 +312,7 @@ if ($a === 'admin-etat') {
     exige_admin();
     $p = partie();
     $qs = questions();
-    $eleves = db()->query('SELECT id, nom, vu FROM eleves ORDER BY id')->fetchAll();
+    $eleves = db()->query('SELECT id, nom, vu, emoji FROM eleves ORDER BY id')->fetchAll();
 
     // Toutes les réponses, groupées par question : l'animateur lit en direct.
     $parQ = [];
@@ -269,7 +324,8 @@ if ($a === 'admin-etat') {
         $rep = [];
         foreach ($eleves as $e) {
             $t = $parQ[(int) $q['id']][(int) $e['id']] ?? null;
-            if ($t !== null) $rep[] = ['nom' => $e['nom'], 'texte' => $t];
+            if ($t !== null) $rep[] = ['nom' => $e['nom'], 'texte' => $t,
+                                        'emoji' => (string) ($e['emoji'] ?? '')];
         }
         $out[] = ['id' => (int) $q['id'], 'ordre' => $i, 'texte' => $q['texte'],
                   'reponses' => $rep, 'nb' => count($rep)];

@@ -50,19 +50,34 @@
   @keyframes paraitre{from{opacity:0}}
   @keyframes surgir{from{opacity:0;transform:scale(.7)}}
 
-  /* ---- Le salon : une page structurée, pas un espace flottant ---- */
+  /* ---- Le choix de l'emoji ---- */
+  .grille-em{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:7px;
+    max-height:168px;overflow-y:auto;padding:4px;background:var(--carte2);
+    border:1.5px solid var(--bord);border-radius:14px}
+  .em-b{width:100%;aspect-ratio:1;margin:0;padding:0;border:1.5px solid transparent;
+    border-radius:11px;background:transparent;font-size:23px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:background .12s}
+  .em-b:hover{background:rgba(255,255,255,.07)}
+  .em-b.on{background:rgba(91,140,255,.26);border-color:var(--acc)}
+
+  /* ---- Le salon : une page structurée, sans animation ----
+     Rien ne bouge ici : le salon se met à jour toutes les deux secondes, et la
+     moindre animation se rejouait à chaque fois — on aurait dit que la page se
+     rechargeait sans arrêt. */
   .moi-carte{text-align:center;padding:34px 30px 30px}
-  .moi-em{font-size:62px;line-height:1;animation:flotte 3.4s ease-in-out infinite}
+  .moi-em{font-size:62px;line-height:1}
   .moi-nom{margin-top:10px;font-size:28px;font-weight:800;letter-spacing:-.025em}
   .moi-ok{margin-top:7px;display:inline-flex;align-items:center;gap:7px;
     background:rgba(45,212,167,.14);border:1px solid rgba(45,212,167,.4);color:#9df0d8;
     border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:700}
+  .modif{margin-top:14px;width:auto;padding:9px 16px;background:transparent;
+    border:1.5px solid var(--bord);color:var(--doux);font-size:13px;border-radius:11px}
+  .modif:hover{border-color:var(--acc);color:var(--encre);filter:none}
 
   .attente{margin-top:22px;padding:18px;border-radius:16px;background:var(--carte2);
     border:1px solid var(--bord);text-align:center}
   .attente-t{font-size:15.5px;font-weight:800;display:flex;align-items:center;
     justify-content:center;gap:9px}
-  .sablier{display:inline-block;animation:bascule 2.6s ease-in-out infinite}
   .attente-d{margin-top:6px;font-size:13.5px;color:var(--doux);line-height:1.5}
 
   .liste-t{margin:24px 0 11px;font-size:12px;font-weight:800;letter-spacing:.07em;
@@ -70,18 +85,10 @@
   .liste{display:flex;flex-wrap:wrap;gap:8px}
   .pst{display:flex;align-items:center;gap:8px;background:var(--carte2);
     border:1px solid var(--bord);border-radius:999px;padding:7px 14px 7px 10px;
-    font-size:14px;font-weight:700;animation:pop .4s cubic-bezier(.2,1.4,.4,1) both}
+    font-size:14px;font-weight:700}
   .pst .em{font-size:18px;line-height:1}
   .pst.moi{background:linear-gradient(135deg,rgba(91,140,255,.34),var(--carte2));
     border-color:var(--acc)}
-
-  @keyframes pop{from{opacity:0;transform:scale(.6)}}
-  @keyframes flotte{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
-  @keyframes bascule{0%,100%{transform:rotate(0)}25%{transform:rotate(14deg)}
-    75%{transform:rotate(-14deg)}}
-  @media (prefers-reduced-motion:reduce){
-    .moi-em,.sablier,.pst,.bv-x,.bienvenue,.puce{animation:none}
-  }
 
   .num{font-size:12.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
     color:var(--acc2)}
@@ -131,44 +138,93 @@
     });
   }
 
-  // Un emoji par personne, tiré de son prénom : toujours le même pour la même
-  // personne, sur tous les écrans, sans rien stocker côté serveur.
+  // La même liste que côté serveur, qui n'accepte que celle-ci.
   var EMOJIS = ['🦊','🐼','🐸','🦁','🐙','🦄','🐨','🦉','🐢','🦋','🐝','🦕','🐧','🦩',
                 '🐬','🦒','🦔','🐳','🦓','🦜','🐲','🦅','🐺','🦌','🐥','🦚','🐯','🐵',
-                '🦘','🦦','🐰','🦈','🪼','🦭','🐞'];
-  function emojiDe(nom){
+                '🦘','🦦','🐰','🦈','🦭','🐞','🌵','🍄','⚡️','🔥','🌙','⭐️','🎸','🚀'];
+  var monEmoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+
+  // Repli pour un participant inscrit avant qu'on ne propose le choix : son
+  // prénom détermine un emoji stable plutôt que de laisser la place vide.
+  function emojiDe(nom, choisi){
+    if(choisi) return choisi;
     var n = (nom || '').toLowerCase(), h = 0;
     for(var i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) % 100000;
     return EMOJIS[h % EMOJIS.length];
   }
 
-  // --- Écran 1 : le prénom --------------------------------------------------
-  function vueNom(msg){
+  function grilleEmojis(){
+    return '<div class="grille-em" id="gem">' + EMOJIS.map(function(e){
+      return '<button type="button" class="em-b' + (e === monEmoji ? ' on' : '')
+        + '" data-em="' + e + '">' + e + '</button>';
+    }).join('') + '</div>';
+  }
+  function brancherEmojis(){
+    [].forEach.call(document.querySelectorAll('[data-em]'), function(b){
+      b.onclick = function(){
+        monEmoji = b.getAttribute('data-em');
+        [].forEach.call(document.querySelectorAll('[data-em]'), function(x){
+          x.classList.toggle('on', x === b);
+        });
+      };
+    });
+  }
+
+  // --- Écran 1 : le prénom et l'emoji ---------------------------------------
+  // `modif` : on revient corriger ce qu'on a saisi, l'inscription existe déjà.
+  function vueNom(msg, modif){
+    salonPose = '';
+    var nomActuel = modif && moi ? moi.nom : '';
     zone.innerHTML = '<div class="carte">'
-      + '<h1>' + esc(etat && etat.titre ? etat.titre : 'Faisons connaissance') + '</h1>'
-      + '<p class="sous">Indique ton prénom pour rejoindre. On attendra que tout le '
-      + 'monde soit là avant de commencer.</p>'
+      + '<h1>' + esc(modif ? 'Modifier mes infos'
+                           : (etat && etat.titre ? etat.titre : 'Faisons connaissance')) + '</h1>'
+      + '<p class="sous">' + (modif
+          ? 'Change ton prénom ou ton emoji. C’est possible tant que les questions '
+            + 'ne sont pas lancées.'
+          : 'Indique ton prénom et choisis ton emoji pour rejoindre. On attendra que '
+            + 'tout le monde soit là avant de commencer.') + '</p>'
       + '<label for="n">Ton prénom</label>'
       + '<input id="n" autocomplete="given-name" autocapitalize="words" '
-      + 'placeholder="Maëlys" maxlength="60">'
-      + '<button id="go">Rejoindre</button>'
+      + 'placeholder="Maëlys" maxlength="60" value="' + esc(nomActuel) + '">'
+      + '<label>Ton emoji</label>'
+      + grilleEmojis()
+      + '<button id="go">' + (modif ? 'Enregistrer' : 'Rejoindre') + '</button>'
+      + (modif ? '<button id="annul" class="modif" style="width:100%;margin-top:9px">'
+               + 'Annuler</button>' : '')
       + '<div class="err" id="e">' + esc(msg || '') + '</div>'
       + '</div>';
+    brancherEmojis();
     var inp = document.getElementById('n');
     var btn = document.getElementById('go');
     inp.focus();
+
+    var annul = document.getElementById('annul');
+    if(annul) annul.onclick = function(){ dernierRendu = ''; rendre(); };
+
     function envoyer(){
       var nom = inp.value.trim();
       if(nom.length < 2){ document.getElementById('e').textContent = 'Il faut au moins 2 caractères.'; return; }
       btn.disabled = true; btn.textContent = 'Un instant…';
-      appel('rejoindre', { nom:nom }).then(function(r){
+
+      if(modif){
+        appel('modifier', { jeton:moi.jeton, nom:nom, emoji:monEmoji }).then(function(r){
+          btn.disabled = false; btn.textContent = 'Enregistrer';
+          if(!r.ok){ document.getElementById('e').textContent = r.d.erreur || 'Échec.'; return; }
+          moi.nom = nom; moi.emoji = monEmoji;
+          try { localStorage.setItem('cours_moi', JSON.stringify(moi)); } catch(e){}
+          dernierRendu = '';
+          battre();
+          rendre();
+        });
+        return;
+      }
+
+      appel('rejoindre', { nom:nom, emoji:monEmoji }).then(function(r){
         btn.disabled = false; btn.textContent = 'Rejoindre';
         if(!r.ok){ document.getElementById('e').textContent = r.d.erreur || 'Impossible de rejoindre.'; return; }
         moi = r.d;
+        if(moi.emoji) monEmoji = moi.emoji;
         try { localStorage.setItem('cours_moi', JSON.stringify(moi)); } catch(e){}
-        // On confirme TOUT DE SUITE, sans attendre le relevé suivant : si
-        // celui-ci tardait ou échouait, l'écran ne bougeait pas et on avait
-        // l'impression que le bouton n'avait rien fait.
         bienvenue(moi.nom);
         // On bascule TOUT DE SUITE, sur ce qu'on a déjà en main. Avant, on
         // attendait le relevé suivant pour changer d'écran : s'il tardait,
@@ -176,9 +232,11 @@
         // restait sur le formulaire et le bouton semblait n'avoir rien fait.
         if(!etat) etat = { titre:'Faisons connaissance', etat:'attente', idx:0,
                            total:0, eleves:[], question:null, maReponse:null };
-        etat.moi = { id:moi.id, nom:moi.nom };
-        if(etat.eleves.indexOf(moi.nom) < 0) etat.eleves.push(moi.nom);
-        sondeOk = false;         // le relevé d'avant ne nous connaissait pas
+        etat.moi = { id:moi.id, nom:moi.nom, emoji:monEmoji };
+        if(!etat.eleves.some(function(x){ return x.nom === moi.nom; })){
+          etat.eleves.push({ nom:moi.nom, emoji:monEmoji });
+        }
+        sondeOk = false;
         dernierRendu = '';
         rendre();
         battre();
@@ -193,7 +251,7 @@
     var d = document.createElement('div');
     d.className = 'bienvenue';
     d.innerHTML = '<div class="bv-x">'
-      + '<div class="bv-e">' + emojiDe(nom) + '</div>'
+      + '<div class="bv-e">' + emojiDe(nom, monEmoji) + '</div>'
       + '<div class="bv-t">Bienvenue ' + esc(nom) + '</div>'
       + '<div class="bv-d">Voilà ton emoji pour la partie</div>'
     + '</div>';
@@ -206,36 +264,59 @@
   }
 
   // --- Écran 2 : le salon ---------------------------------------------------
-  // Une page franche : qui je suis, ce qu'on attend, et qui est déjà là. Les
-  // bulles qui dérivaient étaient jolies mais on ne savait pas si on était
-  // inscrit — c'est précisément ce qu'il fallait rendre évident.
+  // Bâti UNE FOIS, puis seuls le compteur et la liste sont retouchés. Tout
+  // redessiner à chaque relevé donnait un clignotement de deux secondes :
+  // c'était ça, « l'effet rafraîchissement bizarre ».
+  var salonPose = '';
   function vueSalon(){
     var noms = etat.eleves || [];
     var monNom = moi ? moi.nom : '';
-    var liste = noms.map(function(n){
-      var estMoi = monNom && n.toLowerCase() === monNom.toLowerCase();
-      return '<span class="pst' + (estMoi ? ' moi' : '') + '">'
-        + '<span class="em">' + emojiDe(n) + '</span>' + esc(n) + '</span>';
-    }).join('');
+    var monEm = emojiDe(monNom, (etat.moi && etat.moi.emoji) || moi.emoji || monEmoji);
 
-    zone.innerHTML = '<div class="carte moi-carte">'
-      + '<div class="moi-em">' + emojiDe(monNom) + '</div>'
-      + '<div class="moi-nom">' + esc(monNom) + '</div>'
-      + '<div class="moi-ok">✓ Tu es dans la salle</div>'
-      + '<div class="attente">'
-        + '<div class="attente-t"><span class="sablier">⏳</span>'
-        + 'En attente du lancement</div>'
-        + '<div class="attente-d">' + esc(etat.titre) + ' commencera quand '
-        + 'l’animateur lancera la première question. Tu n’as rien à faire, '
-        + 'garde juste cette page ouverte.</div>'
-      + '</div>'
-      + '<div class="liste-t">Dans la salle · ' + noms.length + '</div>'
-      + '<div class="liste">' + liste + '</div>'
-    + '</div>';
+    var signature = monNom + '|' + monEm;
+    if(salonPose !== signature){
+      salonPose = signature;
+      zone.innerHTML = '<div class="carte moi-carte">'
+        + '<div class="moi-em">' + monEm + '</div>'
+        + '<div class="moi-nom">' + esc(monNom) + '</div>'
+        + '<div class="moi-ok">✓ Tu es dans la salle</div>'
+        + '<button class="modif" id="chg">Modifier mon prénom ou mon emoji</button>'
+        + '<div class="attente">'
+          + '<div class="attente-t">⏳ En attente du lancement</div>'
+          + '<div class="attente-d">' + esc(etat.titre) + ' commencera quand '
+          + 'l’animateur lancera la première question. Tu n’as rien à faire, '
+          + 'garde juste cette page ouverte.</div>'
+        + '</div>'
+        + '<div class="liste-t" id="l-t"></div>'
+        + '<div class="liste" id="l-l"></div>'
+      + '</div>';
+      document.getElementById('chg').onclick = function(){
+        monEmoji = monEm;
+        vueNom('', true);
+      };
+    }
+
+    var t = document.getElementById('l-t');
+    var l = document.getElementById('l-l');
+    if(t) t.textContent = 'Dans la salle · ' + noms.length;
+    if(l){
+      var html = noms.map(function(p){
+        var estMoi = monNom && p.nom.toLowerCase() === monNom.toLowerCase();
+        return '<span class="pst' + (estMoi ? ' moi' : '') + '">'
+          + '<span class="em">' + emojiDe(p.nom, p.emoji) + '</span>' + esc(p.nom) + '</span>';
+      }).join('');
+      // On n'écrit que si ça change : réécrire la liste identique à chaque
+      // relevé suffisait à faire sauter l'affichage.
+      if(l.getAttribute('data-sig') !== html){
+        l.setAttribute('data-sig', html);
+        l.innerHTML = html;
+      }
+    }
   }
 
   // --- Écran 3 : une question ----------------------------------------------
   function vueQuestion(){
+    salonPose = '';          // on quitte le salon : il sera rebâti au retour
     var q = etat.question;
     var deja = etat.maReponse;
     zone.innerHTML = '<div class="carte">'
@@ -271,8 +352,10 @@
   }
 
   function vueFini(){
+    salonPose = '';
     zone.innerHTML = '<div class="carte" style="text-align:center">'
-      + '<div style="font-size:50px;line-height:1">' + emojiDe(moi ? moi.nom : '') + '</div>'
+      + '<div style="font-size:50px;line-height:1">'
+      + emojiDe(moi ? moi.nom : '', moi && moi.emoji) + '</div>'
       + '<h1 style="margin-top:14px">C’est terminé, merci ' + esc(moi ? moi.nom : '') + '</h1>'
       + '<p class="sous">Tes réponses sont bien enregistrées. À tout de suite pour la suite du cours.</p>'
       + '</div>';

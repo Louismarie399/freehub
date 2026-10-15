@@ -58,9 +58,25 @@
   .qr .x{flex:none;background:none;border:none;color:#7b8aa3;font-size:19px;cursor:pointer;
     padding:6px 8px;margin-top:4px}
   .qr .x:hover{color:#ff9fb0}
-  .qr.porte{opacity:.4}
-  .qr.cible{box-shadow:0 -3px 0 -1px var(--acc)}
-  .qr.cible-bas{box-shadow:0 3px 0 -1px var(--acc)}
+  /* La ligne en cours de déplacement : soulevée, pas effacée — on doit pouvoir
+     la suivre des yeux pendant qu'elle se faufile entre les autres. */
+  .qr.porte{background:var(--carte2);box-shadow:0 10px 26px -10px rgba(0,0,0,.8);
+    position:relative;z-index:2}
+  .qr.porte .poi{cursor:grabbing}
+
+  /* Le bouton qui ouvre l'éditeur de questions */
+  .q-ouvrir{display:flex;align-items:center;justify-content:space-between;width:100%;
+    margin-bottom:14px;padding:13px 15px;font-size:14px}
+  .q-ouvrir-a{color:var(--acc);font-size:13px}
+  .q-ouvrir:hover .q-ouvrir-a{color:var(--encre)}
+
+  /* La pop-up des questions : haute, et elle défile toute seule */
+  .dlg-q{position:relative;width:620px;max-height:86vh;display:flex;flex-direction:column}
+  .dlg-q .qs{overflow-y:auto;flex:1;min-height:0;padding-right:4px;margin-top:16px}
+  .pop-x{position:absolute;top:14px;right:16px;width:32px;height:32px;padding:0;
+    border-radius:50%;background:var(--carte2);color:var(--doux);font-size:20px;
+    line-height:1;border:none;cursor:pointer}
+  .pop-x:hover{background:var(--bord);color:var(--encre)}
 
   /* La boîte de dialogue « repartir à zéro » */
   .voile{position:fixed;inset:0;background:rgba(5,9,18,.72);display:flex;align-items:center;
@@ -212,13 +228,13 @@
         + '<button class="fant" id="cop">Copier</button></div></header>'
       + '<div class="grille">'
         + '<div>'
-          + '<div class="carte" id="c-questions"></div>'
-          + '<div class="carte" id="c-pilotage" style="margin-top:16px"></div>'
+          + '<div class="carte" id="c-pilotage"></div>'
           + '<div class="carte" id="c-participants" style="margin-top:16px"></div>'
           + '<div class="carte" id="c-apres" style="margin-top:16px"></div>'
         + '</div>'
         + '<div id="c-reponses"></div>'
       + '</div></div>'
+      + '<div id="c-questions"></div>'
       + '<div id="c-dialogue"></div>';
     document.getElementById('cop').onclick = function(){
       var b = document.getElementById('cop');
@@ -233,16 +249,16 @@
   // Il n'est JAMAIS redessiné par le rafraîchissement automatique : seules les
   // actions de structure (ajout, retrait, déplacement) le reconstruisent. Le
   // champ dans lequel on écrit ne peut donc plus disparaître sous les doigts.
+  // L'éditeur vit dans une pop-up : avec trente questions, il repoussait le
+  // pilotage, les participants et l'export tout en bas de la page.
+  var editeurOuvert = false;
+  function ouvrirEditeur(){ editeurOuvert = true; brouillon = null; dessinerQuestions(); }
+  function fermerEditeur(){ editeurOuvert = false; dessinerQuestions(); }
+
   function dessinerQuestions(){
     var c = document.getElementById('c-questions');
     if(!c) return;
-
-    if(D.etat !== 'attente'){
-      c.innerHTML = '<h2>Questions</h2><div class="vide">'
-        + D.questions.length + ' question' + (D.questions.length > 1 ? 's' : '')
-        + ' en jeu. Pour les modifier, remets la partie en salle d’attente.</div>';
-      return;
-    }
+    if(!editeurOuvert || D.etat !== 'attente'){ c.innerHTML = ''; return; }
 
     if(brouillon === null) brouillonDepuisServeur();
     var rangs = brouillon.map(function(l, i){
@@ -255,14 +271,22 @@
       + '</div>';
     }).join('');
 
-    c.innerHTML = '<h2>Questions</h2>'
+    c.innerHTML = '<div class="voile" id="voile-q"><div class="dlg dlg-q">'
+      + '<button class="pop-x" id="fermer-q" aria-label="Fermer">×</button>'
+      + '<h3>Les questions</h3>'
+      + '<p>Elles défileront dans cet ordre. Tout s’enregistre au fil de l’eau.</p>'
       + '<div class="qs" id="qs">' + rangs + '</div>'
       + '<div class="barre"><button class="fant" id="plus">+ Ajouter</button>'
-      + '<button id="enr">Enregistrer</button></div>'
+      + '<button id="enr">Enregistrer et fermer</button></div>'
       + '<div class="msg" id="msg"></div>'
       + '<div class="aide">Entrée valide et ouvre la suivante. Glisse la poignée ⠿ '
-      + 'pour changer l’ordre, × pour supprimer.</div>';
+      + 'pour changer l’ordre, × pour supprimer.</div>'
+    + '</div></div>';
 
+    document.getElementById('fermer-q').onclick = fermerEditeur;
+    document.getElementById('voile-q').onclick = function(e){
+      if(e.target.id === 'voile-q') fermerEditeur();
+    };
     brancherEditeur();
   }
 
@@ -334,7 +358,7 @@
     });
 
     document.getElementById('plus').onclick = function(){ ajouterLigne(); };
-    document.getElementById('enr').onclick = function(){ enregistrer(null); };
+    document.getElementById('enr').onclick = function(){ enregistrer(fermerEditeur); };
 
     brancherGlisser();
   }
@@ -353,70 +377,61 @@
   }
 
   // --- Déplacer une question -------------------------------------------------
-  // Pas de glisser-déposer HTML5 : il exige que `draggable` soit déjà posé
-  // quand le geste commence, or on ne l'arme qu'au clic sur la poignée — le
-  // navigateur ne démarrait donc jamais le glissement. Les événements pointeur
-  // n'ont pas cette contrainte, et fonctionnent aussi au doigt.
+  // La ligne se déplace POUR DE VRAI pendant le glissement, et les voisines
+  // s'écartent : un simple trait de visée obligeait à deviner où elle allait
+  // tomber. On lit l'ordre final dans le DOM au lâcher.
   function brancherGlisser(){
     var piste = document.getElementById('qs');
     if(!piste) return;
 
-    [].forEach.call(document.querySelectorAll('[data-poi]'), function(poi){
+    [].forEach.call(piste.querySelectorAll('[data-poi]'), function(poi){
       poi.onpointerdown = function(ev){
         ev.preventDefault();
         var rang = poi.closest('.qr');
-        var id = rang.getAttribute('data-ligne');
         poi.setPointerCapture(ev.pointerId);
         rang.classList.add('porte');
+        document.body.style.userSelect = 'none';
 
-        var cibleId = null, apres = false;
-
-        function survol(e){
-          var rangs = [].slice.call(piste.querySelectorAll('.qr'));
-          rangs.forEach(function(r){ r.classList.remove('cible', 'cible-bas'); });
-          cibleId = null;
-          for(var i = 0; i < rangs.length; i++){
-            var r = rangs[i], b = r.getBoundingClientRect();
-            if(e.clientY >= b.top && e.clientY <= b.bottom){
-              if(r.getAttribute('data-ligne') === id) return;
-              apres = (e.clientY - b.top) > b.height / 2;
-              cibleId = r.getAttribute('data-ligne');
-              r.classList.add(apres ? 'cible-bas' : 'cible');
+        function bouge(e){
+          var autres = [].slice.call(piste.querySelectorAll('.qr')).filter(function(r){
+            return r !== rang;
+          });
+          for(var i = 0; i < autres.length; i++){
+            var r = autres[i], b = r.getBoundingClientRect();
+            var milieu = b.top + b.height / 2;
+            // Au-dessus du milieu d'une ligne placée plus haut : on passe devant.
+            if(e.clientY < milieu && r.compareDocumentPosition(rang)
+               & Node.DOCUMENT_POSITION_FOLLOWING){
+              piste.insertBefore(rang, r);
+              return;
+            }
+            // Sous le milieu d'une ligne placée plus bas : on passe derrière.
+            if(e.clientY > milieu && r.compareDocumentPosition(rang)
+               & Node.DOCUMENT_POSITION_PRECEDING){
+              piste.insertBefore(rang, r.nextSibling);
               return;
             }
           }
-          // Au-dessus de la première ligne ou sous la dernière : on vise le bout.
-          if(rangs.length){
-            var prem = rangs[0].getBoundingClientRect();
-            var dern = rangs[rangs.length - 1].getBoundingClientRect();
-            if(e.clientY < prem.top){
-              cibleId = rangs[0].getAttribute('data-ligne'); apres = false;
-              rangs[0].classList.add('cible');
-            } else if(e.clientY > dern.bottom){
-              cibleId = rangs[rangs.length - 1].getAttribute('data-ligne'); apres = true;
-              rangs[rangs.length - 1].classList.add('cible-bas');
-            }
-          }
         }
 
-        function fin(e){
-          poi.onpointermove = null;
-          poi.onpointerup = null;
-          poi.onpointercancel = null;
+        function fin(){
+          poi.onpointermove = null; poi.onpointerup = null; poi.onpointercancel = null;
           try { poi.releasePointerCapture(ev.pointerId); } catch(err){}
-          [].forEach.call(piste.querySelectorAll('.qr'), function(r){
-            r.classList.remove('porte', 'cible', 'cible-bas');
+          rang.classList.remove('porte');
+          document.body.style.userSelect = '';
+
+          // L'ordre fait foi, c'est celui qu'on voit à l'écran.
+          var ordre = [].map.call(piste.querySelectorAll('.qr'), function(r){
+            return r.getAttribute('data-ligne');
           });
-          if(!cibleId || cibleId === id) return;
-          var de = indexDe(id);
-          var el = brouillon.splice(de, 1)[0];
-          var vers = indexDe(cibleId) + (apres ? 1 : 0);
-          brouillon.splice(vers, 0, el);
-          dessinerQuestions();
+          var avant = brouillon.map(function(l){ return l.id; }).join(',');
+          if(ordre.join(',') === avant) return;
+          brouillon = ordre.map(function(id){ return brouillon[indexDe(id)]; });
+          dessinerQuestions();     // renumérote les pastilles
           enregistrer(null);
         }
 
-        poi.onpointermove = survol;
+        poi.onpointermove = bouge;
         poi.onpointerup = fin;
         poi.onpointercancel = fin;
       };
@@ -429,6 +444,12 @@
     var nbEl = D.eleves.length;
     var qActive = D.etat === 'en_cours' ? D.questions[D.idx] : null;
     c.innerHTML = '<h2>Pilotage</h2>'
+      + '<button class="fant q-ouvrir" id="ouvrir-q">'
+        + '<span>' + (D.questions.length
+            ? D.questions.length + ' question' + (D.questions.length > 1 ? 's' : '')
+            : 'Aucune question') + '</span>'
+        + '<span class="q-ouvrir-a">' + (D.etat === 'attente' ? 'Gérer →' : 'Verrouillé') + '</span>'
+      + '</button>'
       + '<div class="etat"><span class="pt ' + D.etat + '"></span>' + LIB[D.etat]
       + (D.etat === 'en_cours' ? ' · question ' + (D.idx + 1) + '/' + D.questions.length : '')
       + '</div>'
@@ -444,6 +465,15 @@
       + (qActive ? '<div class="aide" style="margin-top:12px">'
           + qActive.nb + ' réponse' + (qActive.nb > 1 ? 's' : '') + ' sur ' + nbEl
           + (qActive.nb >= nbEl && nbEl > 0 ? ' — tout le monde a répondu.' : '') + '</div>' : '');
+
+    var bq = document.getElementById('ouvrir-q');
+    if(bq) bq.onclick = function(){
+      if(D.etat !== 'attente'){
+        alert('Le jeu est lancé. Remets la partie en salle d’attente pour modifier les questions.');
+        return;
+      }
+      ouvrirEditeur();
+    };
 
     function pilote(quoi){
       appel('admin-pilote', { quoi:quoi }).then(function(){
@@ -555,7 +585,8 @@
             + '</div>'
             + (ouv ? '<div class="q-b">'
                 + (q.reponses.length ? q.reponses.map(function(r){
-                    return '<div class="rep"><div class="rep-n">' + esc(r.nom) + '</div>'
+                    return '<div class="rep"><div class="rep-n">'
+                      + (r.emoji ? r.emoji + ' ' : '') + esc(r.nom) + '</div>'
                       + '<div class="rep-t">' + esc(r.texte) + '</div></div>';
                   }).join('') : '<div class="manque">Aucune réponse pour l’instant.</div>')
                 + (manquants.length && q.reponses.length
@@ -593,7 +624,7 @@
       var mode = D.etat === 'attente' ? 'attente' : 'verrouille';
       if(mode !== modeEditeur){
         modeEditeur = mode;
-        if(mode === 'verrouille') brouillon = null;
+        if(mode === 'verrouille'){ brouillon = null; editeurOuvert = false; }
         dessinerQuestions();
       }
 
