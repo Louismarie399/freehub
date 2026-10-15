@@ -89,9 +89,15 @@ function oups(string $m, int $code = 400): never { sortie(['erreur' => $m], $cod
 
 function corps(): array
 {
+    // Mis en cache : php://input n'est pas garanti relisible selon le SAPI
+    // (c'est notamment le cas de LSAPI, celui d'O2Switch). Sans ce cache, le
+    // deuxième champ lu dans une même requête revenait vide.
+    static $cache = null;
+    if ($cache !== null) return $cache;
     $brut = file_get_contents('php://input') ?: '';
     $d = json_decode($brut, true);
-    return is_array($d) ? $d : [];
+    $cache = is_array($d) ? $d : [];
+    return $cache;
 }
 function champ(string $c, int $max = 400): string
 {
@@ -236,7 +242,10 @@ if ($a === 'admin-entrer') {
     $p = partie();
     if ($p['mdp'] === '') oups('Aucun mot de passe défini.', 409);
     if (!password_verify(champ('mdp', 100), $p['mdp'])) oups('Mot de passe incorrect.', 401);
-    $j = jeton();
+    // On RÉUTILISE le jeton existant au lieu d'en forger un neuf : en regénérer
+    // un déconnectait l'appareil déjà ouvert. Se connecter sur son téléphone en
+    // plein cours aurait renvoyé l'ordinateur sur l'écran de mot de passe.
+    $j = $p['jeton_admin'] !== '' ? $p['jeton_admin'] : jeton();
     db()->prepare('UPDATE partie SET jeton_admin = ? WHERE id = 1')->execute([$j]);
     setcookie('cours_admin', $j, ['expires' => time() + 86400 * 30, 'path' => '/',
         'secure' => !empty($_SERVER['HTTPS']), 'httponly' => true, 'samesite' => 'Lax']);

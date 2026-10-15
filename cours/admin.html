@@ -51,6 +51,9 @@
     padding:6px 8px;margin-top:4px}
   .qr .x:hover{color:#ff9fb0}
   .barre{display:flex;gap:8px;flex-wrap:wrap}
+  .msg{font-size:12.5px;font-weight:700;line-height:1.5;margin-top:10px;min-height:1px}
+  .msg.ok{color:#7ee7c8}
+  .msg.ko{color:#ff9fb0}
   .barre button{flex:1;min-width:110px}
 
   .etat{display:flex;align-items:center;gap:10px;background:var(--carte2);border-radius:12px;
@@ -105,13 +108,30 @@
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
+  // Un appel ne doit JAMAIS échouer en silence : si le serveur renvoie autre
+  // chose que du JSON (page d'erreur de l'hébergeur, réponse vide après une
+  // erreur fatale), r.json() lève et, sans ce filet, le clic ne faisait
+  // simplement rien — impossible à diagnostiquer pour celui qui l'utilise.
   function appel(action, corps){
     return fetch(API + action, {
       method: corps ? 'POST' : 'GET',
       headers: { 'Content-Type':'application/json' },
       body: corps ? JSON.stringify(corps) : undefined,
       credentials: 'same-origin'
-    }).then(function(r){ return r.json().then(function(d){ return { ok:r.ok, d:d }; }); });
+    }).then(function(r){
+      return r.text().then(function(txt){
+        var d;
+        try { d = JSON.parse(txt); }
+        catch(e){
+          d = { erreur: 'Réponse inattendue du serveur (HTTP ' + r.status + ').'
+                 + (txt ? ' ' + txt.replace(/<[^>]*>/g, ' ').trim().slice(0, 160) : '') };
+          return { ok:false, d:d };
+        }
+        return { ok:r.ok, d:d };
+      });
+    }, function(){
+      return { ok:false, d:{ erreur:'Pas de réseau — vérifie ta connexion.' } };
+    });
   }
 
   // --- La porte : créer ou saisir le mot de passe ---------------------------
@@ -168,7 +188,9 @@
           ? '<div class="qs">' + qsHtml + '</div>'
             + '<div class="barre"><button class="fant" id="plus">+ Ajouter</button>'
             + '<button id="enr">Enregistrer</button></div>'
-            + '<div class="aide">Les questions ne sont modifiables qu’avant le lancement.</div>'
+            + '<div class="msg" id="msg"></div>'
+            + '<div class="aide">Entrée valide et passe à la question suivante. '
+            + 'Les questions ne sont modifiables qu’avant le lancement.</div>'
           : '<div class="vide">' + (D.questions.length) + ' question'
             + (D.questions.length > 1 ? 's' : '') + ' en jeu. Pour les modifier, remets '
             + 'la partie en salle d’attente.</div>')
@@ -277,6 +299,12 @@
         if(qBrouillon === null) qBrouillon = D.questions.map(function(q){ return q.texte; });
         qBrouillon[+ta.getAttribute('data-q')] = ta.value;
       };
+      ta.onkeydown = function(e){
+        if(e.key === 'Enter' && !e.shiftKey){
+          e.preventDefault();
+          enregistrer(true);     // on valide, et on ouvre la question suivante
+        }
+      };
     });
     [].forEach.call(document.querySelectorAll('[data-suppr]'), function(b){
       b.onclick = function(){
@@ -292,15 +320,37 @@
       var tas = document.querySelectorAll('[data-q]');
       if(tas.length) tas[tas.length - 1].focus();
     });
-    sur('enr', function(){
+    function dire(texte, erreur){
+      var m = document.getElementById('msg');
+      if(!m) return;
+      m.textContent = texte;
+      m.className = 'msg' + (erreur ? ' ko' : (texte ? ' ok' : ''));
+    }
+
+    // `puisAjouter` : enregistrer PUIS ouvrir un champ vide, ce qu'on attend
+    // quand on valide au clavier pour enchaîner ses questions.
+    function enregistrer(puisAjouter){
       var liste = (qBrouillon === null ? D.questions.map(function(q){ return q.texte; }) : qBrouillon)
         .map(function(t){ return (t || '').trim(); }).filter(Boolean);
+      if(!liste.length){ dire('Écris au moins une question.', true); return; }
+      dire('Enregistrement…');
       appel('admin-questions', { questions:liste }).then(function(r){
-        if(!r.ok){ alert(r.d.erreur || 'Échec'); return; }
-        qBrouillon = null;
+        if(!r.ok){ dire(r.d.erreur || 'L’enregistrement a échoué.', true); return; }
+        qBrouillon = puisAjouter ? liste.concat(['']) : null;
+        signature = '';          // force le redessin au prochain battement
         battre();
+        setTimeout(function(){
+          dire(liste.length + ' question' + (liste.length > 1 ? 's' : '') + ' enregistrée'
+               + (liste.length > 1 ? 's' : ''));
+          if(puisAjouter){
+            var tas = document.querySelectorAll('[data-q]');
+            if(tas.length) tas[tas.length - 1].focus();
+          }
+          setTimeout(function(){ dire(''); }, 2600);
+        }, 120);
       });
-    });
+    }
+    sur('enr', function(){ enregistrer(false); });
 
     function pilote(quoi){ appel('admin-pilote', { quoi:quoi }).then(function(){ battre(); }); }
     sur('go', function(){ pilote('demarrer'); });

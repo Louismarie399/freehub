@@ -77,13 +77,25 @@
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
+  // Même filet que côté animateur : une réponse non-JSON ne doit pas faire
+  // disparaître l'erreur, sinon le bouton semble simplement ne rien faire.
   function appel(action, corps){
     return fetch(API + action, {
       method: corps ? 'POST' : 'GET',
       headers: { 'Content-Type':'application/json' },
       body: corps ? JSON.stringify(corps) : undefined,
       credentials: 'same-origin'
-    }).then(function(r){ return r.json().then(function(d){ return { ok:r.ok, d:d }; }); });
+    }).then(function(r){
+      return r.text().then(function(txt){
+        try { return { ok:r.ok, d:JSON.parse(txt) }; }
+        catch(e){
+          return { ok:false, d:{ erreur:'Le serveur a renvoyé une réponse inattendue '
+            + '(HTTP ' + r.status + '). Réessaie.' } };
+        }
+      });
+    }, function(){
+      return { ok:false, d:{ erreur:'Pas de réseau — vérifie ta connexion.' } };
+    });
   }
 
   // --- Écran 1 : le prénom --------------------------------------------------
