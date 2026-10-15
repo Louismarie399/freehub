@@ -295,8 +295,9 @@
     // connaître ce jeton — pas sur un simple relevé manqué, qui laissait
     // l'impression que l'inscription n'avait servi à rien.
     if(!moi || (sondeOk && !etat.moi)){
+      var perdu = !!moi;
       if(moi){ moi = null; try { localStorage.removeItem('cours_moi'); } catch(e){} }
-      vueNom();
+      vueNom(perdu ? 'Ton inscription n’est plus valide — remets ton prénom.' : '');
       return;
     }
     if(etat.etat === 'fini'){ vueFini(); return; }
@@ -305,9 +306,17 @@
   }
 
   function battre(){
-    var url = 'etat' + (moi ? '&jeton=' + encodeURIComponent(moi.jeton) : '');
+    // On retient AVEC QUELLE IDENTITÉ la requête part. Le relevé tourne toutes
+    // les deux secondes : celui qui était déjà en vol au moment où l'on
+    // s'inscrit revient forcément sans jeton, donc avec « je ne connais
+    // personne ». Sans ce garde-fou, cette réponse périmée effaçait l'identité
+    // qu'on venait d'obtenir et renvoyait au formulaire — on avait validé son
+    // prénom, vu la confirmation, et on se retrouvait au départ.
+    var jetonReq = moi ? moi.jeton : '';
+    var url = 'etat' + (jetonReq ? '&jeton=' + encodeURIComponent(jetonReq) : '');
     appel(url).then(function(r){
       if(!r.ok) return;        // relevé manqué : on garde l'écran en place
+      if(jetonReq !== (moi ? moi.jeton : '')) return;   // réponse périmée
       sondeOk = true;
       etat = r.d;
       rendre();
