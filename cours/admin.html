@@ -43,26 +43,21 @@
   button.danger{background:transparent;border:1.5px solid rgba(255,120,140,.4);color:#ff9fb0}
 
   .qs{display:flex;flex-direction:column;gap:9px;margin-bottom:12px}
-  .qr{display:flex;gap:8px;align-items:flex-start;border-radius:12px;
-    transition:opacity .12s,box-shadow .12s}
-  /* La poignée : c'est elle qui arme le glisser, pas la ligne entière — sinon
-     impossible de sélectionner du texte dans le champ. */
-  .qr .poi{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;
-    margin-top:6px;cursor:grab;user-select:none}
-  .qr .poi:active{cursor:grabbing}
-  .qr .n{width:26px;height:26px;border-radius:8px;background:var(--carte2);
-    display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;
-    color:var(--doux)}
-  .qr .grip{font-size:11px;color:#55637d;line-height:1}
-  .qr .poi:hover .grip{color:var(--acc)}
+  .qr{display:flex;gap:8px;align-items:flex-start}
+  /* La colonne de gauche : monter, le numéro, descendre. */
+  .rang{flex:none;display:flex;flex-direction:column;align-items:center;gap:1px;
+    padding-top:4px}
+  .rang .n{width:26px;height:22px;border-radius:7px;background:var(--carte2);
+    display:flex;align-items:center;justify-content:center;font-size:12.5px;
+    font-weight:800;color:var(--doux)}
+  .fl{width:26px;height:17px;margin:0;padding:0;border:none;border-radius:6px;
+    background:transparent;color:#5d6c86;font-size:9px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center}
+  .fl:hover:not(:disabled){background:var(--carte2);color:var(--acc)}
+  .fl:disabled{opacity:.22;cursor:default}
   .qr .x{flex:none;background:none;border:none;color:#7b8aa3;font-size:19px;cursor:pointer;
     padding:6px 8px;margin-top:4px}
   .qr .x:hover{color:#ff9fb0}
-  /* La ligne en cours de déplacement : soulevée, pas effacée — on doit pouvoir
-     la suivre des yeux pendant qu'elle se faufile entre les autres. */
-  .qr.porte{background:var(--carte2);box-shadow:0 10px 26px -10px rgba(0,0,0,.8);
-    position:relative;z-index:2}
-  .qr.porte .poi{cursor:grabbing}
 
   /* Le bouton qui ouvre l'éditeur de questions */
   .q-ouvrir{display:flex;align-items:center;justify-content:space-between;width:100%;
@@ -263,8 +258,13 @@
     if(brouillon === null) brouillonDepuisServeur();
     var rangs = brouillon.map(function(l, i){
       return '<div class="qr" data-ligne="' + l.id + '">'
-        + '<span class="poi" data-poi="' + l.id + '" title="Glisser pour déplacer">'
-          + '<span class="n">' + (i + 1) + '</span><span class="grip">⠿</span></span>'
+        + '<span class="rang">'
+          + '<button class="fl" data-haut="' + l.id + '"' + (i === 0 ? ' disabled' : '')
+            + ' title="Monter">▲</button>'
+          + '<span class="n">' + (i + 1) + '</span>'
+          + '<button class="fl" data-bas="' + l.id + '"'
+            + (i === brouillon.length - 1 ? ' disabled' : '') + ' title="Descendre">▼</button>'
+        + '</span>'
         + '<textarea rows="2" data-ch="' + l.id + '" placeholder="Ta question…">'
           + esc(l.t) + '</textarea>'
         + '<button class="x" data-suppr="' + l.id + '" title="Supprimer cette question">×</button>'
@@ -279,8 +279,8 @@
       + '<div class="barre"><button class="fant" id="plus">+ Ajouter</button>'
       + '<button id="enr">Enregistrer et fermer</button></div>'
       + '<div class="msg" id="msg"></div>'
-      + '<div class="aide">Entrée valide et ouvre la suivante. Glisse la poignée ⠿ '
-      + 'pour changer l’ordre, × pour supprimer.</div>'
+      + '<div class="aide">Entrée valide et ouvre la suivante. Les flèches ▲▼ '
+      + 'changent l’ordre, × supprime.</div>'
     + '</div></div>';
 
     document.getElementById('fermer-q').onclick = fermerEditeur;
@@ -360,7 +360,7 @@
     document.getElementById('plus').onclick = function(){ ajouterLigne(); };
     document.getElementById('enr').onclick = function(){ enregistrer(fermerEditeur); };
 
-    brancherGlisser();
+    brancherOrdre();
   }
 
   function ajouterLigne(){
@@ -377,64 +377,31 @@
   }
 
   // --- Déplacer une question -------------------------------------------------
-  // La ligne se déplace POUR DE VRAI pendant le glissement, et les voisines
-  // s'écartent : un simple trait de visée obligeait à deviner où elle allait
-  // tomber. On lit l'ordre final dans le DOM au lâcher.
-  function brancherGlisser(){
-    var piste = document.getElementById('qs');
-    if(!piste) return;
+  // Deux flèches, pas un glisser. Déplacer le nœud dans la page pendant le
+  // geste disloquait la liste — la ligne tirée se décalait et les autres
+  // sautaient. Un échange avec la voisine ne peut pas se dérégler, marche au
+  // doigt comme à la souris, et reste accessible au clavier.
+  function deplacer(id, pas){
+    var i = indexDe(id);
+    var j = i + pas;
+    if(i < 0 || j < 0 || j >= brouillon.length) return;
+    var tmp = brouillon[i];
+    brouillon[i] = brouillon[j];
+    brouillon[j] = tmp;
+    dessinerQuestions();
+    // Le focus suit la question déplacée : on peut enchaîner les clics sans
+    // rechercher le bouton des yeux.
+    var b = document.querySelector('[data-' + (pas < 0 ? 'haut' : 'bas') + '="' + id + '"]');
+    if(b && !b.disabled) b.focus();
+    enregistrer(null);
+  }
 
-    [].forEach.call(piste.querySelectorAll('[data-poi]'), function(poi){
-      poi.onpointerdown = function(ev){
-        ev.preventDefault();
-        var rang = poi.closest('.qr');
-        poi.setPointerCapture(ev.pointerId);
-        rang.classList.add('porte');
-        document.body.style.userSelect = 'none';
-
-        function bouge(e){
-          var autres = [].slice.call(piste.querySelectorAll('.qr')).filter(function(r){
-            return r !== rang;
-          });
-          for(var i = 0; i < autres.length; i++){
-            var r = autres[i], b = r.getBoundingClientRect();
-            var milieu = b.top + b.height / 2;
-            // Au-dessus du milieu d'une ligne placée plus haut : on passe devant.
-            if(e.clientY < milieu && r.compareDocumentPosition(rang)
-               & Node.DOCUMENT_POSITION_FOLLOWING){
-              piste.insertBefore(rang, r);
-              return;
-            }
-            // Sous le milieu d'une ligne placée plus bas : on passe derrière.
-            if(e.clientY > milieu && r.compareDocumentPosition(rang)
-               & Node.DOCUMENT_POSITION_PRECEDING){
-              piste.insertBefore(rang, r.nextSibling);
-              return;
-            }
-          }
-        }
-
-        function fin(){
-          poi.onpointermove = null; poi.onpointerup = null; poi.onpointercancel = null;
-          try { poi.releasePointerCapture(ev.pointerId); } catch(err){}
-          rang.classList.remove('porte');
-          document.body.style.userSelect = '';
-
-          // L'ordre fait foi, c'est celui qu'on voit à l'écran.
-          var ordre = [].map.call(piste.querySelectorAll('.qr'), function(r){
-            return r.getAttribute('data-ligne');
-          });
-          var avant = brouillon.map(function(l){ return l.id; }).join(',');
-          if(ordre.join(',') === avant) return;
-          brouillon = ordre.map(function(id){ return brouillon[indexDe(id)]; });
-          dessinerQuestions();     // renumérote les pastilles
-          enregistrer(null);
-        }
-
-        poi.onpointermove = bouge;
-        poi.onpointerup = fin;
-        poi.onpointercancel = fin;
-      };
+  function brancherOrdre(){
+    [].forEach.call(document.querySelectorAll('[data-haut]'), function(b){
+      b.onclick = function(){ deplacer(b.getAttribute('data-haut'), -1); };
+    });
+    [].forEach.call(document.querySelectorAll('[data-bas]'), function(b){
+      b.onclick = function(){ deplacer(b.getAttribute('data-bas'), 1); };
     });
   }
 
