@@ -14,7 +14,7 @@
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;background:var(--bg);color:var(--encre);
     font-family:var(--police);display:flex;flex-direction:column;
-    -webkit-font-smoothing:antialiased}
+    -webkit-font-smoothing:antialiased;overflow-x:hidden}
   body::before{content:'';position:fixed;inset:0;pointer-events:none;
     background:radial-gradient(900px 500px at 15% -5%,rgba(91,140,255,.22),transparent 60%),
       radial-gradient(700px 420px at 95% 100%,rgba(56,189,248,.14),transparent 60%)}
@@ -39,21 +39,57 @@
   button:disabled{opacity:.45;cursor:not-allowed}
   .err{margin-top:12px;color:#ff9fb0;font-size:14px;min-height:20px}
 
-  .pastilles{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
-  .pst{background:var(--carte2);border:1px solid var(--bord);border-radius:999px;
-    padding:7px 14px;font-size:14px;font-weight:700}
-  .pst.moi{background:rgba(91,140,255,.2);border-color:var(--acc);color:#cbd9ff}
-  .compte{font-size:13px;color:var(--doux);margin-top:16px}
+  /* ---- L'accueil : on confirme franchement, on ne laisse pas dans le doute ---- */
+  .bienvenue{position:fixed;inset:0;z-index:20;display:flex;align-items:center;
+    justify-content:center;background:rgba(13,21,38,.92);backdrop-filter:blur(4px);
+    animation:paraitre .25s ease}
+  .bv-x{text-align:center;animation:surgir .5s cubic-bezier(.2,1.4,.4,1) both}
+  .bv-e{font-size:76px;line-height:1}
+  .bv-t{margin-top:14px;font-size:25px;font-weight:800;letter-spacing:-.022em}
+  .bv-d{margin-top:7px;color:var(--doux);font-size:15px}
+  @keyframes paraitre{from{opacity:0}}
+  @keyframes surgir{from{opacity:0;transform:scale(.7)}}
+
+  /* ---- Le salon : des bulles qui dérivent et rebondissent ---- */
+  /* Hauteur déterminée plutôt que déduite du flex : dépendre du flex rendait
+     `clientHeight` faux au premier rendu, et toutes les bulles naissaient
+     entassées dans le haut du cadre. */
+  .salon{position:relative;width:100%;max-width:960px;height:min(64vh,540px);
+    min-height:300px}
+  .salon-t{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;pointer-events:none;
+    padding:20px;z-index:1}
+  /* Un voile sous le texte : sans lui, une bulle qui passe derrière le rendait
+     illisible une seconde sur deux. */
+  .salon-t::before{content:'';position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%);width:min(620px,96%);height:230px;border-radius:50%;
+    background:radial-gradient(ellipse,rgba(13,21,38,.92) 38%,rgba(13,21,38,0) 72%)}
+  .salon-t > *{position:relative}
+  .salon-t h1{text-shadow:0 2px 24px rgba(13,21,38,.9)}
+  .compte{font-size:14px;color:var(--doux);margin-top:14px}
   .puce{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);
     margin-right:7px;animation:bat 1.8s ease-in-out infinite}
   @keyframes bat{50%{opacity:.35}}
-  @media (prefers-reduced-motion:reduce){.puce{animation:none}}
+
+  .bulle{position:absolute;display:flex;align-items:center;gap:9px;
+    background:var(--carte);border:1px solid var(--bord);border-radius:999px;
+    padding:9px 16px 9px 11px;font-size:15px;font-weight:700;white-space:nowrap;
+    box-shadow:0 12px 30px -14px rgba(0,0,0,.8);will-change:transform;
+    animation:pop .45s cubic-bezier(.2,1.4,.4,1) both}
+  .bulle .em{font-size:21px;line-height:1}
+  .bulle.moi{background:linear-gradient(135deg,rgba(91,140,255,.4),var(--carte));
+    border-color:var(--acc);box-shadow:0 12px 34px -12px rgba(91,140,255,.8)}
+  @keyframes pop{from{opacity:0;transform:scale(.5)}}
+
+  @media (prefers-reduced-motion:reduce){
+    .puce,.bulle,.bv-x,.bienvenue{animation:none}
+  }
 
   .num{font-size:12.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
     color:var(--acc2)}
   .envoye{margin-top:16px;background:rgba(45,212,167,.12);border:1px solid rgba(45,212,167,.4);
     border-radius:14px;padding:14px 16px;font-size:14.5px;color:#9df0d8;line-height:1.5}
-  .pied{text-align:center;padding:18px;font-size:12.5px;color:#55637d}
+  .pied{text-align:center;padding:18px;font-size:12.5px;color:#55637d;position:relative}
 </style>
 </head>
 <body>
@@ -67,8 +103,9 @@
   var zone = document.getElementById('zone');
   var moi = null;                 // { id, nom, jeton }
   var etat = null;
-  var brouillon = '';             // ce qu'on est en train d'écrire, préservé entre deux rendus
+  var brouillon = '';
   var dernierRendu = '';
+  var sondeOk = false;            // a-t-on déjà reçu une réponse du serveur ?
 
   try { moi = JSON.parse(localStorage.getItem('cours_moi') || 'null'); } catch(e){}
 
@@ -77,8 +114,6 @@
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
-  // Même filet que côté animateur : une réponse non-JSON ne doit pas faire
-  // disparaître l'erreur, sinon le bouton semble simplement ne rien faire.
   function appel(action, corps){
     return fetch(API + action, {
       method: corps ? 'POST' : 'GET',
@@ -98,8 +133,20 @@
     });
   }
 
+  // Un emoji par personne, tiré de son prénom : toujours le même pour la même
+  // personne, sur tous les écrans, sans rien stocker côté serveur.
+  var EMOJIS = ['🦊','🐼','🐸','🦁','🐙','🦄','🐨','🦉','🐢','🦋','🐝','🦕','🐧','🦩',
+                '🐬','🦒','🦔','🐳','🦓','🦜','🐲','🦅','🐺','🦌','🐥','🦚','🐯','🐵',
+                '🦘','🦦','🐰','🦈','🪼','🦭','🐞'];
+  function emojiDe(nom){
+    var n = (nom || '').toLowerCase(), h = 0;
+    for(var i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) % 100000;
+    return EMOJIS[h % EMOJIS.length];
+  }
+
   // --- Écran 1 : le prénom --------------------------------------------------
   function vueNom(msg){
+    arreterBulles();
     zone.innerHTML = '<div class="carte">'
       + '<h1>' + esc(etat && etat.titre ? etat.titre : 'Faisons connaissance') + '</h1>'
       + '<p class="sous">Indique ton prénom pour rejoindre. On attendra que tout le '
@@ -116,39 +163,149 @@
     function envoyer(){
       var nom = inp.value.trim();
       if(nom.length < 2){ document.getElementById('e').textContent = 'Il faut au moins 2 caractères.'; return; }
-      btn.disabled = true;
+      btn.disabled = true; btn.textContent = 'Un instant…';
       appel('rejoindre', { nom:nom }).then(function(r){
-        btn.disabled = false;
+        btn.disabled = false; btn.textContent = 'Rejoindre';
         if(!r.ok){ document.getElementById('e').textContent = r.d.erreur || 'Impossible de rejoindre.'; return; }
         moi = r.d;
         try { localStorage.setItem('cours_moi', JSON.stringify(moi)); } catch(e){}
+        // On confirme TOUT DE SUITE, sans attendre le relevé suivant : si
+        // celui-ci tardait ou échouait, l'écran ne bougeait pas et on avait
+        // l'impression que le bouton n'avait rien fait.
+        bienvenue(moi.nom);
         dernierRendu = '';
+        if(etat){ etat.moi = { id:moi.id, nom:moi.nom };
+                  if(etat.eleves.indexOf(moi.nom) < 0) etat.eleves.push(moi.nom); }
         battre();
-      }, function(){ btn.disabled = false; document.getElementById('e').textContent = 'Pas de réseau.'; });
+      });
     }
     btn.onclick = envoyer;
     inp.onkeydown = function(e){ if(e.key === 'Enter') envoyer(); };
   }
 
-  // --- Écran 2 : la salle d'attente ----------------------------------------
-  function vueAttente(){
-    var noms = (etat.eleves || []).map(function(n){
-      var cls = (moi && n.toLowerCase() === moi.nom.toLowerCase()) ? ' moi' : '';
-      return '<span class="pst' + cls + '">' + esc(n) + '</span>';
-    }).join('');
-    zone.innerHTML = '<div class="carte">'
-      + '<h1>' + esc(etat.titre) + '</h1>'
-      + '<p class="sous">Tu es bien inscrit' + (moi ? ', ' + esc(moi.nom) : '')
-      + '. On démarre dès que tout le monde est là.</p>'
-      + '<div class="pastilles">' + noms + '</div>'
-      + '<div class="compte"><span class="puce"></span>'
-      + (etat.eleves.length) + ' participant' + (etat.eleves.length > 1 ? 's' : '')
-      + ' connecté' + (etat.eleves.length > 1 ? 's' : '') + '</div>'
+  // Le moment de confirmation : on voit son emoji, on sait que c'est passé.
+  function bienvenue(nom){
+    var d = document.createElement('div');
+    d.className = 'bienvenue';
+    d.innerHTML = '<div class="bv-x">'
+      + '<div class="bv-e">' + emojiDe(nom) + '</div>'
+      + '<div class="bv-t">Bienvenue ' + esc(nom) + '</div>'
+      + '<div class="bv-d">Voilà ton emoji pour la partie</div>'
+    + '</div>';
+    document.body.appendChild(d);
+    setTimeout(function(){
+      d.style.transition = 'opacity .3s';
+      d.style.opacity = '0';
+      setTimeout(function(){ d.remove(); }, 320);
+    }, 1500);
+  }
+
+  // --- Écran 2 : le salon, avec les bulles qui dérivent ---------------------
+  var bulles = [];      // [{ nom, el, x, y, vx, vy, l, h }]
+  var anim = null;
+
+  function arreterBulles(){
+    if(anim){ cancelAnimationFrame(anim); anim = null; }
+    bulles = [];
+  }
+
+  function vueSalon(){
+    var existant = document.getElementById('salon');
+    if(!existant){
+      arreterBulles();
+      zone.innerHTML = '<div class="salon" id="salon">'
+        + '<div class="salon-t">'
+          + '<h1>' + esc(etat.titre) + '</h1>'
+          + '<p class="sous" id="s-sous"></p>'
+          + '<div class="compte" id="s-compte"></div>'
+        + '</div>'
       + '</div>';
+      lancerBulles();
+    }
+    var sous = document.getElementById('s-sous');
+    var cpt = document.getElementById('s-compte');
+    if(sous) sous.textContent = moi
+      ? 'Tu es bien inscrit, ' + moi.nom + '. On démarre dès que tout le monde est là.'
+      : 'On démarre dès que tout le monde est là.';
+    if(cpt) cpt.innerHTML = '<span class="puce"></span>'
+      + etat.eleves.length + ' participant' + (etat.eleves.length > 1 ? 's' : '')
+      + ' dans la salle';
+    majBulles();
+  }
+
+  function majBulles(){
+    var salon = document.getElementById('salon');
+    if(!salon) return;
+    var noms = etat.eleves || [];
+
+    // On retire ceux qui sont partis, on garde la position de ceux qui restent :
+    // sinon toutes les bulles sauteraient à chaque arrivée.
+    bulles = bulles.filter(function(b){
+      if(noms.indexOf(b.nom) >= 0) return true;
+      b.el.remove();
+      return false;
+    });
+
+    noms.forEach(function(nom){
+      if(bulles.some(function(b){ return b.nom === nom; })) return;
+      var el = document.createElement('div');
+      var estMoi = moi && nom.toLowerCase() === moi.nom.toLowerCase();
+      el.className = 'bulle' + (estMoi ? ' moi' : '');
+      el.innerHTML = '<span class="em">' + emojiDe(nom) + '</span>' + esc(nom);
+      salon.appendChild(el);
+      var ang = Math.random() * Math.PI * 2;
+      var v = 0.35 + Math.random() * 0.25;   // lent : c'est un décor, pas un jeu
+      // La position est posée au premier rendu, pas ici : juste après avoir
+      // écrit le HTML, la mise en page flex n'est pas encore stabilisée et la
+      // hauteur du salon est fausse — toutes les bulles atterrissaient alors
+      // en haut de l'écran.
+      bulles.push({
+        nom:nom, el:el, l:el.offsetWidth, h:el.offsetHeight,
+        x:0, y:0, place:false,
+        vx: Math.cos(ang) * v, vy: Math.sin(ang) * v
+      });
+    });
+  }
+
+  function lancerBulles(){
+    var doux = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function pas(){
+      var salon = document.getElementById('salon');
+      if(!salon){ anim = null; return; }
+      var L = salon.clientWidth, H = salon.clientHeight;
+      bulles.forEach(function(b, i){
+        if(!b.place){
+          // Grille lâche : au pur hasard, les premières bulles se retrouvaient
+          // parfois empilées au même endroit.
+          var cols = Math.max(2, Math.floor(L / 200));
+          // Autant de lignes que nécessaire : brider à quatre faisait se
+          // superposer les bulles dès qu'il y avait du monde sur un téléphone.
+          var lignes = Math.max(1, Math.ceil(bulles.length / cols));
+          var cx = (i % cols + 0.5) / cols;
+          var cy = (Math.floor(i / cols) + 0.5) / lignes;
+          b.l = b.el.offsetWidth; b.h = b.el.offsetHeight;
+          b.x = Math.min(Math.max(0, cx * L - b.l / 2), Math.max(0, L - b.l));
+          b.y = Math.min(Math.max(0, cy * H - b.h / 2), Math.max(0, H - b.h));
+          b.place = true;
+        }
+        if(!doux){
+          b.x += b.vx; b.y += b.vy;
+          // Rebond sur les bords, comme le logo d'un lecteur de DVD.
+          if(b.x <= 0){ b.x = 0; b.vx = Math.abs(b.vx); }
+          if(b.x + b.l >= L){ b.x = L - b.l; b.vx = -Math.abs(b.vx); }
+          if(b.y <= 0){ b.y = 0; b.vy = Math.abs(b.vy); }
+          if(b.y + b.h >= H){ b.y = H - b.h; b.vy = -Math.abs(b.vy); }
+        }
+        b.el.style.transform = 'translate(' + Math.round(b.x) + 'px,' + Math.round(b.y) + 'px)';
+      });
+      anim = requestAnimationFrame(pas);
+    }
+    anim = requestAnimationFrame(pas);
   }
 
   // --- Écran 3 : une question ----------------------------------------------
   function vueQuestion(){
+    arreterBulles();
     var q = etat.question;
     var deja = etat.maReponse;
     zone.innerHTML = '<div class="carte">'
@@ -172,54 +329,76 @@
       var b = document.getElementById('env');
       b.disabled = true; b.textContent = 'Envoi…';
       appel('repondre', { jeton:moi.jeton, texte:t }).then(function(r){
-        b.disabled = false;
-        if(!r.ok){ b.textContent = 'Envoyer'; document.getElementById('e').textContent = r.d.erreur || 'Échec.'; return; }
+        b.disabled = false; b.textContent = 'Envoyer';
+        if(!r.ok){ document.getElementById('e').textContent = r.d.erreur || 'Échec.'; return; }
         brouillon = '';
+        if(etat) etat.maReponse = t;     // confirmation immédiate, sans attendre le relevé
         dernierRendu = '';
+        rendre();
         battre();
-      }, function(){ b.disabled = false; b.textContent = 'Envoyer';
-        document.getElementById('e').textContent = 'Pas de réseau.'; });
+      });
     };
   }
 
   function vueFini(){
+    arreterBulles();
     zone.innerHTML = '<div class="carte" style="text-align:center">'
-      + '<div style="font-size:50px;line-height:1">🎉</div>'
+      + '<div style="font-size:50px;line-height:1">' + emojiDe(moi ? moi.nom : '') + '</div>'
       + '<h1 style="margin-top:14px">C’est terminé, merci ' + esc(moi ? moi.nom : '') + '</h1>'
       + '<p class="sous">Tes réponses sont bien enregistrées. À tout de suite pour la suite du cours.</p>'
       + '</div>';
   }
 
-  // --- Le battement ---------------------------------------------------------
+  // --- Le rendu -------------------------------------------------------------
   function rendre(){
-    // On ne redessine QUE si quelque chose a bougé : sinon on effacerait le
-    // texte en cours de saisie toutes les deux secondes.
+    // Le salon se met à jour en continu (les bulles arrivent), les autres
+    // écrans ne se redessinent qu'au vrai changement : sinon on effacerait la
+    // réponse en cours de saisie toutes les deux secondes.
+    var enSalon = moi && etat.moi && etat.etat !== 'fini'
+               && (etat.etat === 'attente' || !etat.question);
+
     var cle = etat.etat + '|' + etat.idx + '|' + (etat.moi ? '1' : '0')
-            + '|' + (etat.maReponse ? 'r' : '-')
-            + '|' + (etat.etat === 'attente' ? etat.eleves.join(',') : '');
-    if(cle === dernierRendu) return;
+            + '|' + (etat.maReponse ? 'r' : '-');
+    if(!enSalon && cle === dernierRendu) return;
     dernierRendu = cle;
 
-    if(!moi || !etat.moi){ moi = null; vueNom(); return; }
+    // On ne renvoie au formulaire QUE si le serveur dit explicitement ne pas
+    // connaître ce jeton — pas sur un simple relevé manqué, qui laissait
+    // l'impression que l'inscription n'avait servi à rien.
+    if(!moi || (sondeOk && !etat.moi)){
+      if(moi){ moi = null; try { localStorage.removeItem('cours_moi'); } catch(e){} }
+      vueNom();
+      return;
+    }
     if(etat.etat === 'fini'){ vueFini(); return; }
-    if(etat.etat === 'attente' || !etat.question){ vueAttente(); return; }
+    if(enSalon){ vueSalon(); return; }
     vueQuestion();
   }
 
   function battre(){
     var url = 'etat' + (moi ? '&jeton=' + encodeURIComponent(moi.jeton) : '');
     appel(url).then(function(r){
-      if(!r.ok) return;
+      if(!r.ok) return;        // relevé manqué : on garde l'écran en place
+      sondeOk = true;
       etat = r.d;
       rendre();
-    }, function(){});
+    });
   }
 
   battre();
   setInterval(battre, 2000);
-  // Retour sur l'onglet : on rafraîchit tout de suite plutôt que d'attendre.
   document.addEventListener('visibilitychange', function(){
     if(document.visibilityState === 'visible') battre();
+  });
+  // Les bulles doivent rester dans le cadre quand la fenêtre change de taille.
+  window.addEventListener('resize', function(){
+    var salon = document.getElementById('salon');
+    if(!salon) return;
+    var L = salon.clientWidth, H = salon.clientHeight;
+    bulles.forEach(function(b){
+      b.x = Math.min(b.x, Math.max(0, L - b.l));
+      b.y = Math.min(b.y, Math.max(0, H - b.h));
+    });
   });
 })();
 </script>

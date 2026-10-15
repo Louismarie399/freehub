@@ -352,53 +352,73 @@
     if(aEcrire) enregistrer(null);
   }
 
-  // --- Déplacer une question par glisser-déposer ----------------------------
-  var tire = null;
+  // --- Déplacer une question -------------------------------------------------
+  // Pas de glisser-déposer HTML5 : il exige que `draggable` soit déjà posé
+  // quand le geste commence, or on ne l'arme qu'au clic sur la poignée — le
+  // navigateur ne démarrait donc jamais le glissement. Les événements pointeur
+  // n'ont pas cette contrainte, et fonctionnent aussi au doigt.
   function brancherGlisser(){
-    [].forEach.call(document.querySelectorAll('[data-poi]'), function(poi){
-      var rang = poi.closest('.qr');
-      // `draggable` n'est armé que depuis la poignée : sinon on ne pourrait
-      // plus sélectionner le texte d'une question à la souris.
-      poi.onmousedown = function(){ rang.draggable = true; };
-      poi.onmouseup   = function(){ rang.draggable = false; };
-    });
+    var piste = document.getElementById('qs');
+    if(!piste) return;
 
-    [].forEach.call(document.querySelectorAll('.qr'), function(rang){
-      rang.ondragstart = function(e){
-        tire = rang.getAttribute('data-ligne');
+    [].forEach.call(document.querySelectorAll('[data-poi]'), function(poi){
+      poi.onpointerdown = function(ev){
+        ev.preventDefault();
+        var rang = poi.closest('.qr');
+        var id = rang.getAttribute('data-ligne');
+        poi.setPointerCapture(ev.pointerId);
         rang.classList.add('porte');
-        e.dataTransfer.effectAllowed = 'move';
-        try { e.dataTransfer.setData('text/plain', tire); } catch(err){}
-      };
-      rang.ondragend = function(){
-        tire = null;
-        rang.draggable = false;
-        [].forEach.call(document.querySelectorAll('.qr'), function(r){
-          r.classList.remove('porte', 'cible', 'cible-bas');
-        });
-      };
-      rang.ondragover = function(e){
-        if(!tire || rang.getAttribute('data-ligne') === tire) return;
-        e.preventDefault();
-        var r = rang.getBoundingClientRect();
-        var bas = (e.clientY - r.top) > r.height / 2;
-        rang.classList.toggle('cible', !bas);
-        rang.classList.toggle('cible-bas', bas);
-      };
-      rang.ondragleave = function(){ rang.classList.remove('cible', 'cible-bas'); };
-      rang.ondrop = function(e){
-        e.preventDefault();
-        var cible = rang.getAttribute('data-ligne');
-        if(!tire || cible === tire) return;
-        var r = rang.getBoundingClientRect();
-        var apres = (e.clientY - r.top) > r.height / 2;
-        var de = indexDe(tire);
-        var el = brouillon.splice(de, 1)[0];
-        var vers = indexDe(cible) + (apres ? 1 : 0);
-        brouillon.splice(vers, 0, el);
-        tire = null;
-        dessinerQuestions();
-        enregistrer(null);
+
+        var cibleId = null, apres = false;
+
+        function survol(e){
+          var rangs = [].slice.call(piste.querySelectorAll('.qr'));
+          rangs.forEach(function(r){ r.classList.remove('cible', 'cible-bas'); });
+          cibleId = null;
+          for(var i = 0; i < rangs.length; i++){
+            var r = rangs[i], b = r.getBoundingClientRect();
+            if(e.clientY >= b.top && e.clientY <= b.bottom){
+              if(r.getAttribute('data-ligne') === id) return;
+              apres = (e.clientY - b.top) > b.height / 2;
+              cibleId = r.getAttribute('data-ligne');
+              r.classList.add(apres ? 'cible-bas' : 'cible');
+              return;
+            }
+          }
+          // Au-dessus de la première ligne ou sous la dernière : on vise le bout.
+          if(rangs.length){
+            var prem = rangs[0].getBoundingClientRect();
+            var dern = rangs[rangs.length - 1].getBoundingClientRect();
+            if(e.clientY < prem.top){
+              cibleId = rangs[0].getAttribute('data-ligne'); apres = false;
+              rangs[0].classList.add('cible');
+            } else if(e.clientY > dern.bottom){
+              cibleId = rangs[rangs.length - 1].getAttribute('data-ligne'); apres = true;
+              rangs[rangs.length - 1].classList.add('cible-bas');
+            }
+          }
+        }
+
+        function fin(e){
+          poi.onpointermove = null;
+          poi.onpointerup = null;
+          poi.onpointercancel = null;
+          try { poi.releasePointerCapture(ev.pointerId); } catch(err){}
+          [].forEach.call(piste.querySelectorAll('.qr'), function(r){
+            r.classList.remove('porte', 'cible', 'cible-bas');
+          });
+          if(!cibleId || cibleId === id) return;
+          var de = indexDe(id);
+          var el = brouillon.splice(de, 1)[0];
+          var vers = indexDe(cibleId) + (apres ? 1 : 0);
+          brouillon.splice(vers, 0, el);
+          dessinerQuestions();
+          enregistrer(null);
+        }
+
+        poi.onpointermove = survol;
+        poi.onpointerup = fin;
+        poi.onpointercancel = fin;
       };
     });
   }
