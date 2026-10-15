@@ -65,8 +65,10 @@
   .q-ouvrir-a{color:var(--acc);font-size:13px}
   .q-ouvrir:hover .q-ouvrir-a{color:var(--encre)}
 
-  /* La pop-up des questions : haute, et elle défile toute seule */
-  .dlg-q{position:relative;width:620px;max-height:86vh;display:flex;flex-direction:column}
+  /* La pop-up des questions : large, haute, et elle défile toute seule.
+     « .dlg.dlg-q » et non « .dlg-q » : la règle commune « .dlg », écrite plus
+     bas, l'emportait à égalité et ramenait la fenêtre à 420 px. */
+  .dlg.dlg-q{position:relative;width:920px;max-height:86vh;display:flex;flex-direction:column}
   .dlg-q .qs{overflow-y:auto;flex:1;min-height:0;padding-right:4px;margin-top:16px}
   .pop-x{position:absolute;top:14px;right:16px;width:32px;height:32px;padding:0;
     border-radius:50%;background:var(--carte2);color:var(--doux);font-size:20px;
