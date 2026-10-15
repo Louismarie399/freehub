@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Animateur · Faisons connaissance</title>
+<style>
+  :root{
+    --bg:#0d1526; --carte:#18233a; --carte2:#1f2c47; --bord:rgba(255,255,255,.1);
+    --encre:#eef2f9; --doux:#9aa9c2; --acc:#5b8cff; --ok:#2dd4a7; --warn:#fbbf24;
+    --police:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--encre);font-family:var(--police);
+    -webkit-font-smoothing:antialiased}
+  .enveloppe{max-width:1180px;margin:0 auto;padding:26px 22px 70px}
+  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  h1{margin:0;font-size:23px;letter-spacing:-.022em}
+  .lien{margin-left:auto;display:flex;align-items:center;gap:9px;background:var(--carte);
+    border:1px solid var(--bord);border-radius:12px;padding:9px 13px;font-size:13px;
+    color:var(--doux)}
+  .lien code{color:var(--encre);font-size:13px}
+  .lien button{padding:6px 11px;font-size:12px;margin:0;width:auto}
+
+  .grille{display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:980px){ .grille{grid-template-columns:minmax(0,1fr)} }
+  .carte{background:var(--carte);border:1px solid var(--bord);border-radius:18px;padding:20px}
+  .carte h2{margin:0 0 14px;font-size:12.5px;font-weight:800;letter-spacing:.07em;
+    text-transform:uppercase;color:var(--doux)}
+
+  input,textarea{width:100%;background:var(--carte2);border:1.5px solid var(--bord);
+    border-radius:11px;padding:11px 13px;font-family:inherit;font-size:14.5px;
+    color:var(--encre);outline:none}
+  input:focus,textarea:focus{border-color:var(--acc)}
+  textarea{resize:vertical;line-height:1.5}
+  button{border:none;border-radius:11px;padding:11px 16px;background:var(--acc);color:#fff;
+    font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;transition:filter .15s}
+  button:hover:not(:disabled){filter:brightness(1.1)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.fant{background:transparent;border:1.5px solid var(--bord);color:var(--doux)}
+  button.fant:hover:not(:disabled){border-color:var(--acc);color:var(--encre)}
+  button.danger{background:transparent;border:1.5px solid rgba(255,120,140,.4);color:#ff9fb0}
+
+  .qs{display:flex;flex-direction:column;gap:9px;margin-bottom:12px}
+  .qr{display:flex;gap:8px;align-items:flex-start}
+  .qr .n{flex:none;width:26px;height:26px;border-radius:8px;background:var(--carte2);
+    display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;
+    color:var(--doux);margin-top:9px}
+  .qr .x{flex:none;background:none;border:none;color:#7b8aa3;font-size:19px;cursor:pointer;
+    padding:6px 8px;margin-top:4px}
+  .qr .x:hover{color:#ff9fb0}
+  .barre{display:flex;gap:8px;flex-wrap:wrap}
+  .barre button{flex:1;min-width:110px}
+
+  .etat{display:flex;align-items:center;gap:10px;background:var(--carte2);border-radius:12px;
+    padding:12px 14px;margin-bottom:14px;font-size:14px;font-weight:700}
+  .pt{width:9px;height:9px;border-radius:50%;flex:none}
+  .pt.attente{background:var(--warn)} .pt.en_cours{background:var(--ok)}
+  .pt.fini{background:#7b8aa3}
+
+  .eleves{display:flex;flex-wrap:wrap;gap:7px}
+  .el{display:flex;align-items:center;gap:7px;background:var(--carte2);border:1px solid var(--bord);
+    border-radius:999px;padding:6px 8px 6px 13px;font-size:13.5px;font-weight:700}
+  .el button{background:none;border:none;color:#7b8aa3;font-size:15px;padding:0 4px;
+    cursor:pointer;width:auto;margin:0}
+  .el button:hover{color:#ff9fb0}
+  .vide{color:var(--doux);font-size:14px;line-height:1.55}
+
+  .q{border:1px solid var(--bord);border-radius:14px;margin-bottom:12px;overflow:hidden;
+    background:var(--carte2)}
+  .q.active{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+  .q-h{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
+  .q-n{flex:none;font-size:12px;font-weight:800;color:var(--doux);letter-spacing:.06em}
+  .q-t{flex:1;min-width:0;font-size:15px;font-weight:700;line-height:1.35}
+  .q-c{flex:none;font-size:12.5px;font-weight:800;border-radius:999px;padding:4px 11px;
+    background:rgba(255,255,255,.07);color:var(--doux)}
+  .q-c.plein{background:rgba(45,212,167,.16);color:#7ee7c8}
+  .q-b{padding:0 16px 14px;display:flex;flex-direction:column;gap:9px}
+  .rep{background:var(--carte);border-radius:11px;padding:11px 13px}
+  .rep-n{font-size:12px;font-weight:800;color:var(--acc);letter-spacing:.02em}
+  .rep-t{font-size:14.5px;line-height:1.55;margin-top:4px;white-space:pre-wrap;
+    overflow-wrap:anywhere}
+  .manque{font-size:12.5px;color:var(--doux);padding-top:2px}
+
+  .porte{max-width:390px;margin:14vh auto;padding:0 20px}
+  .err{color:#ff9fb0;font-size:13.5px;min-height:19px;margin-top:9px}
+  .aide{font-size:12.5px;color:var(--doux);line-height:1.55;margin-top:10px}
+</style>
+</head>
+<body>
+<div id="racine"></div>
+
+<script>
+(function(){
+  'use strict';
+  var API = 'api.php?a=';
+  var racine = document.getElementById('racine');
+  var D = null;                   // données du tableau de bord
+  var ouvertes = {};              // questions dépliées
+  var qBrouillon = null;          // liste de questions en cours d'édition
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function appel(action, corps){
+    return fetch(API + action, {
+      method: corps ? 'POST' : 'GET',
+      headers: { 'Content-Type':'application/json' },
+      body: corps ? JSON.stringify(corps) : undefined,
+      credentials: 'same-origin'
+    }).then(function(r){ return r.json().then(function(d){ return { ok:r.ok, d:d }; }); });
+  }
+
+  // --- La porte : créer ou saisir le mot de passe ---------------------------
+  function porte(cfg, msg){
+    var neuf = !cfg.initialise;
+    racine.innerHTML = '<div class="porte"><div class="carte">'
+      + '<h2>Espace animateur</h2>'
+      + '<div style="font-size:19px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px">'
+      + (neuf ? 'Choisis ton mot de passe' : 'Mot de passe') + '</div>'
+      + '<p class="aide" style="margin:0 0 14px">'
+      + (neuf ? 'Première visite : définis le mot de passe qui protègera le pilotage du jeu. '
+              + 'Note-le, il n’y a pas de récupération.'
+              : 'Celui que tu as défini à la première visite.') + '</p>'
+      + '<input id="m" type="password" autocomplete="' + (neuf ? 'new-password' : 'current-password') + '">'
+      + '<button id="ok" style="width:100%;margin-top:12px">'
+      + (neuf ? 'Définir et entrer' : 'Entrer') + '</button>'
+      + '<div class="err" id="e">' + esc(msg || '') + '</div>'
+      + '</div></div>';
+    var inp = document.getElementById('m');
+    inp.focus();
+    function go(){
+      var v = inp.value;
+      if(neuf && v.length < 6){ document.getElementById('e').textContent = '6 caractères minimum.'; return; }
+      appel(neuf ? 'admin-creer' : 'admin-entrer', { mdp:v }).then(function(r){
+        if(!r.ok){ document.getElementById('e').textContent = r.d.erreur || 'Refusé.'; return; }
+        demarrer();
+      });
+    }
+    document.getElementById('ok').onclick = go;
+    inp.onkeydown = function(e){ if(e.key === 'Enter') go(); };
+  }
+
+  // --- Le tableau de bord ---------------------------------------------------
+  var LIB = { attente:'En salle d’attente', en_cours:'Jeu en cours', fini:'Terminé' };
+
+  function dessiner(){
+    var nbEl = D.eleves.length;
+    var qActive = D.etat === 'en_cours' ? D.questions[D.idx] : null;
+    var lienEleve = location.href.replace(/admin\.html.*$/, '');
+
+    // --- colonne de gauche : préparation et pilotage ---
+    var liste = (qBrouillon !== null ? qBrouillon : D.questions.map(function(q){ return q.texte; }));
+    var qsHtml = liste.map(function(t, i){
+      return '<div class="qr"><span class="n">' + (i + 1) + '</span>'
+        + '<textarea rows="2" data-q="' + i + '" placeholder="Ta question…">' + esc(t) + '</textarea>'
+        + '<button class="x" data-suppr="' + i + '" title="Retirer">×</button></div>';
+    }).join('');
+
+    var modifiable = D.etat === 'attente';
+
+    var gauche = '<div class="carte">'
+      + '<h2>Questions</h2>'
+      + (modifiable
+          ? '<div class="qs">' + qsHtml + '</div>'
+            + '<div class="barre"><button class="fant" id="plus">+ Ajouter</button>'
+            + '<button id="enr">Enregistrer</button></div>'
+            + '<div class="aide">Les questions ne sont modifiables qu’avant le lancement.</div>'
+          : '<div class="vide">' + (D.questions.length) + ' question'
+            + (D.questions.length > 1 ? 's' : '') + ' en jeu. Pour les modifier, remets '
+            + 'la partie en salle d’attente.</div>')
+      + '</div>'
+
+      + '<div class="carte" style="margin-top:16px">'
+      + '<h2>Pilotage</h2>'
+      + '<div class="etat"><span class="pt ' + D.etat + '"></span>' + LIB[D.etat]
+      + (D.etat === 'en_cours' ? ' · question ' + (D.idx + 1) + '/' + D.questions.length : '')
+      + '</div>'
+      + '<div class="barre">'
+      + (D.etat === 'attente'
+          ? '<button id="go" ' + (D.questions.length ? '' : 'disabled') + '>Lancer le jeu</button>'
+          : '')
+      + (D.etat === 'en_cours'
+          ? '<button class="fant" id="prec">← Précédente</button>'
+            + '<button id="suiv">' + (D.idx + 1 >= D.questions.length
+                ? 'Terminer' : 'Question suivante →') + '</button>'
+          : '')
+      + (D.etat === 'fini' ? '<button class="fant" id="rouvrir">Rouvrir la salle</button>' : '')
+      + '</div>'
+      + (qActive
+          ? '<div class="aide" style="margin-top:12px">'
+            + qActive.nb + ' réponse' + (qActive.nb > 1 ? 's' : '') + ' sur ' + nbEl
+            + (qActive.nb >= nbEl && nbEl > 0 ? ' — tout le monde a répondu.' : '')
+            + '</div>'
+          : '')
+      + '</div>'
+
+      + '<div class="carte" style="margin-top:16px">'
+      + '<h2>Participants · ' + nbEl + '</h2>'
+      + (nbEl
+          ? '<div class="eleves">' + D.eleves.map(function(e){
+              return '<span class="el">' + esc(e.nom)
+                + '<button data-el="' + e.id + '" title="Retirer">×</button></span>';
+            }).join('') + '</div>'
+          : '<div class="vide">Personne pour l’instant. Partage le lien ci-dessus : '
+            + 'les prénoms s’afficheront ici au fur et à mesure.</div>')
+      + '</div>'
+
+      + '<div class="carte" style="margin-top:16px">'
+      + '<h2>Après le cours</h2>'
+      + '<div class="barre">'
+      + '<button class="fant" id="exp">Exporter (CSV)</button>'
+      + '<button class="danger" id="raz">Repartir à zéro</button>'
+      + '</div>'
+      + '<div class="aide">L’export s’ouvre dans Excel ou Numbers. « Repartir à zéro » '
+      + 'efface les participants et les réponses, mais garde tes questions.</div>'
+      + '</div>';
+
+    // --- colonne de droite : les réponses en direct ---
+    var droite = '<div class="carte">'
+      + '<h2>Réponses en direct</h2>'
+      + (D.questions.length ? D.questions.map(function(q, i){
+          var active = D.etat === 'en_cours' && i === D.idx;
+          var ouv = ouvertes[q.id] !== undefined ? ouvertes[q.id] : active;
+          var manquants = D.eleves.filter(function(e){
+            return !q.reponses.some(function(r){ return r.nom === e.nom; });
+          }).map(function(e){ return e.nom; });
+          return '<div class="q' + (active ? ' active' : '') + '">'
+            + '<div class="q-h" data-bascule="' + q.id + '">'
+              + '<span class="q-n">Q' + (i + 1) + '</span>'
+              + '<span class="q-t">' + esc(q.texte) + '</span>'
+              + '<span class="q-c' + (nbEl && q.nb >= nbEl ? ' plein' : '') + '">'
+                + q.nb + '/' + nbEl + '</span>'
+            + '</div>'
+            + (ouv ? '<div class="q-b">'
+                + (q.reponses.length ? q.reponses.map(function(r){
+                    return '<div class="rep"><div class="rep-n">' + esc(r.nom) + '</div>'
+                      + '<div class="rep-t">' + esc(r.texte) + '</div></div>';
+                  }).join('') : '<div class="manque">Aucune réponse pour l’instant.</div>')
+                + (manquants.length && q.reponses.length
+                    ? '<div class="manque">En attente : ' + esc(manquants.join(', ')) + '</div>' : '')
+              + '</div>' : '')
+          + '</div>';
+        }).join('')
+        : '<div class="vide">Ajoute des questions à gauche, elles apparaîtront ici avec '
+          + 'les réponses de chacun.</div>')
+      + '</div>';
+
+    racine.innerHTML = '<div class="enveloppe">'
+      + '<header><h1>' + esc(D.titre) + '</h1>'
+        + '<div class="lien">Lien élèves <code id="lk">' + esc(lienEleve) + '</code>'
+        + '<button class="fant" id="cop">Copier</button></div></header>'
+      + '<div class="grille"><div>' + gauche + '</div><div>' + droite + '</div></div>'
+      + '</div>';
+
+    brancher(lienEleve);
+  }
+
+  function brancher(lienEleve){
+    function sur(sel, fn){ var e = document.getElementById(sel); if(e) e.onclick = fn; }
+
+    sur('cop', function(){
+      var b = document.getElementById('cop');
+      navigator.clipboard.writeText(lienEleve).then(function(){
+        b.textContent = '✓ Copié';
+        setTimeout(function(){ b.textContent = 'Copier'; }, 1600);
+      }, function(){});
+    });
+
+    // Édition des questions : on travaille sur un brouillon local, le
+    // rafraîchissement automatique ne doit pas effacer la saisie en cours.
+    [].forEach.call(document.querySelectorAll('[data-q]'), function(ta){
+      ta.oninput = function(){
+        if(qBrouillon === null) qBrouillon = D.questions.map(function(q){ return q.texte; });
+        qBrouillon[+ta.getAttribute('data-q')] = ta.value;
+      };
+    });
+    [].forEach.call(document.querySelectorAll('[data-suppr]'), function(b){
+      b.onclick = function(){
+        if(qBrouillon === null) qBrouillon = D.questions.map(function(q){ return q.texte; });
+        qBrouillon.splice(+b.getAttribute('data-suppr'), 1);
+        dessiner();
+      };
+    });
+    sur('plus', function(){
+      if(qBrouillon === null) qBrouillon = D.questions.map(function(q){ return q.texte; });
+      qBrouillon.push('');
+      dessiner();
+      var tas = document.querySelectorAll('[data-q]');
+      if(tas.length) tas[tas.length - 1].focus();
+    });
+    sur('enr', function(){
+      var liste = (qBrouillon === null ? D.questions.map(function(q){ return q.texte; }) : qBrouillon)
+        .map(function(t){ return (t || '').trim(); }).filter(Boolean);
+      appel('admin-questions', { questions:liste }).then(function(r){
+        if(!r.ok){ alert(r.d.erreur || 'Échec'); return; }
+        qBrouillon = null;
+        battre();
+      });
+    });
+
+    function pilote(quoi){ appel('admin-pilote', { quoi:quoi }).then(function(){ battre(); }); }
+    sur('go', function(){ pilote('demarrer'); });
+    sur('suiv', function(){ pilote('suivant'); });
+    sur('prec', function(){ pilote('precedent'); });
+    sur('rouvrir', function(){ pilote('rouvrir'); });
+
+    sur('exp', function(){ window.location = API + 'admin-export'; });
+    sur('raz', function(){
+      if(!confirm('Effacer les participants et toutes les réponses ? Les questions sont conservées.')) return;
+      appel('admin-raz', { questions:true }).then(function(){ ouvertes = {}; battre(); });
+    });
+
+    [].forEach.call(document.querySelectorAll('[data-el]'), function(b){
+      b.onclick = function(){
+        var id = +b.getAttribute('data-el');
+        if(!confirm('Retirer ce participant et ses réponses ?')) return;
+        appel('admin-eleve-suppr', { id:id }).then(function(){ battre(); });
+      };
+    });
+    [].forEach.call(document.querySelectorAll('[data-bascule]'), function(h){
+      h.onclick = function(){
+        var id = +h.getAttribute('data-bascule');
+        var q = D.questions.filter(function(x){ return x.id === id; })[0];
+        var actuel = ouvertes[id] !== undefined ? ouvertes[id]
+                   : (D.etat === 'en_cours' && q && q.ordre === D.idx);
+        ouvertes[id] = !actuel;
+        dessiner();
+      };
+    });
+  }
+
+  // --- Le battement ---------------------------------------------------------
+  var signature = '';
+  function battre(){
+    appel('admin-etat').then(function(r){
+      if(!r.ok){ if(r.d && r.d.erreur) demarrer(); return; }
+      D = r.d;
+      // On ne redessine que si l'affichage changerait : sans ça, impossible de
+      // taper une question, le champ serait recréé toutes les deux secondes.
+      var sig = JSON.stringify(D);
+      if(sig === signature) return;
+      signature = sig;
+      dessiner();
+    }, function(){});
+  }
+
+  function demarrer(){
+    appel('admin-config').then(function(r){
+      if(r.d && r.d.connecte){ battre(); setInterval(battre, 2000); }
+      else porte(r.d || { initialise:false });
+    });
+  }
+  demarrer();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Faisons connaissance</title>
+<style>
+  :root{
+    --bg:#0d1526; --carte:#18233a; --carte2:#1f2c47; --bord:rgba(255,255,255,.1);
+    --encre:#eef2f9; --doux:#9aa9c2; --acc:#5b8cff; --acc2:#38bdf8; --ok:#2dd4a7;
+    --police:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--encre);
+    font-family:var(--police);display:flex;flex-direction:column;
+    -webkit-font-smoothing:antialiased}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;
+    background:radial-gradient(900px 500px at 15% -5%,rgba(91,140,255,.22),transparent 60%),
+      radial-gradient(700px 420px at 95% 100%,rgba(56,189,248,.14),transparent 60%)}
+  .zone{position:relative;flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:24px;gap:18px}
+  .carte{width:100%;max-width:560px;background:var(--carte);border:1px solid var(--bord);
+    border-radius:22px;padding:30px;box-shadow:0 30px 70px -30px rgba(0,0,0,.7)}
+  h1{margin:0;font-size:27px;line-height:1.2;letter-spacing:-.025em;text-wrap:balance}
+  .sous{margin:9px 0 0;color:var(--doux);font-size:15px;line-height:1.55}
+  label{display:block;font-size:12.5px;font-weight:800;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--doux);margin:22px 0 8px}
+  input,textarea{width:100%;background:var(--carte2);border:1.5px solid var(--bord);
+    border-radius:14px;padding:15px 16px;font-family:inherit;font-size:16px;
+    color:var(--encre);outline:none;transition:border-color .15s}
+  input:focus,textarea:focus{border-color:var(--acc)}
+  textarea{min-height:130px;resize:vertical;line-height:1.55}
+  button{width:100%;margin-top:16px;border:none;border-radius:14px;padding:16px;
+    background:var(--acc);color:#fff;font-family:inherit;font-size:16px;font-weight:800;
+    cursor:pointer;transition:filter .15s,transform .15s}
+  button:hover:not(:disabled){filter:brightness(1.1)}
+  button:active:not(:disabled){transform:translateY(1px)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .err{margin-top:12px;color:#ff9fb0;font-size:14px;min-height:20px}
+
+  .pastilles{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .pst{background:var(--carte2);border:1px solid var(--bord);border-radius:999px;
+    padding:7px 14px;font-size:14px;font-weight:700}
+  .pst.moi{background:rgba(91,140,255,.2);border-color:var(--acc);color:#cbd9ff}
+  .compte{font-size:13px;color:var(--doux);margin-top:16px}
+  .puce{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);
+    margin-right:7px;animation:bat 1.8s ease-in-out infinite}
+  @keyframes bat{50%{opacity:.35}}
+  @media (prefers-reduced-motion:reduce){.puce{animation:none}}
+
+  .num{font-size:12.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--acc2)}
+  .envoye{margin-top:16px;background:rgba(45,212,167,.12);border:1px solid rgba(45,212,167,.4);
+    border-radius:14px;padding:14px 16px;font-size:14.5px;color:#9df0d8;line-height:1.5}
+  .pied{text-align:center;padding:18px;font-size:12.5px;color:#55637d}
+</style>
+</head>
+<body>
+<div class="zone" id="zone"></div>
+<div class="pied">FreeHub · espace de cours</div>
+
+<script>
+(function(){
+  'use strict';
+  var API = 'api.php?a=';
+  var zone = document.getElementById('zone');
+  var moi = null;                 // { id, nom, jeton }
+  var etat = null;
+  var brouillon = '';             // ce qu'on est en train d'écrire, préservé entre deux rendus
+  var dernierRendu = '';
+
+  try { moi = JSON.parse(localStorage.getItem('cours_moi') || 'null'); } catch(e){}
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function appel(action, corps){
+    return fetch(API + action, {
+      method: corps ? 'POST' : 'GET',
+      headers: { 'Content-Type':'application/json' },
+      body: corps ? JSON.stringify(corps) : undefined,
+      credentials: 'same-origin'
+    }).then(function(r){ return r.json().then(function(d){ return { ok:r.ok, d:d }; }); });
+  }
+
+  // --- Écran 1 : le prénom --------------------------------------------------
+  function vueNom(msg){
+    zone.innerHTML = '<div class="carte">'
+      + '<h1>' + esc(etat && etat.titre ? etat.titre : 'Faisons connaissance') + '</h1>'
+      + '<p class="sous">Indique ton prénom pour rejoindre. On attendra que tout le '
+      + 'monde soit là avant de commencer.</p>'
+      + '<label for="n">Ton prénom</label>'
+      + '<input id="n" autocomplete="given-name" autocapitalize="words" '
+      + 'placeholder="Maëlys" maxlength="60">'
+      + '<button id="go">Rejoindre</button>'
+      + '<div class="err" id="e">' + esc(msg || '') + '</div>'
+      + '</div>';
+    var inp = document.getElementById('n');
+    var btn = document.getElementById('go');
+    inp.focus();
+    function envoyer(){
+      var nom = inp.value.trim();
+      if(nom.length < 2){ document.getElementById('e').textContent = 'Il faut au moins 2 caractères.'; return; }
+      btn.disabled = true;
+      appel('rejoindre', { nom:nom }).then(function(r){
+        btn.disabled = false;
+        if(!r.ok){ document.getElementById('e').textContent = r.d.erreur || 'Impossible de rejoindre.'; return; }
+        moi = r.d;
+        try { localStorage.setItem('cours_moi', JSON.stringify(moi)); } catch(e){}
+        dernierRendu = '';
+        battre();
+      }, function(){ btn.disabled = false; document.getElementById('e').textContent = 'Pas de réseau.'; });
+    }
+    btn.onclick = envoyer;
+    inp.onkeydown = function(e){ if(e.key === 'Enter') envoyer(); };
+  }
+
+  // --- Écran 2 : la salle d'attente ----------------------------------------
+  function vueAttente(){
+    var noms = (etat.eleves || []).map(function(n){
+      var cls = (moi && n.toLowerCase() === moi.nom.toLowerCase()) ? ' moi' : '';
+      return '<span class="pst' + cls + '">' + esc(n) + '</span>';
+    }).join('');
+    zone.innerHTML = '<div class="carte">'
+      + '<h1>' + esc(etat.titre) + '</h1>'
+      + '<p class="sous">Tu es bien inscrit' + (moi ? ', ' + esc(moi.nom) : '')
+      + '. On démarre dès que tout le monde est là.</p>'
+      + '<div class="pastilles">' + noms + '</div>'
+      + '<div class="compte"><span class="puce"></span>'
+      + (etat.eleves.length) + ' participant' + (etat.eleves.length > 1 ? 's' : '')
+      + ' connecté' + (etat.eleves.length > 1 ? 's' : '') + '</div>'
+      + '</div>';
+  }
+
+  // --- Écran 3 : une question ----------------------------------------------
+  function vueQuestion(){
+    var q = etat.question;
+    var deja = etat.maReponse;
+    zone.innerHTML = '<div class="carte">'
+      + '<div class="num">Question ' + (etat.idx + 1) + ' sur ' + etat.total + '</div>'
+      + '<h1 style="margin-top:10px">' + esc(q.texte) + '</h1>'
+      + '<label for="r">Ta réponse</label>'
+      + '<textarea id="r" maxlength="2000" placeholder="Écris ce que tu veux, '
+      + 'prends ton temps"></textarea>'
+      + '<button id="env">' + (deja ? 'Modifier ma réponse' : 'Envoyer') + '</button>'
+      + (deja ? '<div class="envoye">Réponse envoyée. Tu peux encore la modifier tant '
+              + 'qu’on n’est pas passé à la question suivante.</div>' : '')
+      + '<div class="err" id="e"></div>'
+      + '</div>';
+    var ta = document.getElementById('r');
+    ta.value = brouillon || deja || '';
+    ta.oninput = function(){ brouillon = ta.value; };
+    if(!deja) ta.focus();
+    document.getElementById('env').onclick = function(){
+      var t = ta.value.trim();
+      if(!t){ document.getElementById('e').textContent = 'Ta réponse est vide.'; return; }
+      var b = document.getElementById('env');
+      b.disabled = true; b.textContent = 'Envoi…';
+      appel('repondre', { jeton:moi.jeton, texte:t }).then(function(r){
+        b.disabled = false;
+        if(!r.ok){ b.textContent = 'Envoyer'; document.getElementById('e').textContent = r.d.erreur || 'Échec.'; return; }
+        brouillon = '';
+        dernierRendu = '';
+        battre();
+      }, function(){ b.disabled = false; b.textContent = 'Envoyer';
+        document.getElementById('e').textContent = 'Pas de réseau.'; });
+    };
+  }
+
+  function vueFini(){
+    zone.innerHTML = '<div class="carte" style="text-align:center">'
+      + '<div style="font-size:50px;line-height:1">🎉</div>'
+      + '<h1 style="margin-top:14px">C’est terminé, merci ' + esc(moi ? moi.nom : '') + '</h1>'
+      + '<p class="sous">Tes réponses sont bien enregistrées. À tout de suite pour la suite du cours.</p>'
+      + '</div>';
+  }
+
+  // --- Le battement ---------------------------------------------------------
+  function rendre(){
+    // On ne redessine QUE si quelque chose a bougé : sinon on effacerait le
+    // texte en cours de saisie toutes les deux secondes.
+    var cle = etat.etat + '|' + etat.idx + '|' + (etat.moi ? '1' : '0')
+            + '|' + (etat.maReponse ? 'r' : '-')
+            + '|' + (etat.etat === 'attente' ? etat.eleves.join(',') : '');
+    if(cle === dernierRendu) return;
+    dernierRendu = cle;
+
+    if(!moi || !etat.moi){ moi = null; vueNom(); return; }
+    if(etat.etat === 'fini'){ vueFini(); return; }
+    if(etat.etat === 'attente' || !etat.question){ vueAttente(); return; }
+    vueQuestion();
+  }
+
+  function battre(){
+    var url = 'etat' + (moi ? '&jeton=' + encodeURIComponent(moi.jeton) : '');
+    appel(url).then(function(r){
+      if(!r.ok) return;
+      etat = r.d;
+      rendre();
+    }, function(){});
+  }
+
+  battre();
+  setInterval(battre, 2000);
+  // Retour sur l'onglet : on rafraîchit tout de suite plutôt que d'attendre.
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') battre();
+  });
+})();
+</script>
+</body>
+</html>

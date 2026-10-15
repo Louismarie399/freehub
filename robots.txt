@@ -8,5 +8,7 @@ Allow: /legal.html
 Disallow: /app
 Disallow: /app.html
 Disallow: /api/
+# Espace de cours : un outil ponctuel, partagé par lien à un groupe précis.
+Disallow: /cours
 
 Sitemap: https://free-hub.fr/sitemap.xml
