@@ -50,39 +50,37 @@
   @keyframes paraitre{from{opacity:0}}
   @keyframes surgir{from{opacity:0;transform:scale(.7)}}
 
-  /* ---- Le salon : des bulles qui dérivent et rebondissent ---- */
-  /* Hauteur déterminée plutôt que déduite du flex : dépendre du flex rendait
-     `clientHeight` faux au premier rendu, et toutes les bulles naissaient
-     entassées dans le haut du cadre. */
-  .salon{position:relative;width:100%;max-width:960px;height:min(64vh,540px);
-    min-height:300px}
-  .salon-t{position:absolute;inset:0;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;text-align:center;pointer-events:none;
-    padding:20px;z-index:1}
-  /* Un voile sous le texte : sans lui, une bulle qui passe derrière le rendait
-     illisible une seconde sur deux. */
-  .salon-t::before{content:'';position:absolute;left:50%;top:50%;
-    transform:translate(-50%,-50%);width:min(620px,96%);height:230px;border-radius:50%;
-    background:radial-gradient(ellipse,rgba(13,21,38,.92) 38%,rgba(13,21,38,0) 72%)}
-  .salon-t > *{position:relative}
-  .salon-t h1{text-shadow:0 2px 24px rgba(13,21,38,.9)}
-  .compte{font-size:14px;color:var(--doux);margin-top:14px}
-  .puce{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);
-    margin-right:7px;animation:bat 1.8s ease-in-out infinite}
-  @keyframes bat{50%{opacity:.35}}
+  /* ---- Le salon : une page structurée, pas un espace flottant ---- */
+  .moi-carte{text-align:center;padding:34px 30px 30px}
+  .moi-em{font-size:62px;line-height:1;animation:flotte 3.4s ease-in-out infinite}
+  .moi-nom{margin-top:10px;font-size:28px;font-weight:800;letter-spacing:-.025em}
+  .moi-ok{margin-top:7px;display:inline-flex;align-items:center;gap:7px;
+    background:rgba(45,212,167,.14);border:1px solid rgba(45,212,167,.4);color:#9df0d8;
+    border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:700}
 
-  .bulle{position:absolute;display:flex;align-items:center;gap:9px;
-    background:var(--carte);border:1px solid var(--bord);border-radius:999px;
-    padding:9px 16px 9px 11px;font-size:15px;font-weight:700;white-space:nowrap;
-    box-shadow:0 12px 30px -14px rgba(0,0,0,.8);will-change:transform;
-    animation:pop .45s cubic-bezier(.2,1.4,.4,1) both}
-  .bulle .em{font-size:21px;line-height:1}
-  .bulle.moi{background:linear-gradient(135deg,rgba(91,140,255,.4),var(--carte));
-    border-color:var(--acc);box-shadow:0 12px 34px -12px rgba(91,140,255,.8)}
-  @keyframes pop{from{opacity:0;transform:scale(.5)}}
+  .attente{margin-top:22px;padding:18px;border-radius:16px;background:var(--carte2);
+    border:1px solid var(--bord);text-align:center}
+  .attente-t{font-size:15.5px;font-weight:800;display:flex;align-items:center;
+    justify-content:center;gap:9px}
+  .sablier{display:inline-block;animation:bascule 2.6s ease-in-out infinite}
+  .attente-d{margin-top:6px;font-size:13.5px;color:var(--doux);line-height:1.5}
 
+  .liste-t{margin:24px 0 11px;font-size:12px;font-weight:800;letter-spacing:.07em;
+    text-transform:uppercase;color:var(--doux);text-align:left}
+  .liste{display:flex;flex-wrap:wrap;gap:8px}
+  .pst{display:flex;align-items:center;gap:8px;background:var(--carte2);
+    border:1px solid var(--bord);border-radius:999px;padding:7px 14px 7px 10px;
+    font-size:14px;font-weight:700;animation:pop .4s cubic-bezier(.2,1.4,.4,1) both}
+  .pst .em{font-size:18px;line-height:1}
+  .pst.moi{background:linear-gradient(135deg,rgba(91,140,255,.34),var(--carte2));
+    border-color:var(--acc)}
+
+  @keyframes pop{from{opacity:0;transform:scale(.6)}}
+  @keyframes flotte{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+  @keyframes bascule{0%,100%{transform:rotate(0)}25%{transform:rotate(14deg)}
+    75%{transform:rotate(-14deg)}}
   @media (prefers-reduced-motion:reduce){
-    .puce,.bulle,.bv-x,.bienvenue{animation:none}
+    .moi-em,.sablier,.pst,.bv-x,.bienvenue,.puce{animation:none}
   }
 
   .num{font-size:12.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
@@ -146,7 +144,6 @@
 
   // --- Écran 1 : le prénom --------------------------------------------------
   function vueNom(msg){
-    arreterBulles();
     zone.innerHTML = '<div class="carte">'
       + '<h1>' + esc(etat && etat.titre ? etat.titre : 'Faisons connaissance') + '</h1>'
       + '<p class="sous">Indique ton prénom pour rejoindre. On attendra que tout le '
@@ -173,9 +170,17 @@
         // celui-ci tardait ou échouait, l'écran ne bougeait pas et on avait
         // l'impression que le bouton n'avait rien fait.
         bienvenue(moi.nom);
+        // On bascule TOUT DE SUITE, sur ce qu'on a déjà en main. Avant, on
+        // attendait le relevé suivant pour changer d'écran : s'il tardait,
+        // s'il échouait, ou si le tout premier n'était pas encore revenu, on
+        // restait sur le formulaire et le bouton semblait n'avoir rien fait.
+        if(!etat) etat = { titre:'Faisons connaissance', etat:'attente', idx:0,
+                           total:0, eleves:[], question:null, maReponse:null };
+        etat.moi = { id:moi.id, nom:moi.nom };
+        if(etat.eleves.indexOf(moi.nom) < 0) etat.eleves.push(moi.nom);
+        sondeOk = false;         // le relevé d'avant ne nous connaissait pas
         dernierRendu = '';
-        if(etat){ etat.moi = { id:moi.id, nom:moi.nom };
-                  if(etat.eleves.indexOf(moi.nom) < 0) etat.eleves.push(moi.nom); }
+        rendre();
         battre();
       });
     }
@@ -200,112 +205,37 @@
     }, 1500);
   }
 
-  // --- Écran 2 : le salon, avec les bulles qui dérivent ---------------------
-  var bulles = [];      // [{ nom, el, x, y, vx, vy, l, h }]
-  var anim = null;
-
-  function arreterBulles(){
-    if(anim){ cancelAnimationFrame(anim); anim = null; }
-    bulles = [];
-  }
-
+  // --- Écran 2 : le salon ---------------------------------------------------
+  // Une page franche : qui je suis, ce qu'on attend, et qui est déjà là. Les
+  // bulles qui dérivaient étaient jolies mais on ne savait pas si on était
+  // inscrit — c'est précisément ce qu'il fallait rendre évident.
   function vueSalon(){
-    var existant = document.getElementById('salon');
-    if(!existant){
-      arreterBulles();
-      zone.innerHTML = '<div class="salon" id="salon">'
-        + '<div class="salon-t">'
-          + '<h1>' + esc(etat.titre) + '</h1>'
-          + '<p class="sous" id="s-sous"></p>'
-          + '<div class="compte" id="s-compte"></div>'
-        + '</div>'
-      + '</div>';
-      lancerBulles();
-    }
-    var sous = document.getElementById('s-sous');
-    var cpt = document.getElementById('s-compte');
-    if(sous) sous.textContent = moi
-      ? 'Tu es bien inscrit, ' + moi.nom + '. On démarre dès que tout le monde est là.'
-      : 'On démarre dès que tout le monde est là.';
-    if(cpt) cpt.innerHTML = '<span class="puce"></span>'
-      + etat.eleves.length + ' participant' + (etat.eleves.length > 1 ? 's' : '')
-      + ' dans la salle';
-    majBulles();
-  }
-
-  function majBulles(){
-    var salon = document.getElementById('salon');
-    if(!salon) return;
     var noms = etat.eleves || [];
+    var monNom = moi ? moi.nom : '';
+    var liste = noms.map(function(n){
+      var estMoi = monNom && n.toLowerCase() === monNom.toLowerCase();
+      return '<span class="pst' + (estMoi ? ' moi' : '') + '">'
+        + '<span class="em">' + emojiDe(n) + '</span>' + esc(n) + '</span>';
+    }).join('');
 
-    // On retire ceux qui sont partis, on garde la position de ceux qui restent :
-    // sinon toutes les bulles sauteraient à chaque arrivée.
-    bulles = bulles.filter(function(b){
-      if(noms.indexOf(b.nom) >= 0) return true;
-      b.el.remove();
-      return false;
-    });
-
-    noms.forEach(function(nom){
-      if(bulles.some(function(b){ return b.nom === nom; })) return;
-      var el = document.createElement('div');
-      var estMoi = moi && nom.toLowerCase() === moi.nom.toLowerCase();
-      el.className = 'bulle' + (estMoi ? ' moi' : '');
-      el.innerHTML = '<span class="em">' + emojiDe(nom) + '</span>' + esc(nom);
-      salon.appendChild(el);
-      var ang = Math.random() * Math.PI * 2;
-      var v = 0.35 + Math.random() * 0.25;   // lent : c'est un décor, pas un jeu
-      // La position est posée au premier rendu, pas ici : juste après avoir
-      // écrit le HTML, la mise en page flex n'est pas encore stabilisée et la
-      // hauteur du salon est fausse — toutes les bulles atterrissaient alors
-      // en haut de l'écran.
-      bulles.push({
-        nom:nom, el:el, l:el.offsetWidth, h:el.offsetHeight,
-        x:0, y:0, place:false,
-        vx: Math.cos(ang) * v, vy: Math.sin(ang) * v
-      });
-    });
-  }
-
-  function lancerBulles(){
-    var doux = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function pas(){
-      var salon = document.getElementById('salon');
-      if(!salon){ anim = null; return; }
-      var L = salon.clientWidth, H = salon.clientHeight;
-      bulles.forEach(function(b, i){
-        if(!b.place){
-          // Grille lâche : au pur hasard, les premières bulles se retrouvaient
-          // parfois empilées au même endroit.
-          var cols = Math.max(2, Math.floor(L / 200));
-          // Autant de lignes que nécessaire : brider à quatre faisait se
-          // superposer les bulles dès qu'il y avait du monde sur un téléphone.
-          var lignes = Math.max(1, Math.ceil(bulles.length / cols));
-          var cx = (i % cols + 0.5) / cols;
-          var cy = (Math.floor(i / cols) + 0.5) / lignes;
-          b.l = b.el.offsetWidth; b.h = b.el.offsetHeight;
-          b.x = Math.min(Math.max(0, cx * L - b.l / 2), Math.max(0, L - b.l));
-          b.y = Math.min(Math.max(0, cy * H - b.h / 2), Math.max(0, H - b.h));
-          b.place = true;
-        }
-        if(!doux){
-          b.x += b.vx; b.y += b.vy;
-          // Rebond sur les bords, comme le logo d'un lecteur de DVD.
-          if(b.x <= 0){ b.x = 0; b.vx = Math.abs(b.vx); }
-          if(b.x + b.l >= L){ b.x = L - b.l; b.vx = -Math.abs(b.vx); }
-          if(b.y <= 0){ b.y = 0; b.vy = Math.abs(b.vy); }
-          if(b.y + b.h >= H){ b.y = H - b.h; b.vy = -Math.abs(b.vy); }
-        }
-        b.el.style.transform = 'translate(' + Math.round(b.x) + 'px,' + Math.round(b.y) + 'px)';
-      });
-      anim = requestAnimationFrame(pas);
-    }
-    anim = requestAnimationFrame(pas);
+    zone.innerHTML = '<div class="carte moi-carte">'
+      + '<div class="moi-em">' + emojiDe(monNom) + '</div>'
+      + '<div class="moi-nom">' + esc(monNom) + '</div>'
+      + '<div class="moi-ok">✓ Tu es dans la salle</div>'
+      + '<div class="attente">'
+        + '<div class="attente-t"><span class="sablier">⏳</span>'
+        + 'En attente du lancement</div>'
+        + '<div class="attente-d">' + esc(etat.titre) + ' commencera quand '
+        + 'l’animateur lancera la première question. Tu n’as rien à faire, '
+        + 'garde juste cette page ouverte.</div>'
+      + '</div>'
+      + '<div class="liste-t">Dans la salle · ' + noms.length + '</div>'
+      + '<div class="liste">' + liste + '</div>'
+    + '</div>';
   }
 
   // --- Écran 3 : une question ----------------------------------------------
   function vueQuestion(){
-    arreterBulles();
     var q = etat.question;
     var deja = etat.maReponse;
     zone.innerHTML = '<div class="carte">'
@@ -341,7 +271,6 @@
   }
 
   function vueFini(){
-    arreterBulles();
     zone.innerHTML = '<div class="carte" style="text-align:center">'
       + '<div style="font-size:50px;line-height:1">' + emojiDe(moi ? moi.nom : '') + '</div>'
       + '<h1 style="margin-top:14px">C’est terminé, merci ' + esc(moi ? moi.nom : '') + '</h1>'
@@ -351,7 +280,7 @@
 
   // --- Le rendu -------------------------------------------------------------
   function rendre(){
-    // Le salon se met à jour en continu (les bulles arrivent), les autres
+    // Le salon se met à jour en continu (les arrivées s'affichent), les autres
     // écrans ne se redessinent qu'au vrai changement : sinon on effacerait la
     // réponse en cours de saisie toutes les deux secondes.
     var enSalon = moi && etat.moi && etat.etat !== 'fini'
@@ -389,16 +318,6 @@
   setInterval(battre, 2000);
   document.addEventListener('visibilitychange', function(){
     if(document.visibilityState === 'visible') battre();
-  });
-  // Les bulles doivent rester dans le cadre quand la fenêtre change de taille.
-  window.addEventListener('resize', function(){
-    var salon = document.getElementById('salon');
-    if(!salon) return;
-    var L = salon.clientWidth, H = salon.clientHeight;
-    bulles.forEach(function(b){
-      b.x = Math.min(b.x, Math.max(0, L - b.l));
-      b.y = Math.min(b.y, Math.max(0, H - b.h));
-    });
   });
 })();
 </script>
